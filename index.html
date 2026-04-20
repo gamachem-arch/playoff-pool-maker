@@ -124,6 +124,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 <div id="setup" style="display:none"></div>
 <div id="pool-list" style="display:none"></div>
 <div id="legwrap"></div>
+<div id="pie-wrap"></div>
 <div id="main"><div class="loading">Loading...</div></div>
 <div id="swrap"></div>
 
@@ -494,7 +495,7 @@ function showSection(name) {
   sections.forEach(function(s){
     var el = document.getElementById(s);
     if (!el) return;
-    if (s === name || (name === "main" && (s==="swrap"||s==="legwrap"||s==="pool-switcher-wrap"))) {
+    if (s === name || (name === "main" && (s==="swrap"||s==="legwrap"||s==="pool-switcher-wrap"||s==="pie-wrap"))) {
       el.style.display = "";
     } else if (s !== "pool-switcher-wrap") {
       el.style.display = "none";
@@ -671,6 +672,12 @@ async function doRender(){
     if(hasR4)html+='<div class="round-section"><div class="rtitle">Stanley Cup Final</div>'+
       '<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw)+'</div></div>';
     document.getElementById("main").innerHTML=html;
+    var pieTotals2=(loadData()||{players:[]}).players.map(function(p,i){
+      var total=0;
+      p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
+      return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
+    }).sort(function(a,b){return b.total-a.total;});
+    document.getElementById("pie-wrap").innerHTML=buildPieChart(pieTotals2,ALL_COLORS);
     document.getElementById("swrap").innerHTML=buildStandings(odds);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
   }catch(e){
