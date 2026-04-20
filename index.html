@@ -182,7 +182,7 @@ function renderSetup() {
     html += '<div class="player-block">';
     html += '<div class="player-head">';
     html += '<div class="pdot" style="background:'+pc.color+'"></div>';
-    html += '<input class="pname" id="pa'+i+'" value="'+escHtml(p.abbrev||"")+'" placeholder="ABC" maxlength="3" style="width:60px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;flex:0 0 60px" oninput="readSetupNames()">';
+        html += '<input class="pname" id="pa'+i+'" value="'+escHtml(p.abbrev||"")+'" placeholder="ABC" maxlength="3" style="width:60px;text-transform:uppercase;font-weight:700;letter-spacing:1px;flex:0 0 60px" oninput="readSetupNames()">';
     html += '<input class="pname" id="pn'+i+'" value="'+escHtml(p.name)+'" placeholder="Player '+(i+1)+' name" oninput="readSetupNames()">';
     html += '<span class="pcount">'+p.teams.length+' teams</span>';
     if (setupPlayers.length > 2) {
