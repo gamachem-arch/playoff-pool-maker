@@ -556,9 +556,9 @@ function buildLegend(){
 function buildPieChart(totals, colorList) {
   var grand = totals.reduce(function(s,p){return s+p.total;},0);
   if (grand === 0) return "";
-  var cx=90, cy=90, r=80, start=0;
-  var slices = "", labels = "";
-  totals.forEach(function(p, i) {
+  var cx=40, cy=40, r=36, start=0;
+  var slices = "";
+  totals.forEach(function(p) {
     var pct = p.total / grand;
     var angle = pct * 2 * Math.PI;
     var x1 = cx + r * Math.sin(start);
@@ -568,29 +568,10 @@ function buildPieChart(totals, colorList) {
     var large = angle > Math.PI ? 1 : 0;
     var col = colorList[p.ci % colorList.length].color;
     slices += '<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+col+'" opacity="0.9"/>';
-    var mid = start + angle/2;
-    var lx = cx + (r*0.65) * Math.sin(mid);
-    var ly = cy - (r*0.65) * Math.cos(mid);
-    var abbrev = (p.abbrev||p.name.substring(0,3)).toUpperCase();
-    if (pct > 0.08) {
-      labels += '<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-family="Barlow Condensed,sans-serif" font-size="11" font-weight="700" fill="white">'+abbrev+'</text>';
-    }
     start += angle;
   });
-  var legendItems = totals.map(function(p) {
-    var col = colorList[p.ci % colorList.length].color;
-    var pct = grand > 0 ? (p.total/grand*100).toFixed(1) : "0.0";
-    var abbrev = (p.abbrev||p.name.substring(0,3)).toUpperCase();
-    return '<div style="display:flex;align-items:center;gap:8px;font-family:Barlow Condensed,sans-serif">'
-      + '<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
-      + '<span style="font-size:13px;color:var(--text);font-weight:700">'+abbrev+'</span>'
-      + '<span style="font-size:12px;color:var(--muted)">'+p.name+'</span>'
-      + '<span style="font-size:12px;color:'+col+';margin-left:4px">'+pct+'%</span>'
-      + '</div>';
-  }).join("");
-  return '<div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:20px;flex-wrap:wrap">'
-    + '<svg width="180" height="180" viewBox="0 0 180 180">'+slices+labels+'</svg>'
-    + '<div style="display:flex;flex-direction:column;gap:8px">'+legendItems+'</div>'
+  return '<div style="display:flex;justify-content:center;margin-bottom:16px">'
+    + '<svg width="80" height="80" viewBox="0 0 80 80">'+slices+'</svg>'
     + '</div>';
 }
 
