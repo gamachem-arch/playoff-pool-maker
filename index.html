@@ -625,7 +625,7 @@ async function doRender(){
   if(!pool){showPoolList();return;}
   document.getElementById("pool-title").textContent=pool.title||"Playoff Pool";
   document.getElementById("sub").textContent="Refreshing...";
-  document.getElementById("legwrap").innerHTML=buildLegend();
+  // legend set below with pie
   drawPoolSwitcher();
   try{
     var r1=await fetch(ODDS_API+"?t="+Date.now());
