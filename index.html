@@ -20,8 +20,27 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .btn{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Barlow',sans-serif;font-size:11px;padding:5px 16px;border-radius:20px;cursor:pointer;margin:4px;transition:all 0.2s;}
 .btn:hover{color:var(--text);}
 .btn-primary{background:#3b82f6;border-color:#3b82f6;color:white;}
+.btn-primary:hover{background:#2563eb;color:white;}
 .btn-green{background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.3);color:#10b981;}
 .btn-danger{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.25);color:#f87171;font-size:10px;padding:3px 10px;}
+
+/* Pool switcher */
+.pool-switcher{max-width:640px;margin:0 auto 20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pool-switcher-label{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);flex-shrink:0;}
+.pool-select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;color:var(--text);font-family:'Barlow',sans-serif;font-size:13px;flex:1;outline:none;min-width:140px;}
+.pool-select option{background:#1a2236;}
+
+/* Pool list screen */
+.pool-list-screen{max-width:640px;margin:0 auto;}
+.pool-list-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;text-align:center;}
+.pool-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.2s;}
+.pool-item:hover{border-color:rgba(255,255,255,0.2);}
+.pool-item.active{border-color:#3b82f6;}
+.pool-item-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;flex:1;}
+.pool-item-meta{font-size:11px;color:var(--muted);}
+.pool-item-actions{display:flex;gap:6px;}
+
+/* Setup */
 .setup-screen{max-width:640px;margin:0 auto;}
 .slabel{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
 .title-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
@@ -35,8 +54,10 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .teams-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .tbtn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 4px;text-align:center;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--muted);transition:all 0.15s;user-select:none;}
 .tbtn.taken{opacity:0.2;pointer-events:none;}
-.setup-actions{text-align:center;margin-top:20px;}
+.setup-actions{text-align:center;margin-top:20px;display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
 .add-wrap{text-align:center;margin-bottom:12px;}
+
+/* Bracket */
 .legend{display:flex;justify-content:center;gap:16px;margin-bottom:24px;flex-wrap:wrap;}
 .legend-item{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);}
 .ldot{width:8px;height:8px;border-radius:50%;}
@@ -79,13 +100,16 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   <div class="eyebrow">2026 NHL Postseason</div>
   <h1 id="pool-title">Playoff Pool</h1>
   <div class="sub" id="sub">Loading...</div>
-  <div style="margin-top:8px">
+  <div style="margin-top:8px" id="header-btns">
     <button class="btn" onclick="doRefresh()">↻ Refresh</button>
     <button class="btn" onclick="showSetup()">⚙ Edit Pool</button>
+    <button class="btn" onclick="showPoolList()">☰ My Pools</button>
   </div>
 </div>
 
+<div id="pool-switcher-wrap"></div>
 <div id="setup" style="display:none"></div>
+<div id="pool-list" style="display:none"></div>
 <div id="legwrap"></div>
 <div id="main"><div class="loading">Loading...</div></div>
 <div id="swrap"></div>
@@ -108,158 +132,297 @@ var R1E = [{t:"CAR",b:"OTT"},{t:"TBL",b:"MTL"},{t:"BUF",b:"BOS"},{t:"PIT",b:"PHI
 
 var setupPlayers = [];
 var setupTitle = "Playoff Pool";
+var editingPoolId = null;
+
+// ---- Storage ----
+function getAllPools() {
+  try { var s = localStorage.getItem("pp2026_pools"); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
+}
+function savePools(pools) {
+  try { localStorage.setItem("pp2026_pools", JSON.stringify(pools)); } catch(e) {}
+}
+function getActiveId() {
+  try { return localStorage.getItem("pp2026_active") || null; } catch(e) { return null; }
+}
+function setActiveId(id) {
+  try { localStorage.setItem("pp2026_active", id); } catch(e) {}
+}
+function getActivePool() {
+  var pools = getAllPools();
+  var id = getActiveId();
+  return (id && pools[id]) ? pools[id] : null;
+}
+function generateId() {
+  return "pool_" + Date.now();
+}
 
 function esc(s) {
   return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 }
 
-function loadData() {
-  try { var s = localStorage.getItem("pp2026v3"); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+// ---- Pool List Screen ----
+function showPoolList() {
+  showSection("pool-list");
+  drawPoolList();
 }
-function saveData(d) {
-  try { localStorage.setItem("pp2026v3", JSON.stringify(d)); } catch(e) {}
+
+function drawPoolList() {
+  var pools = getAllPools();
+  var activeId = getActiveId();
+  var ids = Object.keys(pools);
+  var el = document.getElementById("pool-list");
+  el.innerHTML = "";
+
+  var wrap = document.createElement("div");
+  wrap.className = "pool-list-screen";
+
+  var title = document.createElement("div");
+  title.className = "pool-list-title";
+  title.textContent = "My Pools";
+  wrap.appendChild(title);
+
+  if (ids.length === 0) {
+    var empty = document.createElement("div");
+    empty.className = "loading";
+    empty.textContent = "No pools yet — create one below!";
+    wrap.appendChild(empty);
+  }
+
+  ids.forEach(function(id) {
+    var pool = pools[id];
+    var item = document.createElement("div");
+    item.className = "pool-item" + (id === activeId ? " active" : "");
+
+    var nameEl = document.createElement("div");
+    nameEl.className = "pool-item-name";
+    nameEl.textContent = pool.title || "Untitled Pool";
+    item.appendChild(nameEl);
+
+    var meta = document.createElement("div");
+    meta.className = "pool-item-meta";
+    meta.textContent = pool.players.length + " players";
+    item.appendChild(meta);
+
+    var actions = document.createElement("div");
+    actions.className = "pool-item-actions";
+
+    var selectBtn = document.createElement("button");
+    selectBtn.className = "btn" + (id === activeId ? " btn-primary" : "");
+    selectBtn.textContent = id === activeId ? "Active" : "Switch";
+    (function(pid) {
+      selectBtn.onclick = function(e) {
+        e.stopPropagation();
+        setActiveId(pid);
+        showSection("main");
+        doRender();
+        drawPoolSwitcher();
+      };
+    })(id);
+    actions.appendChild(selectBtn);
+
+    var editBtn = document.createElement("button");
+    editBtn.className = "btn";
+    editBtn.textContent = "Edit";
+    (function(pid) {
+      editBtn.onclick = function(e) {
+        e.stopPropagation();
+        startEditPool(pid);
+      };
+    })(id);
+    actions.appendChild(editBtn);
+
+    var delBtn = document.createElement("button");
+    delBtn.className = "btn btn-danger";
+    delBtn.textContent = "✕";
+    (function(pid) {
+      delBtn.onclick = function(e) {
+        e.stopPropagation();
+        if (!confirm("Delete this pool?")) return;
+        var p = getAllPools();
+        delete p[pid];
+        savePools(p);
+        if (getActiveId() === pid) {
+          var remaining = Object.keys(p);
+          setActiveId(remaining.length > 0 ? remaining[0] : null);
+        }
+        drawPoolList();
+        drawPoolSwitcher();
+      };
+    })(id);
+    actions.appendChild(delBtn);
+
+    item.appendChild(actions);
+    wrap.appendChild(item);
+  });
+
+  // New pool button
+  var newWrap = document.createElement("div");
+  newWrap.style.textAlign = "center";
+  newWrap.style.marginTop = "16px";
+  var newBtn = document.createElement("button");
+  newBtn.className = "btn btn-green";
+  newBtn.textContent = "+ New Pool";
+  newBtn.onclick = function() { startNewPool(); };
+  newWrap.appendChild(newBtn);
+
+  if (getActiveId()) {
+    var backBtn = document.createElement("button");
+    backBtn.className = "btn";
+    backBtn.textContent = "← Back";
+    backBtn.onclick = function() { showSection("main"); doRender(); };
+    newWrap.appendChild(backBtn);
+  }
+
+  wrap.appendChild(newWrap);
+  el.appendChild(wrap);
+}
+
+function drawPoolSwitcher() {
+  var pools = getAllPools();
+  var ids = Object.keys(pools);
+  var wrap = document.getElementById("pool-switcher-wrap");
+  if (ids.length <= 1) { wrap.innerHTML = ""; return; }
+  var activeId = getActiveId();
+  var html = '<div class="pool-switcher"><span class="pool-switcher-label">Pool</span><select class="pool-select" onchange="switchPool(this.value)">';
+  ids.forEach(function(id) {
+    html += '<option value="' + esc(id) + '"' + (id === activeId ? " selected" : "") + '>' + esc(pools[id].title || "Untitled") + '</option>';
+  });
+  html += '</select><button class="btn btn-green" onclick="startNewPool()" style="margin:0;padding:4px 12px;font-size:10px">+ New</button></div>';
+  wrap.innerHTML = html;
+}
+
+function switchPool(id) {
+  setActiveId(id);
+  var pool = getActivePool();
+  if (pool) document.getElementById("pool-title").textContent = pool.title || "Playoff Pool";
+  doRender();
+}
+
+// ---- Setup / Edit ----
+function startNewPool() {
+  editingPoolId = null;
+  setupTitle = "Playoff Pool";
+  setupPlayers = [
+    {name:"Player 1",abbrev:"P1",teams:[]},
+    {name:"Player 2",abbrev:"P2",teams:[]},
+    {name:"Player 3",abbrev:"P3",teams:[]},
+    {name:"Player 4",abbrev:"P4",teams:[]}
+  ];
+  showSection("setup");
+  drawSetup();
+}
+
+function startEditPool(id) {
+  var pools = getAllPools();
+  var pool = pools[id];
+  if (!pool) return;
+  editingPoolId = id;
+  setupTitle = pool.title || "Playoff Pool";
+  setupPlayers = pool.players.map(function(p) {
+    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3).toUpperCase(), teams:p.teams.slice()};
+  });
+  showSection("setup");
+  drawSetup();
+}
+
+function showSetup() {
+  var active = getActivePool();
+  if (active) {
+    startEditPool(getActiveId());
+  } else {
+    startNewPool();
+  }
 }
 
 function readCurrentNames() {
   var titleEl = document.getElementById("setup-title");
   if (titleEl) setupTitle = titleEl.value || "Playoff Pool";
   setupPlayers.forEach(function(p, i) {
-    var aEl = document.getElementById("pa" + i);
-    var nEl = document.getElementById("pn" + i);
+    var aEl = document.getElementById("pa"+i);
+    var nEl = document.getElementById("pn"+i);
     if (aEl) p.abbrev = aEl.value.toUpperCase().substring(0,3) || p.name.substring(0,3).toUpperCase();
-    if (nEl) p.name = nEl.value || ("Player " + (i+1));
+    if (nEl) p.name = nEl.value || ("Player "+(i+1));
   });
-}
-
-function showSetup() {
-  var data = loadData();
-  if (data) {
-    setupTitle = data.title || "Playoff Pool";
-    setupPlayers = data.players.map(function(p) {
-      return { name: p.name, abbrev: p.abbrev || p.name.substring(0,3).toUpperCase(), teams: p.teams.slice() };
-    });
-  } else {
-    setupTitle = "Playoff Pool";
-    setupPlayers = [
-      {name:"Player 1", abbrev:"P1", teams:[]},
-      {name:"Player 2", abbrev:"P2", teams:[]},
-      {name:"Player 3", abbrev:"P3", teams:[]},
-      {name:"Player 4", abbrev:"P4", teams:[]}
-    ];
-  }
-  document.getElementById("setup").style.display = "block";
-  document.getElementById("main").style.display = "none";
-  document.getElementById("swrap").style.display = "none";
-  document.getElementById("legwrap").style.display = "none";
-  drawSetup();
 }
 
 function drawSetup() {
   var taken = {};
-  setupPlayers.forEach(function(p, i) { p.teams.forEach(function(t) { taken[t] = i; }); });
-
+  setupPlayers.forEach(function(p,i){p.teams.forEach(function(t){taken[t]=i;});});
   var out = document.getElementById("setup");
   out.innerHTML = "";
-
   var wrap = document.createElement("div");
   wrap.className = "setup-screen";
 
-  // Title section
+  // Title
   var titleWrap = document.createElement("div");
   titleWrap.className = "title-wrap";
-  var titleLabel = document.createElement("div");
-  titleLabel.className = "slabel";
-  titleLabel.style.marginBottom = "8px";
-  titleLabel.textContent = "Pool name";
-  titleWrap.appendChild(titleLabel);
-  var titleInput = document.createElement("input");
-  titleInput.className = "title-input";
-  titleInput.id = "setup-title";
-  titleInput.value = setupTitle;
-  titleInput.placeholder = "PLAYOFF POOL";
-  titleInput.maxLength = 30;
-  titleWrap.appendChild(titleInput);
+  var tl = document.createElement("div");
+  tl.className = "slabel";
+  tl.style.marginBottom = "8px";
+  tl.textContent = "Pool name";
+  titleWrap.appendChild(tl);
+  var ti = document.createElement("input");
+  ti.className = "title-input";
+  ti.id = "setup-title";
+  ti.value = setupTitle;
+  ti.placeholder = "PLAYOFF POOL";
+  ti.maxLength = 30;
+  titleWrap.appendChild(ti);
   wrap.appendChild(titleWrap);
 
-  // Players label
-  var pLabel = document.createElement("div");
-  pLabel.className = "slabel";
-  pLabel.textContent = "Players & teams";
-  wrap.appendChild(pLabel);
+  var pl = document.createElement("div");
+  pl.className = "slabel";
+  pl.textContent = "Players & teams";
+  wrap.appendChild(pl);
 
-  // Player blocks
-  setupPlayers.forEach(function(p, i) {
-    var pc = ALL_COLORS[i % ALL_COLORS.length];
+  setupPlayers.forEach(function(p,i) {
+    var pc = ALL_COLORS[i%ALL_COLORS.length];
     var block = document.createElement("div");
     block.className = "player-block";
-
-    // Header row
     var head = document.createElement("div");
     head.className = "player-head";
-
     var dot = document.createElement("div");
     dot.className = "pdot";
     dot.style.background = pc.color;
     head.appendChild(dot);
-
-    var abbrInput = document.createElement("input");
-    abbrInput.className = "pabbrev";
-    abbrInput.id = "pa" + i;
-    abbrInput.value = p.abbrev || "";
-    abbrInput.placeholder = "ABC";
-    abbrInput.maxLength = 3;
-    abbrInput.addEventListener("input", function() { readCurrentNames(); });
-    head.appendChild(abbrInput);
-
-    var nameInput = document.createElement("input");
-    nameInput.className = "pname";
-    nameInput.id = "pn" + i;
-    nameInput.value = p.name || "";
-    nameInput.placeholder = "Player " + (i+1) + " name";
-    nameInput.addEventListener("input", function() { readCurrentNames(); });
-    head.appendChild(nameInput);
-
-    var count = document.createElement("span");
-    count.className = "pcount";
-    count.textContent = p.teams.length + " teams";
-    head.appendChild(count);
-
+    var ai = document.createElement("input");
+    ai.className = "pabbrev";
+    ai.id = "pa"+i;
+    ai.value = p.abbrev||"";
+    ai.placeholder = "ABC";
+    ai.maxLength = 3;
+    ai.addEventListener("input", readCurrentNames);
+    head.appendChild(ai);
+    var ni = document.createElement("input");
+    ni.className = "pname";
+    ni.id = "pn"+i;
+    ni.value = p.name||"";
+    ni.placeholder = "Player "+(i+1)+" name";
+    ni.addEventListener("input", readCurrentNames);
+    head.appendChild(ni);
+    var cnt = document.createElement("span");
+    cnt.className = "pcount";
+    cnt.textContent = p.teams.length+" teams";
+    head.appendChild(cnt);
     if (setupPlayers.length > 2) {
-      var removeBtn = document.createElement("button");
-      removeBtn.className = "btn btn-danger";
-      removeBtn.textContent = "✕ Remove";
-      (function(idx) {
-        removeBtn.onclick = function() { readCurrentNames(); setupPlayers.splice(idx, 1); drawSetup(); };
-      })(i);
-      head.appendChild(removeBtn);
+      var rb = document.createElement("button");
+      rb.className = "btn btn-danger";
+      rb.textContent = "✕ Remove";
+      (function(idx){rb.onclick=function(){readCurrentNames();setupPlayers.splice(idx,1);drawSetup();};})(i);
+      head.appendChild(rb);
     }
-
     block.appendChild(head);
-
-    // Teams grid
     var grid = document.createElement("div");
     grid.className = "teams-grid";
-    ALL_TEAMS.forEach(function(t) {
-      var mine = p.teams.indexOf(t) >= 0;
-      var takenBy = (t in taken) && taken[t] !== i;
+    ALL_TEAMS.forEach(function(t){
+      var mine = p.teams.indexOf(t)>=0;
+      var takenBy = (t in taken)&&taken[t]!==i;
       var btn = document.createElement("div");
-      btn.className = "tbtn" + (takenBy ? " taken" : "");
+      btn.className = "tbtn"+(takenBy?" taken":"");
       btn.textContent = t;
-      if (mine) {
-        btn.style.background = pc.bg;
-        btn.style.borderColor = pc.color;
-        btn.style.color = pc.color;
-      }
-      if (!takenBy) {
-        (function(pi, team) {
-          btn.onclick = function() {
-            readCurrentNames();
-            var idx2 = setupPlayers[pi].teams.indexOf(team);
-            if (idx2 >= 0) setupPlayers[pi].teams.splice(idx2, 1);
-            else setupPlayers[pi].teams.push(team);
-            drawSetup();
-          };
-        })(i, t);
+      if (mine){btn.style.background=pc.bg;btn.style.borderColor=pc.color;btn.style.color=pc.color;}
+      if (!takenBy){
+        (function(pi,team){btn.onclick=function(){readCurrentNames();var ix=setupPlayers[pi].teams.indexOf(team);if(ix>=0)setupPlayers[pi].teams.splice(ix,1);else setupPlayers[pi].teams.push(team);drawSetup();};})(i,t);
       }
       grid.appendChild(btn);
     });
@@ -267,182 +430,170 @@ function drawSetup() {
     wrap.appendChild(block);
   });
 
-  // Add player button
   if (setupPlayers.length < 8) {
-    var addWrap = document.createElement("div");
-    addWrap.className = "add-wrap";
-    var addBtn = document.createElement("button");
-    addBtn.className = "btn btn-green";
-    addBtn.textContent = "+ Add Player";
-    addBtn.onclick = function() {
-      readCurrentNames();
-      var n = setupPlayers.length + 1;
-      setupPlayers.push({name:"Player "+n, abbrev:"P"+n, teams:[]});
-      drawSetup();
-    };
-    addWrap.appendChild(addBtn);
-    wrap.appendChild(addWrap);
+    var aw = document.createElement("div");
+    aw.className = "add-wrap";
+    var ab = document.createElement("button");
+    ab.className = "btn btn-green";
+    ab.textContent = "+ Add Player";
+    ab.onclick = function(){readCurrentNames();var n=setupPlayers.length+1;setupPlayers.push({name:"Player "+n,abbrev:"P"+n,teams:[]});drawSetup();};
+    aw.appendChild(ab);
+    wrap.appendChild(aw);
   }
 
-  // Actions
-  var actions = document.createElement("div");
-  actions.className = "setup-actions";
-  var saveBtn = document.createElement("button");
-  saveBtn.className = "btn btn-primary";
-  saveBtn.textContent = "Save & View Pool";
-  saveBtn.onclick = saveSetup;
-  actions.appendChild(saveBtn);
-  if (loadData()) {
-    var cancelBtn = document.createElement("button");
-    cancelBtn.className = "btn";
-    cancelBtn.textContent = "Cancel";
-    cancelBtn.onclick = cancelSetup;
-    actions.appendChild(cancelBtn);
-  }
-  wrap.appendChild(actions);
+  var acts = document.createElement("div");
+  acts.className = "setup-actions";
+  var sb = document.createElement("button");
+  sb.className = "btn btn-primary";
+  sb.textContent = "Save & View Pool";
+  sb.onclick = saveSetup;
+  acts.appendChild(sb);
+  var cb = document.createElement("button");
+  cb.className = "btn";
+  cb.textContent = "Cancel";
+  cb.onclick = function(){
+    var active = getActivePool();
+    if (active) { showSection("main"); doRender(); }
+    else { showPoolList(); }
+  };
+  acts.appendChild(cb);
+  wrap.appendChild(acts);
   out.appendChild(wrap);
 }
 
 function saveSetup() {
   readCurrentNames();
   var title = setupTitle.trim() || "Playoff Pool";
-  saveData({title: title, players: setupPlayers});
+  var pools = getAllPools();
+  var id = editingPoolId || generateId();
+  pools[id] = {title:title, players:setupPlayers, created:Date.now()};
+  savePools(pools);
+  setActiveId(id);
   document.getElementById("pool-title").textContent = title;
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("main").style.display = "block";
-  document.getElementById("swrap").style.display = "block";
-  document.getElementById("legwrap").style.display = "block";
+  showSection("main");
+  drawPoolSwitcher();
   doRender();
 }
 
-function cancelSetup() {
-  document.getElementById("setup").style.display = "none";
-  document.getElementById("main").style.display = "block";
-  document.getElementById("swrap").style.display = "block";
-  document.getElementById("legwrap").style.display = "block";
+// ---- Section management ----
+function showSection(name) {
+  var sections = ["setup","pool-list","main","swrap","legwrap","pool-switcher-wrap"];
+  sections.forEach(function(s){
+    var el = document.getElementById(s);
+    if (!el) return;
+    if (s === name || (name === "main" && (s==="swrap"||s==="legwrap"||s==="pool-switcher-wrap"))) {
+      el.style.display = "";
+    } else if (s !== "pool-switcher-wrap") {
+      el.style.display = "none";
+    }
+  });
+  if (name !== "main") {
+    document.getElementById("swrap").style.display = "none";
+    document.getElementById("legwrap").style.display = "none";
+    document.getElementById("pool-switcher-wrap").style.display = "none";
+  }
 }
 
+// ---- Bracket rendering ----
 function getPlayerFor(team) {
-  var data = loadData(); if (!data) return null;
-  for (var i = 0; i < data.players.length; i++) {
-    if (data.players[i].teams.indexOf(team) >= 0) return i;
-  }
+  var pool = getActivePool(); if(!pool) return null;
+  for(var i=0;i<pool.players.length;i++){if(pool.players[i].teams.indexOf(team)>=0)return i;}
   return null;
 }
-
 function makePill(team) {
-  var i = getPlayerFor(team);
-  if (i === null) return '<span class="pill-empty"></span>';
-  var data = loadData();
-  var pc = ALL_COLORS[i % ALL_COLORS.length];
-  var label = (data.players[i].abbrev || data.players[i].name.substring(0,3)).toUpperCase();
-  return '<span class="pill" style="background:' + pc.bg + ';color:' + pc.color + '">' + label + '</span>';
+  var i=getPlayerFor(team); if(i===null)return '<span class="pill-empty"></span>';
+  var pool=getActivePool(); var pc=ALL_COLORS[i%ALL_COLORS.length];
+  var label=(pool.players[i].abbrev||pool.players[i].name.substring(0,3)).toUpperCase();
+  return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+label+'</span>';
 }
-
-function seriesCard(s, label, odds) {
-  if (!s || s.topTeam === "TBD") {
-    return '<div class="series"><div class="sh">' + label + '</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
-  }
-  var t1=s.topTeam, t2=s.bottomTeam, w1=s.topWins, w2=s.bottomWins;
-  var t1won=w1===4, t2won=w2===4;
-  var o1=odds[t1]||"", o2=odds[t2]||"";
-  return '<div class="series"><div class="sh">' + label + '</div>' +
-    '<div class="tr">' + makePill(t1) + '<span class="tname' + (t2won?" elim":"") + (t1won?" champ":"") + '">' + t1 + '</span>' + (o1?'<span class="todds">'+o1+'</span>':"") + '<span class="twins' + (w1>w2?" lead":"") + '">' + w1 + '</span></div>' +
-    '<div class="tr">' + makePill(t2) + '<span class="tname' + (t1won?" elim":"") + (t2won?" champ":"") + '">' + t2 + '</span>' + (o2?'<span class="todds">'+o2+'</span>':"") + '<span class="twins' + (w2>w1?" lead":"") + '">' + w2 + '</span></div></div>';
+function seriesCard(s,label,odds){
+  if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
+  var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
+  var o1=odds[t1]||"",o2=odds[t2]||"";
+  return '<div class="series"><div class="sh">'+label+'</div>'+
+    '<div class="tr">'+makePill(t1)+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+(o1?'<span class="todds">'+o1+'</span>':"")+
+    '<span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
+    '<div class="tr">'+makePill(t2)+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+(o2?'<span class="todds">'+o2+'</span>':"")+
+    '<span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div></div>';
 }
-
-function parseSeries(arr) {
-  if (!Array.isArray(arr)) return null;
-  var byTeams={}, byLetter={};
-  arr.forEach(function(s) {
-    var t1=(s.topTeam||"").toUpperCase(), t2=(s.bottomTeam||"").toUpperCase();
+function parseSeries(arr){
+  if(!Array.isArray(arr))return null;
+  var byTeams={},byLetter={};
+  arr.forEach(function(s){
+    var t1=(s.topTeam||"").toUpperCase(),t2=(s.bottomTeam||"").toUpperCase();
     var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0};
-    if(t1&&t2) byTeams[[t1,t2].sort().join("-")]=e;
-    if(s.letter) byLetter[s.letter.toUpperCase()]=e;
+    if(t1&&t2)byTeams[[t1,t2].sort().join("-")]=e;
+    if(s.letter)byLetter[s.letter.toUpperCase()]=e;
   });
   function find(t1,t2){return byTeams[[t1,t2].sort().join("-")]||{topTeam:t1,bottomTeam:t2,topWins:0,bottomWins:0};}
-  return {
-    r1w: R1W.map(function(m){return find(m.t,m.b);}),
-    r1e: R1E.map(function(m){return find(m.t,m.b);}),
-    r2: ["I","J","K","L"].map(function(l){return byLetter[l]||null;}),
-    r3: ["M","N"].map(function(l){return byLetter[l]||null;}),
-    r4: byLetter["O"]||null
-  };
+  return{r1w:R1W.map(function(m){return find(m.t,m.b);}),r1e:R1E.map(function(m){return find(m.t,m.b);}),
+    r2:["I","J","K","L"].map(function(l){return byLetter[l]||null;}),
+    r3:["M","N"].map(function(l){return byLetter[l]||null;}),r4:byLetter["O"]||null};
 }
-
-function buildLegend() {
-  var data = loadData(); if (!data) return "";
-  return '<div class="legend">' + data.players.map(function(p,i){
-    var pc = ALL_COLORS[i%ALL_COLORS.length];
-    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div>'+esc(p.name)+'</div>';
-  }).join("") + '</div>';
+function buildLegend(){
+  var pool=getActivePool();if(!pool)return"";
+  return '<div class="legend">'+pool.players.map(function(p,i){var pc=ALL_COLORS[i%ALL_COLORS.length];
+    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div>'+esc(p.name)+'</div>';}).join("")+'</div>';
 }
-
-function buildStandings(odds) {
-  var data = loadData(); if (!data) return "";
-  var totals = data.players.map(function(p,i){
-    var total=0;
-    p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
-    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3), total:total, teams:p.teams, ci:i};
-  }).sort(function(a,b){return b.total-a.total;});
+function buildStandings(odds){
+  var pool=getActivePool();if(!pool)return"";
   var ranks=["1st","2nd","3rd","4th","5th","6th","7th","8th"];
-  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds</div><div class="sgrid">' +
-    totals.map(function(p,i){
-      var pc = ALL_COLORS[p.ci%ALL_COLORS.length];
-      return '<div class="scard'+(i===0?" first":"")+'"><div class="srank">'+ranks[i]+'</div>' +
-        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>' +
-        '<div class="sname">'+esc(p.name)+'</div>' +
-        '<div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>' +
-        '<div class="steams">'+p.teams.join(" · ")+'</div></div>';
-    }).join("") + '</div></div>';
+  var totals=pool.players.map(function(p,i){
+    var total=0;p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
+    return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
+  }).sort(function(a,b){return b.total-a.total;});
+  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds</div><div class="sgrid">'+
+    totals.map(function(p,i){var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
+      return '<div class="scard'+(i===0?" first":"")+'"><div class="srank">'+ranks[i]+'</div>'+
+        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
+        '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
+        '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
 }
 
-function doRefresh() { doRender(); }
+function doRefresh(){doRender();}
 
-async function doRender() {
-  var data = loadData();
-  if (!data) { showSetup(); return; }
-  document.getElementById("pool-title").textContent = data.title || "Playoff Pool";
-  document.getElementById("sub").textContent = "Refreshing...";
-  document.getElementById("legwrap").innerHTML = buildLegend();
-  try {
-    var r1 = await fetch(ODDS_API + "?t=" + Date.now());
-    var rawOdds = await r1.json();
-    var r2 = await fetch(ODDS_API + "?action=scores&t=" + Date.now());
-    var nhlRaw = await r2.json();
-    var odds = {};
-    Object.keys(rawOdds).forEach(function(k){ odds[k.toUpperCase().trim()] = rawOdds[k]; });
-    var parsed = parseSeries(nhlRaw) || {
-      r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
-      r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
-      r2:[null,null,null,null], r3:[null,null], r4:null
-    };
-    var r1w=parsed.r1w, r1e=parsed.r1e, r2f=parsed.r2, r3=parsed.r3, r4=parsed.r4;
-    var hasR2=r2f.some(Boolean), hasR3=r3.some(Boolean), hasR4=Boolean(r4);
-    var html = '<div class="round-section"><div class="rtitle">Round 1</div>' +
-      '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>' +
-      '<div class="four-col">' + r1w.map(function(s){return seriesCard(s,"Round 1",odds);}).join("") + r1e.map(function(s){return seriesCard(s,"Round 1",odds);}).join("") + '</div></div>';
-    if(hasR2) html += '<div class="round-section"><div class="rtitle">Round 2</div>' +
-      '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>' +
-      '<div class="four-col">' + seriesCard(r2f[0],"West R2",odds) + seriesCard(r2f[1],"West R2",odds) + seriesCard(r2f[2],"East R2",odds) + seriesCard(r2f[3],"East R2",odds) + '</div></div>';
-    if(hasR3) html += '<div class="round-section"><div class="rtitle">Conference Finals</div>' +
-      '<div class="two-col">' + seriesCard(r3[0],"West CF",odds) + seriesCard(r3[1],"East CF",odds) + '</div></div>';
-    if(hasR4) html += '<div class="round-section"><div class="rtitle">Stanley Cup Final</div>' +
-      '<div class="one-col">' + seriesCard(r4,"Stanley Cup Final",odds) + '</div></div>';
-    document.getElementById("main").innerHTML = html;
-    document.getElementById("swrap").innerHTML = buildStandings(odds);
-    document.getElementById("sub").textContent = "Live NHL scores + MoneyPuck odds · Updated " + new Date().toLocaleTimeString();
-  } catch(e) {
-    document.getElementById("main").innerHTML = '<div class="loading">Error: ' + e.message + '</div>';
-    document.getElementById("sub").textContent = "Failed to load";
+async function doRender(){
+  var pool=getActivePool();
+  if(!pool){showPoolList();return;}
+  document.getElementById("pool-title").textContent=pool.title||"Playoff Pool";
+  document.getElementById("sub").textContent="Refreshing...";
+  document.getElementById("legwrap").innerHTML=buildLegend();
+  drawPoolSwitcher();
+  try{
+    var r1=await fetch(ODDS_API+"?t="+Date.now());
+    var rawOdds=await r1.json();
+    var r2=await fetch(ODDS_API+"?action=scores&t="+Date.now());
+    var nhlRaw=await r2.json();
+    var odds={};
+    Object.keys(rawOdds).forEach(function(k){odds[k.toUpperCase().trim()]=rawOdds[k];});
+    var parsed=parseSeries(nhlRaw)||{r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
+      r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
+    var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
+    var hasR2=r2f.some(Boolean),hasR3=r3.some(Boolean),hasR4=Boolean(r4);
+    var html='<div class="round-section"><div class="rtitle">Round 1</div>'+
+      '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'+
+      '<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds);}).join("")+'</div></div>';
+    if(hasR2)html+='<div class="round-section"><div class="rtitle">Round 2</div>'+
+      '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'+
+      '<div class="four-col">'+seriesCard(r2f[0],"West R2",odds)+seriesCard(r2f[1],"West R2",odds)+seriesCard(r2f[2],"East R2",odds)+seriesCard(r2f[3],"East R2",odds)+'</div></div>';
+    if(hasR3)html+='<div class="round-section"><div class="rtitle">Conference Finals</div>'+
+      '<div class="two-col">'+seriesCard(r3[0],"West CF",odds)+seriesCard(r3[1],"East CF",odds)+'</div></div>';
+    if(hasR4)html+='<div class="round-section"><div class="rtitle">Stanley Cup Final</div>'+
+      '<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds)+'</div></div>';
+    document.getElementById("main").innerHTML=html;
+    document.getElementById("swrap").innerHTML=buildStandings(odds);
+    document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
+    document.getElementById("sub").textContent="Failed to load";
   }
 }
 
-document.addEventListener("DOMContentLoaded", function() {
-  var data = loadData();
-  if (!data) { showSetup(); } else { doRender(); }
+document.addEventListener("DOMContentLoaded",function(){
+  var pool=getActivePool();
+  if(!pool){showPoolList();}else{showSection("main");doRender();}
 });
-setInterval(function(){ if(loadData()) doRender(); }, 3600000);
+setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main").style.display!=="none")doRender();},3600000);
 </script>
 </body>
 </html>
