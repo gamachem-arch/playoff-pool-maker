@@ -672,7 +672,8 @@ async function doRender(){
     if(hasR4)html+='<div class="round-section"><div class="rtitle">Stanley Cup Final</div>'+
       '<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw)+'</div></div>';
     document.getElementById("main").innerHTML=html;
-    var pieTotals2=(loadData()||{players:[]}).players.map(function(p,i){
+    var activePool=getActivePool();
+    var pieTotals2=(activePool?activePool.players:[]).map(function(p,i){
       var total=0;
       p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
