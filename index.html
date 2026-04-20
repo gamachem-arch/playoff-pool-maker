@@ -74,7 +74,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .tr+.tr{border-top:1px solid var(--border);}
 .pill{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;min-width:34px;text-align:center;flex-shrink:0;}
 .pill-empty{min-width:34px;flex-shrink:0;display:inline-block;}
-.tname{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;flex:1;text-transform:uppercase;}
+.tname{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;flex:1;text-transform:uppercase;}.tlogo{width:20px;height:20px;object-fit:contain;flex-shrink:0;}
 .todds{font-size:10px;color:var(--green);flex-shrink:0;font-weight:500;}
 .twins{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;min-width:18px;text-align:right;color:var(--muted);flex-shrink:0;}
 .twins.lead{color:var(--green);}
@@ -510,10 +510,12 @@ function seriesCard(s,label,odds){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
+  var l1='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_light.svg" onerror="this.style.display=\'none\'">';
+  var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_light.svg" onerror="this.style.display=\'none\'">';
   return '<div class="series"><div class="sh">'+label+'</div>'+
-    '<div class="tr">'+makePill(t1)+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+(o1?'<span class="todds">'+o1+'</span>':"")+
+    '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+(o1?'<span class="todds">'+o1+'</span>':"")+
     '<span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
-    '<div class="tr">'+makePill(t2)+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+(o2?'<span class="todds">'+o2+'</span>':"")+
+    '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+(o2?'<span class="todds">'+o2+'</span>':"")+
     '<span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div></div>';
 }
 function parseSeries(arr){
