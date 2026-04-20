@@ -398,12 +398,18 @@ async function render() {
 }
 
 // Init
-if (!loadPool()) {
-  showSetup();
-} else {
-  render();
-}
-setInterval(() => { if (loadPool()) render(); }, 3600000);
+window.addEventListener('load', function() {
+  try {
+    if (!loadPool()) {
+      showSetup();
+    } else {
+      render();
+    }
+  } catch(e) {
+    showSetup();
+  }
+});
+setInterval(() => { try { if (loadPool()) render(); } catch(e) {} }, 3600000);
 </script>
 </body>
 </html>
