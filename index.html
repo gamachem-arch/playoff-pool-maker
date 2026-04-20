@@ -88,6 +88,11 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .twins.lead{color:var(--green);}
 .tname.elim{opacity:0.3;text-decoration:line-through;}
 .tname.champ{color:#fbbf24;}
+
+  .game-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; float: right; }
+  .game-badge.live { color: #f87171; }
+  .game-badge.final { color: var(--green); }
+
 .tbd-r{padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);}
 .standings{max-width:1120px;margin:24px auto 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;}
 .stitle{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
@@ -514,13 +519,14 @@ function makePill(team) {
   var label=(pool.players[i].abbrev||pool.players[i].name.substring(0,3)).toUpperCase();
   return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+label+'</span>';
 }
-function seriesCard(s,label,odds){
+function seriesCard(s,label,odds,gd){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
   var l1='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_light.svg" onerror="this.style.display=\'none\'">';
   var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_light.svg" onerror="this.style.display=\'none\'">';
-  return '<div class="series"><div class="sh">'+label+'</div>'+
+  var badge=s&&s.topTeam&&s.topTeam!=="TBD"?getGameBadge(gd,s.topTeam,s.bottomTeam):"";
+  return '<div class="series"><div class="sh">'+label+badge+'</div>'+
     '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+(o1?'<span class="todds">'+o1+'</span>':"")+
     '<span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
     '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+(o2?'<span class="todds">'+o2+'</span>':"")+
@@ -560,6 +566,34 @@ function buildStandings(odds){
         '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
 }
 
+
+function formatGameTime(utcStr) {
+  var d = new Date(utcStr);
+  var h = d.getHours(), m = d.getMinutes();
+  var ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+  return h + (m ? ":" + String(m).padStart(2,"0") : "") + " " + ampm;
+}
+
+function getGameBadge(gamesData, t1, t2) {
+  if (!gamesData || !gamesData.length) return "";
+  var today = new Date().toDateString();
+  for (var i = 0; i < gamesData.length; i++) {
+    var g = gamesData[i];
+    if ([g.away,g.home].indexOf(t1)<0 || [g.away,g.home].indexOf(t2)<0) continue;
+    var gameUTCDate = g.startUTC.substring(0,10);
+    var nowUTCDate = new Date().toISOString().substring(0,10);
+    var tomorrowUTCDate = new Date(Date.now()+86400000).toISOString().substring(0,10);
+    if (gameUTCDate !== nowUTCDate && gameUTCDate !== tomorrowUTCDate) continue;
+    var as = g.awayScore !== null ? g.awayScore : 0;
+    var hs = g.homeScore !== null ? g.homeScore : 0;
+    if (g.state === "FUT" || g.state === "PRE") return '<span class="game-badge">'+formatGameTime(g.startUTC)+'</span>';
+    if (g.state === "LIVE" || g.state === "CRIT") return '<span class="game-badge live">🔴 '+g.away+" "+as+" · "+g.home+" "+hs+(g.period?" P"+g.period:"")+'</span>';
+    if (g.state === "FINAL" || g.state === "OFF") return '<span class="game-badge final">'+g.away+" "+as+" · "+g.home+" "+hs+' F</span>';
+  }
+  return "";
+}
+
 function doRefresh(){doRender();}
 
 async function doRender(){
@@ -574,6 +608,8 @@ async function doRender(){
     var rawOdds=await r1.json();
     var r2=await fetch(ODDS_API+"?action=scores&t="+Date.now());
     var nhlRaw=await r2.json();
+    var gamesRaw=[];
+    try{var rg=await fetch(ODDS_API+"?action=games&t="+Date.now());gamesRaw=await rg.json();}catch(e){}
     var odds={};
     Object.keys(rawOdds).forEach(function(k){odds[k.toUpperCase().trim()]=rawOdds[k];});
     var parsed=parseSeries(nhlRaw)||{r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
@@ -582,14 +618,14 @@ async function doRender(){
     var hasR2=r2f.some(Boolean),hasR3=r3.some(Boolean),hasR4=Boolean(r4);
     var html='<div class="round-section"><div class="rtitle">Round 1</div>'+
       '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'+
-      '<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds);}).join("")+'</div></div>';
+      '<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw);}).join("")+'</div></div>';
     if(hasR2)html+='<div class="round-section"><div class="rtitle">Round 2</div>'+
       '<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'+
-      '<div class="four-col">'+seriesCard(r2f[0],"West R2",odds)+seriesCard(r2f[1],"West R2",odds)+seriesCard(r2f[2],"East R2",odds)+seriesCard(r2f[3],"East R2",odds)+'</div></div>';
+      '<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw)+seriesCard(r2f[1],"West R2",odds,gamesRaw)+seriesCard(r2f[2],"East R2",odds,gamesRaw)+seriesCard(r2f[3],"East R2",odds,gamesRaw)+'</div></div>';
     if(hasR3)html+='<div class="round-section"><div class="rtitle">Conference Finals</div>'+
-      '<div class="two-col">'+seriesCard(r3[0],"West CF",odds)+seriesCard(r3[1],"East CF",odds)+'</div></div>';
+      '<div class="two-col">'+seriesCard(r3[0],"West CF",odds,gamesRaw)+seriesCard(r3[1],"East CF",odds,gamesRaw)+'</div></div>';
     if(hasR4)html+='<div class="round-section"><div class="rtitle">Stanley Cup Final</div>'+
-      '<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds)+'</div></div>';
+      '<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw)+'</div></div>';
     document.getElementById("main").innerHTML=html;
     document.getElementById("swrap").innerHTML=buildStandings(odds);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
