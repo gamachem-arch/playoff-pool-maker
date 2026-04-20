@@ -131,10 +131,10 @@ function defaultData() {
   return {
     title: "Playoff Pool",
     players: [
-      {name:"Player 1",teams:[]},
-      {name:"Player 2",teams:[]},
-      {name:"Player 3",teams:[]},
-      {name:"Player 4",teams:[]}
+      {name:"Player 1",abbrev:"P1",teams:[]},
+      {name:"Player 2",abbrev:"P2",teams:[]},
+      {name:"Player 3",abbrev:"P3",teams:[]},
+      {name:"Player 4",abbrev:"P4",teams:[]}
     ]
   };
 }
@@ -143,6 +143,8 @@ function readSetupNames() {
   setupPlayers.forEach(function(p, i) {
     var el = document.getElementById("pn"+i);
     if (el) p.name = el.value || ("Player "+(i+1));
+    var ael = document.getElementById("pa"+i);
+    if (ael) p.abbrev = ael.value.toUpperCase().substring(0,3) || p.name.substring(0,3).toUpperCase();
   });
   var tel = document.getElementById("setup-title");
   if (tel) setupTitle = tel.value || "Playoff Pool";
@@ -180,6 +182,7 @@ function renderSetup() {
     html += '<div class="player-block">';
     html += '<div class="player-head">';
     html += '<div class="pdot" style="background:'+pc.color+'"></div>';
+    html += '<input class="pname" id="pa'+i+'" value="'+escHtml(p.abbrev||"")+'" placeholder="ABC" maxlength="3" style="width:60px;text-transform:uppercase;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:1px;flex:0 0 60px" oninput="readSetupNames()">';
     html += '<input class="pname" id="pn'+i+'" value="'+escHtml(p.name)+'" placeholder="Player '+(i+1)+' name" oninput="readSetupNames()">';
     html += '<span class="pcount">'+p.teams.length+' teams</span>';
     if (setupPlayers.length > 2) {
@@ -269,7 +272,7 @@ function makePill(team) {
   if (i===null) return '<span class="pill-empty"></span>';
   var data = loadData();
   var pc = ALL_COLORS[i % ALL_COLORS.length];
-  var label = data.players[i].name.substring(0,3).toUpperCase();
+  var label = (data.players[i].abbrev || data.players[i].name.substring(0,3)).toUpperCase();
   return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+label+'</span>';
 }
 
@@ -324,7 +327,7 @@ function buildStandings(odds) {
     totals.map(function(p,i){
       var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
       return '<div class="scard'+(i===0?" first":"")+'"><div class="srank">'+ranks[i]+'</div>'+
-        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+escHtml(p.name.substring(0,3).toUpperCase())+'</span>'+
+        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+(p.abbrev||p.name.substring(0,3)).toUpperCase()+'</span>'+
         '<div class="sname">'+escHtml(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
         '<div class="steams">'+p.teams.join(" · ")+'</div></div>';
     }).join("")+'</div></div>';
