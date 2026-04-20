@@ -400,13 +400,18 @@ async function render() {
 // Init
 window.addEventListener('load', function() {
   try {
-    if (!loadPool()) {
+    const pool = loadPool();
+    if (!pool) {
+      document.getElementById('setup').style.display = 'block';
+      document.getElementById('main').style.display = 'none';
+      document.getElementById('standings-wrap').style.display = 'none';
+      document.getElementById('legend-wrap').style.display = 'none';
       showSetup();
     } else {
       render();
     }
   } catch(e) {
-    showSetup();
+    document.getElementById('main').innerHTML = '<div class="loading">Error: ' + e.message + '</div>';
   }
 });
 setInterval(() => { try { if (loadPool()) render(); } catch(e) {} }, 3600000);
