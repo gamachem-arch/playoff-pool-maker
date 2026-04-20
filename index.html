@@ -581,10 +581,12 @@ function getGameBadge(gamesData, t1, t2) {
   for (var i = 0; i < gamesData.length; i++) {
     var g = gamesData[i];
     if ([g.away,g.home].indexOf(t1)<0 || [g.away,g.home].indexOf(t2)<0) continue;
-    var gameUTCDate = g.startUTC.substring(0,10);
-    var nowUTCDate = new Date().toISOString().substring(0,10);
-    var yestUTCDate = new Date(Date.now()-86400000).toISOString().substring(0,10);
-    if (gameUTCDate !== nowUTCDate && gameUTCDate !== yestUTCDate) continue;
+    function toEasternDate2(utcStr) {
+      var d = new Date(utcStr); d.setHours(d.getHours()-4); return d.toISOString().substring(0,10);
+    }
+    var gameUTCDate = toEasternDate2(g.startUTC);
+    var nowEastern = toEasternDate2(new Date().toISOString());
+    if (gameUTCDate !== nowEastern) continue;
     var as = g.awayScore !== null ? g.awayScore : 0;
     var hs = g.homeScore !== null ? g.homeScore : 0;
     if (g.state === "FUT" || g.state === "PRE") return '<span class="game-badge">'+formatGameTime(g.startUTC)+'</span>';
