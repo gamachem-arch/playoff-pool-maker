@@ -603,7 +603,7 @@ document.addEventListener("DOMContentLoaded",function(){
   var pool=getActivePool();
   if(!pool){showPoolList();}else{showSection("main");doRender();}
 });
-setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main").style.display!=="none")doRender();},3600000);
+setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main").style.display!=="none")doRender();},300000);
 </script>
 </body>
 </html>
