@@ -583,7 +583,8 @@ function getGameBadge(gamesData, t1, t2) {
     if ([g.away,g.home].indexOf(t1)<0 || [g.away,g.home].indexOf(t2)<0) continue;
     var gameUTCDate = g.startUTC.substring(0,10);
     var nowUTCDate = new Date().toISOString().substring(0,10);
-    if (gameUTCDate !== nowUTCDate) continue;
+    var yestUTCDate = new Date(Date.now()-86400000).toISOString().substring(0,10);
+    if (gameUTCDate !== nowUTCDate && gameUTCDate !== yestUTCDate) continue;
     var as = g.awayScore !== null ? g.awayScore : 0;
     var hs = g.homeScore !== null ? g.homeScore : 0;
     if (g.state === "FUT" || g.state === "PRE") return '<span class="game-badge">'+formatGameTime(g.startUTC)+'</span>';
