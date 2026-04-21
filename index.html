@@ -80,6 +80,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .sh{padding:5px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between;}
 .tr{display:flex;align-items:center;gap:8px;padding:8px 12px;}
 .tr+.tr{border-top:1px solid var(--border);}
+.pool-pill{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:6px}
 .pill{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;min-width:34px;text-align:center;flex-shrink:0;}
 .pill-empty{min-width:34px;flex-shrink:0;display:inline-block;}
 .tname{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;flex:1;text-transform:uppercase;}.tlogo{width:20px;height:20px;object-fit:contain;flex-shrink:0;}
@@ -561,24 +562,21 @@ function buildLegend(pieSvg){
 function buildPieChart(totals, colorList) {
   var grand = totals.reduce(function(s,p){return s+p.total;},0);
   if (grand === 0) return "";
-  var cx=40, cy=40, r=34, start=0, gap=0.04;
+  var cx=40, cy=40, r=33, start=0, gap=0.06;
   var slices = "";
   totals.forEach(function(p) {
     var pct = p.total / grand;
     var angle = pct * 2 * Math.PI;
-    var s2 = start + gap/2;
-    var a2 = angle - gap;
-    if (a2 < 0.01) { start += angle; return; }
-    var x1 = cx + r * Math.sin(s2);
-    var y1 = cy - r * Math.cos(s2);
-    var x2 = cx + r * Math.sin(s2 + a2);
-    var y2 = cy - r * Math.cos(s2 + a2);
-    var large = a2 > Math.PI ? 1 : 0;
+    var s2 = start+gap/2, a2 = angle-gap;
+    if (a2 < 0.01){start+=angle;return;}
+    var x1=cx+r*Math.sin(s2), y1=cy-r*Math.cos(s2);
+    var x2=cx+r*Math.sin(s2+a2), y2=cy-r*Math.cos(s2+a2);
+    var large=a2>Math.PI?1:0;
     var col = colorList[p.ci % colorList.length].color;
-    slices += '<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+col+'"/>';
+    slices += '<path d="M'+cx+','+cy+' L'+x1.toFixed(2)+','+y1.toFixed(2)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(2)+','+y2.toFixed(2)+' Z" fill="'+col+'"/>';
     start += angle;
   });
-  return '<svg width="52" height="52" viewBox="0 0 80 80">'+slices+'</svg>';
+  return '<svg width="44" height="44" viewBox="0 0 80 80" style="flex-shrink:0">'+slices+'</svg>';
 }
 
 function buildStandings(odds){
