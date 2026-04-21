@@ -616,7 +616,7 @@ function getGameBadge(gamesData, t1, t2) {
     var as = g.awayScore !== null ? g.awayScore : 0;
     var hs = g.homeScore !== null ? g.homeScore : 0;
     if (g.state === "FUT" || g.state === "PRE") return '<span class="game-badge">'+formatGameTime(g.startUTC)+'</span>';
-    if (g.state === "LIVE" || g.state === "CRIT") return '<span class="game-badge live">🔴 '+g.away+" "+as+" · "+g.home+" "+hs+(g.period?" P"+g.period:"")+'</span>';
+    if (g.state === "LIVE" || g.state === "CRIT") return '<span class="game-badge live">'+g.away+" "+as+" · "+g.home+" "+hs+(g.period?" P"+g.period:"")+'</span>';
     if (g.state === "FINAL" || g.state === "OFF") return '<span class="game-badge final">'+g.away+" "+as+" · "+g.home+" "+hs+' F</span>';
   }
   return "";
