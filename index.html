@@ -550,7 +550,8 @@ function parseSeries(arr){
 function buildLegend(pieSvg){
   var pool=getActivePool();if(!pool)return"";
   var items=pool.players.map(function(p,i){var pc=ALL_COLORS[i%ALL_COLORS.length];
-    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div>'+esc(p.name)+'</div>';}).join("");
+    var abbrev=(p.abbrev||p.name.substring(0,3)).toUpperCase();
+    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted)"> — '+esc(p.name)+'</span></div>';}).join("");
   if(!pieSvg) return '<div class="legend">'+items+'</div>';
   return '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">'+items+'</div>'
@@ -560,21 +561,24 @@ function buildLegend(pieSvg){
 function buildPieChart(totals, colorList) {
   var grand = totals.reduce(function(s,p){return s+p.total;},0);
   if (grand === 0) return "";
-  var cx=40, cy=40, r=36, start=0;
+  var cx=40, cy=40, r=34, start=0, gap=0.04;
   var slices = "";
   totals.forEach(function(p) {
     var pct = p.total / grand;
     var angle = pct * 2 * Math.PI;
-    var x1 = cx + r * Math.sin(start);
-    var y1 = cy - r * Math.cos(start);
-    var x2 = cx + r * Math.sin(start + angle);
-    var y2 = cy - r * Math.cos(start + angle);
-    var large = angle > Math.PI ? 1 : 0;
+    var s2 = start + gap/2;
+    var a2 = angle - gap;
+    if (a2 < 0.01) { start += angle; return; }
+    var x1 = cx + r * Math.sin(s2);
+    var y1 = cy - r * Math.cos(s2);
+    var x2 = cx + r * Math.sin(s2 + a2);
+    var y2 = cy - r * Math.cos(s2 + a2);
+    var large = a2 > Math.PI ? 1 : 0;
     var col = colorList[p.ci % colorList.length].color;
-    slices += '<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+col+'" opacity="0.9"/>';
+    slices += '<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+large+',1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+col+'"/>';
     start += angle;
   });
-  return '<svg width="60" height="60" viewBox="0 0 80 80">'+slices+'</svg>';
+  return '<svg width="52" height="52" viewBox="0 0 80 80">'+slices+'</svg>';
 }
 
 function buildStandings(odds){
@@ -616,8 +620,8 @@ function getGameBadge(gamesData, t1, t2) {
     var as = g.awayScore !== null ? g.awayScore : 0;
     var hs = g.homeScore !== null ? g.homeScore : 0;
     if (g.state === "FUT" || g.state === "PRE") return '<span class="game-badge">'+formatGameTime(g.startUTC)+'</span>';
-    if (g.state === "LIVE" || g.state === "CRIT") return '<span class="game-badge live">'+as+" : "+hs+(g.period?" P"+g.period:"")+'</span>';
-    if (g.state === "FINAL" || g.state === "OFF") return '<span class="game-badge final">'+as+" : "+hs+' F</span>';
+    if (g.state === "LIVE" || g.state === "CRIT") return '<span class="game-badge live">'+g.away+' '+as+' : '+hs+' '+g.home+(g.period?' P'+g.period:'')+'</span>';
+    if (g.state === "FINAL" || g.state === "OFF") return '<span class="game-badge final">'+g.away+' '+as+' : '+hs+' '+g.home+' F</span>';
   }
   return "";
 }
