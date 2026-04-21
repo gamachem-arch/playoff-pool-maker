@@ -97,15 +97,15 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .tbd-r{padding:9px 12px;font-family:'Barlow Condensed',sans-serif;font-size:14px;color:var(--muted);}
 .standings{max-width:1120px;margin:24px auto 0;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;}
 .stitle{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;}
-.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 .scard{background:var(--surface2);border-radius:12px;padding:16px 12px;text-align:center;border:1px solid var(--border);position:relative;overflow:hidden;}
 .scard.first::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#fbbf24,transparent);}
 .srank{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 .sname{font-size:12px;color:var(--muted);margin:4px 0 6px;}
-.spct{font-family:'Barlow Condensed',sans-serif;font-size:32px;font-weight:900;line-height:1;}
+.spct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;line-height:1;}
 .steams{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.7;}
 .loading{text-align:center;padding:40px;color:var(--muted);}
-@media(max-width:640px){.four-col{grid-template-columns:1fr 1fr;}}
+@media(max-width:640px){.four-col{grid-template-columns:1fr 1fr;}.sgrid{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
 <body>
