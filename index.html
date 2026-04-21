@@ -588,10 +588,14 @@ function buildStandings(odds){
   }).sort(function(a,b){return b.total-a.total;});
   return '<div class="standings"><div class="stitle">Pool standings — combined cup odds</div><div class="sgrid">'+
     totals.map(function(p,i){var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
-      return '<div class="scard'+(i===0?" first":"")+'"><div class="srank">'+ranks[i]+'</div>'+
-        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
-        '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
-        '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
+      var ab=(p.abbrev||p.name.substring(0,3)).toUpperCase();
+      return '<div class="scard'+(i===0?" first":"")+'">'
+        +'<div class="srank">'+ranks[i]+'</div>'
+        +'<span style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;margin-bottom:6px;background:'+pc.bg+';color:'+pc.color+'">'+ab+'</span>'
+        +'<div class="sname">'+esc(p.name)+'</div>'
+        +'<div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'
+        +'<div class="steams">'+p.teams.join(" · ")+'</div>'
+        +'</div>';}).join("")+'</div></div>';
 }
 
 
