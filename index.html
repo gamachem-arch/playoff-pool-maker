@@ -97,6 +97,16 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .round-section.is-collapsed .round-toggle{transform:rotate(-90deg);}
 .round-body.collapsed{display:none;}
 .team-odds-list{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.series{cursor:pointer;}
+.series-games{border-top:1px solid var(--border);padding:6px 10px;display:none;}
+.series-games.open{display:block;}
+.game-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-family:'Barlow Condensed',sans-serif;font-size:11px;}
+.game-num{font-weight:700;color:var(--muted);min-width:20px;font-size:10px;}
+.game-date-col{color:var(--muted);min-width:40px;font-size:10px;}
+.game-result{flex:1;}
+.game-result.live{color:#f87171;font-weight:700;}
+.game-result.final{color:var(--green);}
+.game-result.future{color:var(--muted);}
 .team-odds-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
 .team-rank{font-size:9px;color:var(--muted);width:14px;text-align:right;flex-shrink:0;}
 .tlogo-sm{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
@@ -144,6 +154,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 
 <script>
 var ODDS_API = "https://script.google.com/macros/s/AKfycbyeMYsFI6sVfRnuPJgX_6-Ev9qr7dosfnpD-T-s9UtmMoQ03fjfHy6wuY3AJ63wU2wY/exec";
+var NHL_WORKER = "https://lucky-forest-af32.gamache-m.workers.dev";
 var ALL_COLORS = [
   {color:"#3b82f6",bg:"rgba(59,130,246,0.15)"},
   {color:"#10b981",bg:"rgba(16,185,129,0.15)"},
@@ -534,6 +545,33 @@ function makePill(team) {
   var label=(pool.players[i].abbrev||pool.players[i].name.substring(0,3)).toUpperCase();
   return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+label+'</span>';
 }
+function toggleSeriesGames(id){
+  var el=document.getElementById('sg-'+id);
+  if(el)el.classList.toggle('open');
+}
+function buildSeriesGames(t1,t2,gamesData){
+  if(!gamesData||!gamesData.length)return'';
+  var games=gamesData.filter(function(g){
+    return [g.away,g.home].indexOf(t1)>=0&&[g.away,g.home].indexOf(t2)>=0;
+  }).sort(function(a,b){return new Date(a.startUTC)-new Date(b.startUTC);});
+  if(!games.length)return'';
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return games.map(function(g,i){
+    var d=new Date(g.startUTC);
+    var dateStr=months[d.getUTCMonth()]+' '+d.getUTCDate();
+    var num='<span class="game-num">G'+(i+1)+'</span>';
+    var dc='<span class="game-date-col">'+dateStr+'</span>';
+    var as=g.awayScore||0,hs=g.homeScore||0;
+    if(g.state==='OFF'||g.state==='FINAL'){
+      var ot=(g.periodType&&g.periodType!=='REG')?' OT':'';
+      return'<div class="game-row">'+num+dc+'<span class="game-result final">'+g.away+' '+as+' · '+hs+' '+g.home+ot+'</span></div>';
+    }else if(g.state==='LIVE'||g.state==='CRIT'){
+      return'<div class="game-row">'+num+'<span class="game-date-col" style="color:#f87171">LIVE</span><span class="game-result live">'+g.away+' '+as+' · '+hs+' '+g.home+(g.period?' P'+g.period:'')+'</span></div>';
+    }else{
+      return'<div class="game-row">'+num+dc+'<span class="game-result future">'+formatGameTime(g.startUTC)+'</span></div>';
+    }
+  }).join('');
+}
 function deltaBadge(d){
   if(d===null||d===undefined||d===0)return'';
   var cls=d>0?'up':'down',arrow=d>0?'▲':'▼';
@@ -576,11 +614,13 @@ function seriesCard(s,label,odds,gd,dm){
   var l1='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_light.svg" onerror="this.style.display=\'none\'">';
   var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_light.svg" onerror="this.style.display=\'none\'">';
   var badge=s&&s.topTeam&&s.topTeam!=="TBD"?getGameBadge(gd,s.topTeam,s.bottomTeam):"";
-  return '<div class="series"><div class="sh">'+label+badge+'</div>'+
+  var sid=(t1+'-'+t2).toLowerCase();
+  return '<div class="series" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+label+badge+'</div>'+
     '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+(o1?'<span class="todds">'+o1+'</span>':"")+deltaBadge(d1)+
     '<span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
     '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+(o2?'<span class="todds">'+o2+'</span>':"")+deltaBadge(d2)+
-    '<span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div></div>';
+    '<span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>'
+    +'<div class="series-games" id="sg-'+sid+'">'+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
@@ -689,7 +729,21 @@ async function doRender(){
     var r2=await fetch(ODDS_API+"?action=scores&t="+Date.now());
     var nhlRaw=await r2.json();
     var gamesRaw=[];
-    try{var rg=await fetch(ODDS_API+"?action=games&t="+Date.now());gamesRaw=await rg.json();}catch(e){}
+    try{
+      var nhlRes=await fetch(NHL_WORKER+"?action=nhl&t="+Date.now(),{cache:"no-store"});
+      var nhlJson=await nhlRes.json();
+      (nhlJson.gamesByDate||[]).forEach(function(day){
+        (day.games||[]).forEach(function(g){
+          if(g.gameType!==3)return;
+          gamesRaw.push({away:g.awayTeam.abbrev,home:g.homeTeam.abbrev,
+            awayScore:g.awayTeam.score!=null?g.awayTeam.score:null,
+            homeScore:g.homeTeam.score!=null?g.homeTeam.score:null,
+            state:g.gameState,startUTC:g.startTimeUTC,
+            period:(g.periodDescriptor&&g.periodDescriptor.number)||null,
+            periodType:(g.periodDescriptor&&g.periodDescriptor.periodType)||'REG'});
+        });
+      });
+    }catch(e){}
     var odds={};
     Object.keys(rawOdds).forEach(function(k){var v=rawOdds[k];if(typeof v==='string')odds[k.toUpperCase().trim()]=v;});
     var today=new Date().toISOString().substring(0,10);
