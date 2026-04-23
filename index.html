@@ -603,7 +603,44 @@ function makeRoundSection(id,title,bodyHtml,collapsed){
     +'<span class="rtitle">'+title+'</span><span class="round-toggle">▼</span></div>'
     +'<div class="round-body'+(collapsed?' collapsed':'')+'" id="rb-'+id+'">'+bodyHtml+'</div></div>';
 }
-function buildTeamOdds(oddsMap,roundOdds){
+function buildSparkline(histData,team){
+  var points=((histData)||[])
+    .filter(function(d){return (d.team||'').toUpperCase()===team.toUpperCase()&&d.cup!=null&&d.cup!=='';})
+    .sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+    .map(function(d){return{date:d.date,val:parseFloat(d.cup)};})
+    .filter(function(d){return!isNaN(d.val);});
+  if(points.length<2)return'';
+  var W=200,H=38,padX=8,padY=8;
+  var vals=points.map(function(p){return p.val;});
+  var min=Math.min.apply(null,vals),max=Math.max.apply(null,vals);
+  var range=max-min||0.5;
+  var xs=points.map(function(_,i){return padX+(i/(points.length-1))*(W-padX*2);});
+  var ys=vals.map(function(v){return padY+(H-padY*2)*(1-(v-min)/range);});
+  var trend=vals[vals.length-1]-vals[0];
+  var color=trend>0.2?'#4ade80':trend<-0.2?'#f87171':'#9ca3af';
+  var poly=xs.map(function(x,i){return x.toFixed(1)+','+ys[i].toFixed(1);}).join(' ');
+  var area='M'+xs[0].toFixed(1)+','+H+' '+xs.map(function(x,i){return'L'+x.toFixed(1)+','+ys[i].toFixed(1);}).join(' ')+' L'+xs[xs.length-1].toFixed(1)+','+H+' Z';
+  var dots=points.map(function(p,i){return'<circle cx="'+xs[i].toFixed(1)+'" cy="'+ys[i].toFixed(1)+'" r="'+(i===points.length-1?2.5:1.8)+'" fill="'+color+'"/>';}).join('');
+  var dateLabels=points.map(function(p,i){
+    var md=(p.date||'').substring(5).replace('-','/');
+    var anchor=i===0?'start':i===points.length-1?'end':'middle';
+    return'<text x="'+xs[i].toFixed(1)+'" y="'+(H+9)+'" font-size="6.5" fill="#6b7280" text-anchor="'+anchor+'" font-family="monospace">'+md+'</text>';
+  }).join('');
+  var valLabels=points.map(function(p,i){
+    if(i!==0&&i!==points.length-1)return'';
+    var anchor=i===0?'start':'end';
+    return'<text x="'+xs[i].toFixed(1)+'" y="'+(ys[i]-4).toFixed(1)+'" font-size="6.5" fill="'+color+'" text-anchor="'+anchor+'" font-weight="700" font-family="sans-serif">'+p.val.toFixed(1)+'%</text>';
+  }).join('');
+  return'<svg width="100%" viewBox="0 0 '+W+' '+(H+14)+'" preserveAspectRatio="none" style="display:block;height:52px;margin-bottom:4px">'
+    +'<defs><linearGradient id="sg-'+team+'" x1="0" y1="0" x2="0" y2="1">'
+    +'<stop offset="0%" stop-color="'+color+'" stop-opacity="0.25"/>'
+    +'<stop offset="100%" stop-color="'+color+'" stop-opacity="0"/>'
+    +'</linearGradient></defs>'
+    +'<path d="'+area+'" fill="url(#sg-'+team+')"/>'
+    +'<polyline points="'+poly+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+    +dots+valLabels+dateLabels+'</svg>';
+}
+function buildTeamOdds(oddsMap,roundOdds,histData){
   if(!Object.keys(oddsMap).length)return'';
   var ranked=(ALL_TEAMS||[]).map(function(t){return{t:t,v:parseFloat((oddsMap[t]||'0%').replace('%',''))};})
     .sort(function(a,b){return b.v-a.v;});
@@ -612,6 +649,7 @@ function buildTeamOdds(oddsMap,roundOdds){
   var rows=interleaved.map(function(x){
     var rank=ranked.indexOf(x)+1;
     var ro=(roundOdds&&roundOdds[x.t])||{};
+    var spark=buildSparkline(histData,x.t);
     return'<div class="team-odds-row" onclick="toggleTeamDetail(\''+x.t+'\')">'
       +'<div class="tor-main">'
       +'<span class="team-rank">'+rank+'</span>'
@@ -621,6 +659,7 @@ function buildTeamOdds(oddsMap,roundOdds){
       +'<span class="team-cup-pct">'+x.v.toFixed(1)+'%</span>'
       +'</div>'
       +'<div class="team-detail" id="td-'+x.t+'">'
+      +spark
       +'<div class="detail-grid">'
       +'<div class="detail-cell"><span class="detail-label">Win R1</span><span class="detail-val">'+(ro.r2||'—')+'</span></div>'
       +'<div class="detail-cell"><span class="detail-label">Win R2</span><span class="detail-val">'+(ro.r3||'—')+'</span></div>'
@@ -753,10 +792,14 @@ async function doRender(){
   document.getElementById('legwrap').innerHTML = buildLegend(null);
   drawPoolSwitcher();
   try{
-    var r1=await fetch(ODDS_API+"?t="+Date.now());
+    var [r1,r2,histRes]=await Promise.all([
+      fetch(ODDS_API+"?t="+Date.now()),
+      fetch(ODDS_API+"?action=scores&t="+Date.now()),
+      fetch(ODDS_API+"?action=history&t="+Date.now())
+    ]);
     var rawOdds=await r1.json();
-    var r2=await fetch(ODDS_API+"?action=scores&t="+Date.now());
     var nhlRaw=await r2.json();
+    var historyData=[]; try{historyData=await histRes.json();}catch(e){}
     var gamesRaw=[];
     try{
       var nhlRes=await fetch(NHL_WORKER+"?action=nhl&t="+Date.now(),{cache:"no-store"});
@@ -818,7 +861,7 @@ async function doRender(){
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
-    document.getElementById("swrap").innerHTML=buildStandings(odds)+buildTeamOdds(odds,roundOdds);
+    document.getElementById("swrap").innerHTML=buildStandings(odds)+buildTeamOdds(odds,roundOdds,historyData);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
