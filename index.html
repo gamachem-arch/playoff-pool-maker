@@ -108,11 +108,21 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .game-result.live{color:#f87171;font-weight:700;}
 .game-result.final{color:var(--green);}
 .game-result.future{color:var(--muted);}
-.team-odds-row{display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);}
+.team-odds-row{display:flex;flex-direction:column;background:var(--surface2);border-radius:8px;border:1px solid var(--border);cursor:pointer;overflow:hidden;}
+.tor-main{display:flex;align-items:center;gap:6px;padding:5px 8px;}
 .team-rank{font-size:9px;color:var(--muted);width:14px;text-align:right;flex-shrink:0;}
 .tlogo-sm{width:16px;height:16px;object-fit:contain;flex-shrink:0;}
 .team-name-odds{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;flex:1;}
 .team-cup-pct{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--green);}
+.team-detail{display:none;border-top:1px solid var(--border);padding:6px 8px 8px;}
+.team-detail.open{display:block;}
+.detail-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;}
+.detail-cell{display:flex;flex-direction:column;align-items:center;padding:4px 2px;background:var(--surface);border-radius:5px;}
+.detail-label{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:1px;}
+.detail-val{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--green);}
+.series-odds-header{display:flex;align-items:center;gap:4px;padding:5px 10px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);letter-spacing:0.5px;text-transform:uppercase;}
+.soh-team{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--text);}
+.soh-pct{color:var(--green);font-weight:600;}
 
   .game-badge { font-family: 'Barlow Condensed', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.5px; }
   .game-badge.live { color: #f87171; }
@@ -550,6 +560,10 @@ function toggleSeriesGames(id){
   var el=document.getElementById('sg-'+id);
   if(el)el.classList.toggle('open');
 }
+function toggleTeamDetail(team){
+  var el=document.getElementById('td-'+team);
+  if(el)el.classList.toggle('open');
+}
 function buildSeriesGames(t1,t2,gamesData){
   if(!gamesData||!gamesData.length)return'';
   var games=gamesData.filter(function(g){
@@ -589,7 +603,7 @@ function makeRoundSection(id,title,bodyHtml,collapsed){
     +'<span class="rtitle">'+title+'</span><span class="round-toggle">▼</span></div>'
     +'<div class="round-body'+(collapsed?' collapsed':'')+'" id="rb-'+id+'">'+bodyHtml+'</div></div>';
 }
-function buildTeamOdds(oddsMap){
+function buildTeamOdds(oddsMap,roundOdds){
   if(!Object.keys(oddsMap).length)return'';
   var ranked=(ALL_TEAMS||[]).map(function(t){return{t:t,v:parseFloat((oddsMap[t]||'0%').replace('%',''))};})
     .sort(function(a,b){return b.v-a.v;});
@@ -597,17 +611,27 @@ function buildTeamOdds(oddsMap){
   var interleaved=col1.map(function(a,i){return col2[i]?[a,col2[i]]:[a];}).reduce(function(acc,v){return acc.concat(v);},[]);
   var rows=interleaved.map(function(x){
     var rank=ranked.indexOf(x)+1;
-    return'<div class="team-odds-row">'
+    var ro=(roundOdds&&roundOdds[x.t])||{};
+    return'<div class="team-odds-row" onclick="toggleTeamDetail(\''+x.t+'\')">'
+      +'<div class="tor-main">'
       +'<span class="team-rank">'+rank+'</span>'
       +'<img class="tlogo-sm" src="https://assets.nhle.com/logos/nhl/svg/'+x.t+'_light.svg" onerror="this.style.display=\'none\'">'
       +'<span class="team-name-odds">'+x.t+'</span>'
       +makePill(x.t)
-      +'<span class="team-cup-pct">'+x.v.toFixed(1)+'%</span></div>';
+      +'<span class="team-cup-pct">'+x.v.toFixed(1)+'%</span>'
+      +'</div>'
+      +'<div class="team-detail" id="td-'+x.t+'">'
+      +'<div class="detail-grid">'
+      +'<div class="detail-cell"><span class="detail-label">Win R1</span><span class="detail-val">'+(ro.r2||'—')+'</span></div>'
+      +'<div class="detail-cell"><span class="detail-label">Win R2</span><span class="detail-val">'+(ro.r3||'—')+'</span></div>'
+      +'<div class="detail-cell"><span class="detail-label">Conf Final</span><span class="detail-val">'+(ro.r4||'—')+'</span></div>'
+      +'<div class="detail-cell"><span class="detail-label">Win Cup</span><span class="detail-val">'+(ro.cup||x.v.toFixed(1)+'%')+'</span></div>'
+      +'</div></div></div>';
   }).join('');
   return'<div class="standings" style="margin-top:16px"><div class="stitle">All teams — Stanley Cup odds</div>'
     +'<div class="team-odds-list">'+rows+'</div></div>';
 }
-function seriesCard(s,label,odds,gd,dm){
+function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
@@ -616,12 +640,16 @@ function seriesCard(s,label,odds,gd,dm){
   var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_light.svg" onerror="this.style.display=\'none\'">';
   var badge=s&&s.topTeam&&s.topTeam!=="TBD"?getGameBadge(gd,s.topTeam,s.bottomTeam):"";
   var sid=(t1+'-'+t2).toLowerCase();
+  var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
+  var ro1=(roundOdds&&roundOdds[t1])||{},ro2=(roundOdds&&roundOdds[t2])||{};
+  var sr1=ro1[roundKey]||'',sr2=ro2[roundKey]||'';
+  var seriesHeader=(sr1||sr2)?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win series</div>':'';
   return '<div class="series" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+label+badge+'</div>'+
     '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span><div class="odds-wrap">'+deltaBadge(d1)+(o1?'<span class="todds">'+o1+'</span>':"")+
     '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
     '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span><div class="odds-wrap">'+deltaBadge(d2)+(o2?'<span class="todds">'+o2+'</span>':"")+
     '</div><span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>'
-    +'<div class="series-games" id="sg-'+sid+'">'+buildSeriesGames(t1,t2,gd)+'</div></div>';
+    +'<div class="series-games" id="sg-'+sid+'">'+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
@@ -745,8 +773,12 @@ async function doRender(){
         });
       });
     }catch(e){}
-    var odds={};
-    Object.keys(rawOdds).forEach(function(k){var v=rawOdds[k];if(typeof v==='string')odds[k.toUpperCase().trim()]=v;});
+    var odds={},roundOdds={};
+    Object.keys(rawOdds).forEach(function(k){
+      var v=rawOdds[k],team=k.toUpperCase().trim();
+      if(typeof v==='string'){odds[team]=v;}
+      else if(typeof v==='object'&&v!==null){if(v.cup)odds[team]=v.cup;roundOdds[team]={r2:v.r2||'',r3:v.r3||'',r4:v.r4||'',cup:v.cup||''};}
+    });
     var today=new Date().toISOString().substring(0,10);
     if(localStorage.getItem('makerOddsSnapDate')!==today&&Object.keys(odds).length){
       var curr=localStorage.getItem('makerOddsSnapCurr');
@@ -768,14 +800,14 @@ async function doRender(){
     var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap);}).join("")+'</div>';
+      +'<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1);}).join("")+'</div>';
     var html=makeRoundSection('r1','Round 1',r1body,r2HasTeams);
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap)+'</div>';
+      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2)+'</div>';
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams);
-    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap)+'</div>';
+    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams);
-    var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap)+'</div>';
+    var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4)+'</div>';
     html+=makeRoundSection('r4','Stanley Cup Final',r4body,!r4HasTeams);
     document.getElementById("main").innerHTML=html;
     var activePool=getActivePool();
@@ -786,7 +818,7 @@ async function doRender(){
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
-    document.getElementById("swrap").innerHTML=buildStandings(odds)+buildTeamOdds(odds);
+    document.getElementById("swrap").innerHTML=buildStandings(odds)+buildTeamOdds(odds,roundOdds);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
