@@ -84,12 +84,13 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .pill{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;min-width:34px;text-align:center;flex-shrink:0;}
 .pill-empty{min-width:34px;flex-shrink:0;display:inline-block;}
 .tname{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:700;flex:1;text-transform:uppercase;}.tlogo{width:20px;height:20px;object-fit:contain;flex-shrink:0;}
-.todds{font-size:10px;color:var(--green);flex-shrink:0;font-weight:500;min-width:36px;text-align:right;}
+.odds-wrap{display:flex;align-items:center;justify-content:flex-end;flex-shrink:0;width:50px;gap:2px;}
+.todds{font-size:10px;color:var(--green);font-weight:500;}
 .twins{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:900;width:18px;text-align:right;color:var(--muted);flex-shrink:0;}
 .twins.lead{color:var(--green);}
 .tname.elim{opacity:0.3;text-decoration:line-through;}
 .tname.champ{color:#fbbf24;}
-.odds-delta{font-size:7px;font-weight:700;flex-shrink:0;line-height:1;align-self:center;margin-right:-5px;}
+.odds-delta{font-size:7px;font-weight:700;flex-shrink:0;line-height:1;}
 .odds-delta.up{color:#4ade80;}
 .odds-delta.down{color:#f87171;}
 .round-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;border-top:1px solid var(--border);padding:10px 4px;margin-bottom:8px;}
@@ -616,10 +617,10 @@ function seriesCard(s,label,odds,gd,dm){
   var badge=s&&s.topTeam&&s.topTeam!=="TBD"?getGameBadge(gd,s.topTeam,s.bottomTeam):"";
   var sid=(t1+'-'+t2).toLowerCase();
   return '<div class="series" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+label+badge+'</div>'+
-    '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span>'+deltaBadge(d1)+(o1?'<span class="todds">'+o1+'</span>':"")+
-    '<span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
-    '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span>'+deltaBadge(d2)+(o2?'<span class="todds">'+o2+'</span>':"")+
-    '<span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>'
+    '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span><div class="odds-wrap">'+deltaBadge(d1)+(o1?'<span class="todds">'+o1+'</span>':"")+
+    '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
+    '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span><div class="odds-wrap">'+deltaBadge(d2)+(o2?'<span class="todds">'+o2+'</span>':"")+
+    '</div><span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>'
     +'<div class="series-games" id="sg-'+sid+'">'+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
