@@ -670,7 +670,57 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
   return'<div class="standings" style="margin-top:16px"><div class="stitle">All teams — Stanley Cup odds</div>'
     +'<div class="team-odds-list">'+rows+'</div></div>';
 }
-function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum){
+function buildDualSparkline(histData,t1,t2,roundKey){
+  function getPoints(team){
+    return((histData)||[])
+      .filter(function(d){return(d.team||'').toUpperCase()===team.toUpperCase()&&d[roundKey]!=null&&d[roundKey]!=='';})
+      .sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
+      .map(function(d){return{date:d.date,val:parseFloat(d[roundKey])};})
+      .filter(function(d){return!isNaN(d.val);});
+  }
+  var pts1=getPoints(t1),pts2=getPoints(t2);
+  if(pts1.length<2&&pts2.length<2)return'';
+  var dateSet={};
+  pts1.concat(pts2).forEach(function(p){dateSet[p.date]=1;});
+  var allDates=Object.keys(dateSet).sort();
+  if(allDates.length<2)return'';
+  var W=200,H=36,padX=8,padY=6;
+  var allVals=pts1.concat(pts2).map(function(p){return p.val;});
+  var min=Math.min.apply(null,allVals),max=Math.max.apply(null,allVals);
+  var range=max-min||1;
+  function toCoords(pts){
+    return pts.map(function(p){
+      var di=allDates.indexOf(p.date);
+      var x=padX+(di/(allDates.length-1))*(W-padX*2);
+      var y=padY+(H-padY*2)*(1-(p.val-min)/range);
+      return{x:x,y:y,val:p.val};
+    });
+  }
+  var c1=toCoords(pts1),c2=toCoords(pts2);
+  function polyStr(pts){return pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');}
+  var col1='#60a5fa',col2='#fb923c';
+  var last1=c1.length?c1[c1.length-1]:null,last2=c2.length?c2[c2.length-1]:null;
+  var dateLabels=allDates.map(function(d,i){
+    var md=d.substring(5).replace('-','/');
+    var x=padX+(i/(allDates.length-1))*(W-padX*2);
+    var anchor=i===0?'start':i===allDates.length-1?'end':'middle';
+    return'<text x="'+x.toFixed(1)+'" y="'+(H+9)+'" font-size="6.5" fill="#6b7280" text-anchor="'+anchor+'" font-family="monospace">'+md+'</text>';
+  }).join('');
+  var dots1=c1.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c1.length-1?2.5:1.8)+'" fill="'+col1+'"/>';}).join('');
+  var dots2=c2.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c2.length-1?2.5:1.8)+'" fill="'+col2+'"/>';}).join('');
+  return'<div style="padding:6px 8px 4px;border-bottom:1px solid var(--border)">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
+    +'<span style="font-size:9px;font-weight:700;color:'+col1+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+t1+(last1?' <span style="opacity:0.7">'+last1.val.toFixed(1)+'%</span>':'')+'</span>'
+    +'<span style="font-size:7px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;opacity:0.5">win series</span>'
+    +'<span style="font-size:9px;font-weight:700;color:'+col2+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+(last2?'<span style="opacity:0.7">'+last2.val.toFixed(1)+'%</span> ':'')+t2+'</span>'
+    +'</div>'
+    +'<svg width="100%" viewBox="0 0 '+W+' '+(H+14)+'" preserveAspectRatio="none" style="display:block;height:44px">'
+    +(c1.length>=2?'<polyline points="'+polyStr(c1)+'" fill="none" stroke="'+col1+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>':'')
+    +(c2.length>=2?'<polyline points="'+polyStr(c2)+'" fill="none" stroke="'+col2+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>':'')
+    +dots1+dots2+dateLabels
+    +'</svg></div>';
+}
+function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
@@ -682,13 +732,14 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum){
   var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
   var ro1=(roundOdds&&roundOdds[t1])||{},ro2=(roundOdds&&roundOdds[t2])||{};
   var sr1=ro1[roundKey]||'',sr2=ro2[roundKey]||'';
-  var seriesHeader=(sr1||sr2)?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
+  var dualSpark=buildDualSparkline(histData,t1,t2,roundKey);
+  var seriesHeader=(!dualSpark&&(sr1||sr2))?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
   return '<div class="series" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+label+badge+'</div>'+
     '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span><div class="odds-wrap">'+deltaBadge(d1)+(o1?'<span class="todds">'+o1+'</span>':"")+
     '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
     '<div class="tr">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span><div class="odds-wrap">'+deltaBadge(d2)+(o2?'<span class="todds">'+o2+'</span>':"")+
     '</div><span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>'
-    +'<div class="series-games" id="sg-'+sid+'">'+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
+    +'<div class="series-games" id="sg-'+sid+'">'+dualSpark+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
@@ -843,14 +894,14 @@ async function doRender(){
     var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1);}).join("")+'</div>';
+      +'<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
     var html=makeRoundSection('r1','Round 1',r1body,r2HasTeams);
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2)+'</div>';
+      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams);
-    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3)+'</div>';
+    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams);
-    var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4)+'</div>';
+    var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4,historyData)+'</div>';
     html+=makeRoundSection('r4','Stanley Cup Final',r4body,!r4HasTeams);
     document.getElementById("main").innerHTML=html;
     var activePool=getActivePool();
