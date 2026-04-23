@@ -643,7 +643,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum){
   var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
   var ro1=(roundOdds&&roundOdds[t1])||{},ro2=(roundOdds&&roundOdds[t2])||{};
   var sr1=ro1[roundKey]||'',sr2=ro2[roundKey]||'';
-  var seriesHeader=(sr1||sr2)?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win series</div>':'';
+  var seriesHeader=(sr1||sr2)?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
   return '<div class="series" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+label+badge+'</div>'+
     '<div class="tr">'+makePill(t1)+l1+'<span class="tname'+(t2won?" elim":"")+(t1won?" champ":"")+'">'+t1+'</span><div class="odds-wrap">'+deltaBadge(d1)+(o1?'<span class="todds">'+o1+'</span>':"")+
     '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>'+
