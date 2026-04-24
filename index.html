@@ -202,10 +202,10 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
   if(myData&&myRank>0){
     var rl=["1st","2nd","3rd","4th"][myRank-1]||(myRank+'th');
     var pc=ALL_COLORS[myData.ci%ALL_COLORS.length];
-    standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:10px 14px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:16px;cursor:pointer;flex-shrink:0">'
-      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:64px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
-      +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:5px;display:inline-block">'+esc(me)+'</span>'
-      +'<div style="font-size:9px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:3px">'+myData.total.toFixed(1)+'%</div>'
+    standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:6px 10px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:12px;cursor:pointer;flex-shrink:0">'
+      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:42px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
+      +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:3px;display:inline-block">'+esc(me)+'</span>'
+      +'<div style="font-size:9px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px">'+myData.total.toFixed(1)+'%</div>'
       +'</div>';
   }
   var pool=getActivePool();
@@ -214,10 +214,10 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
     return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted);font-size:11px"> — '+esc(p.name)+'</span></div>';
   }).join('');
   if(!pieSvg)return'<div class="legend">'+items+'</div>';
-  return'<div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;">'
+  return'<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px;">'
     +standingBlock
-    +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 12px;">'+items+'</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 8px;">'+items+'</div>'
     +pieSvg+'</div></div>';
 }
 var R1W = [{t:"COL",b:"LAK"},{t:"DAL",b:"MIN"},{t:"VGK",b:"UTA"},{t:"EDM",b:"ANA"}];
