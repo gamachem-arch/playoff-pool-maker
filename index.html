@@ -650,12 +650,13 @@ function makeRoundSection(id,title,bodyHtml,collapsed){
     +'<span class="rtitle">'+title+'</span><span class="round-toggle">▼</span></div>'
     +'<div class="round-body'+(collapsed?' collapsed':'')+'" id="rb-'+id+'">'+bodyHtml+'</div></div>';
 }
-function buildSparkline(histData,team){
+function buildSparkline(histData,team,liveVal){
   var raw=((histData)||[])
     .filter(function(d){return (d.team||'').toUpperCase()===team.toUpperCase()&&d.cup!=null&&d.cup!=='';})
     .sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
     .map(function(d){return{date:d.date,val:parseFloat(d.cup)};})
     .filter(function(d){return!isNaN(d.val);});
+  if(liveVal!=null){var td=new Date().toISOString().substring(0,10);var ix=raw.findIndex(function(d){return d.date===td;});if(ix>=0)raw[ix].val=liveVal;else raw.push({date:td,val:liveVal});}
   if(raw.length<2)return'';
   // Filter to significant changes (>= 0.8pp), always keep first & last
   var THRESH=0.8;
@@ -708,7 +709,7 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
   var rows=interleaved.map(function(x){
     var rank=ranked.indexOf(x)+1;
     var ro=(roundOdds&&roundOdds[x.t])||{};
-    var spark=buildSparkline(histData,x.t);
+    var spark=buildSparkline(histData,x.t,x.v);
     var isMine=myTeams.indexOf(x.t)>=0;
     var myStyle=isMine?'border-left-color:'+myColor+';':'';
     return'<div class="team-odds-row'+(isMine?' my-team':'')+'" style="'+myStyle+'" onclick="toggleTeamDetail(\''+x.t+'\')">'
@@ -731,7 +732,7 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
   return'<div class="standings" style="margin-top:16px"><div class="stitle">All teams — Stanley Cup odds</div>'
     +'<div class="team-odds-list">'+rows+'</div></div>';
 }
-function buildDualSparkline(histData,t1,t2,roundKey){
+function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2){
   function getPoints(team){
     return((histData)||[])
       .filter(function(d){return(d.team||'').toUpperCase()===team.toUpperCase()&&d[roundKey]!=null&&d[roundKey]!=='';})
@@ -744,8 +745,12 @@ function buildDualSparkline(histData,t1,t2,roundKey){
   var map1={},map2={};
   pts1.forEach(function(p){map1[p.date]=p.val;});
   pts2.forEach(function(p){map2[p.date]=p.val;});
+  // Inject today's live values as final point
+  var today=new Date().toISOString().substring(0,10);
+  if(liveVal1!=null)map1[today]=liveVal1;
+  if(liveVal2!=null)map2[today]=liveVal2;
   var dateSet={};
-  pts1.concat(pts2).forEach(function(p){dateSet[p.date]=1;});
+  Object.keys(map1).concat(Object.keys(map2)).forEach(function(d){dateSet[d]=1;});
   var allDates=Object.keys(dateSet).sort();
   if(allDates.length<2)return'';
   // Filter to dates where either team shifted >= 1pp, always keep first & last
@@ -816,7 +821,9 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
   var ro1=(roundOdds&&roundOdds[t1])||{},ro2=(roundOdds&&roundOdds[t2])||{};
   var sr1=ro1[roundKey]||'',sr2=ro2[roundKey]||'';
-  var dualSpark=buildDualSparkline(histData,t1,t2,roundKey);
+  var lv1=ro1[roundKey]?parseFloat((ro1[roundKey]||'0%').replace('%','')):null;
+  var lv2=ro2[roundKey]?parseFloat((ro2[roundKey]||'0%').replace('%','')):null;
+  var dualSpark=buildDualSparkline(histData,t1,t2,roundKey,lv1,lv2);
   var seriesHeader=(!dualSpark&&(sr1||sr2))?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
   var live=isSeriesLive(gd,t1,t2);
   var liveDot=live?'<span class="live-dot"></span>':'';
