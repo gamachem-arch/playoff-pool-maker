@@ -946,20 +946,29 @@ async function doRender(){
       if(typeof v==='string'){odds[team]=v;}
       else if(typeof v==='object'&&v!==null){if(v.cup)odds[team]=v.cup;roundOdds[team]={r2:v.r2||'',r3:v.r3||'',r4:v.r4||'',cup:v.cup||''};}
     });
-    var today=new Date().toISOString().substring(0,10);
-    if(localStorage.getItem('makerOddsSnapDate')!==today&&Object.keys(odds).length){
-      var curr=localStorage.getItem('makerOddsSnapCurr');
-      if(curr)localStorage.setItem('makerOddsSnapPrev',curr);
-      localStorage.setItem('makerOddsSnapDate',today);
-    }
-    if(Object.keys(odds).length)localStorage.setItem('makerOddsSnapCurr',JSON.stringify(odds));
-    var prevOdds=JSON.parse(localStorage.getItem('makerOddsSnapPrev')||'{}');
+    // Odds delta — compare live odds to most recent historical snapshot from a previous day
     var deltaMap={};
-    Object.keys(odds).forEach(function(t){
-      var cur=parseFloat((odds[t]||'0%').replace('%',''));
-      var prev=parseFloat((prevOdds[t]||'0%').replace('%',''));
-      deltaMap[t]=prevOdds[t]?parseFloat((cur-prev).toFixed(1)):null;
-    });
+    try{
+      if(historyData&&historyData.length>0){
+        var todayStr=new Date().toISOString().substring(0,10);
+        var histDates=[...new Set(historyData.map(function(r){return r.date;}).filter(Boolean))].sort();
+        var prevDate=null;
+        for(var di=histDates.length-1;di>=0;di--){if(histDates[di]<todayStr){prevDate=histDates[di];break;}}
+        if(prevDate){
+          var prevSnap={};
+          historyData.filter(function(r){return r.date===prevDate;}).forEach(function(r){
+            if(r.team)prevSnap[r.team.toUpperCase()]=parseFloat(r.cup)||0;
+          });
+          Object.keys(odds).forEach(function(t){
+            if(prevSnap[t]!==undefined){
+              var cur=parseFloat((odds[t]||'0%').replace('%',''));
+              var d=parseFloat((cur-prevSnap[t]).toFixed(1));
+              if(Math.abs(d)>=0.1)deltaMap[t]=d;
+            }
+          });
+        }
+      }
+    }catch(e){}
     var parsed=parseSeries(nhlRaw)||{r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
       r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
     var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
