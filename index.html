@@ -177,6 +177,48 @@ var ALL_COLORS = [
   {color:"#84cc16",bg:"rgba(132,204,22,0.15)"}
 ];
 var ALL_TEAMS = ["COL","EDM","TBL","LAK","BUF","MTL","PIT","ANA","MIN","OTT","PHI","UTA","CAR","VGK","DAL","BOS"];
+
+// My player — localStorage personalization per pool
+var _makerState = {};
+function _myPlayerKey(){var p=getActivePool();return p?'myPlayer_'+(p.id||p.title):null;}
+function getMyPlayer(){try{var k=_myPlayerKey();return k?localStorage.getItem(k):null;}catch(e){return null;}}
+function setMyPlayer(abbrev){
+  try{var k=_myPlayerKey();if(!k)return;
+    if(abbrev===getMyPlayer())localStorage.removeItem(k);else localStorage.setItem(k,abbrev);
+  }catch(e){}
+  _rebuildMakerUI();
+}
+function _rebuildMakerUI(){
+  var st=_makerState;
+  if(!st.pieTotals)return;
+  document.getElementById('legwrap').innerHTML=_buildMakerLegendPie(st.pieTotals,st.pieSvg);
+  document.getElementById('swrap').innerHTML=buildStandings(st.odds)+buildTeamOdds(st.odds,st.roundOdds,st.historyData);
+}
+function _buildMakerLegendPie(pieTotals,pieSvg){
+  var me=getMyPlayer();
+  var myData=me?pieTotals.find(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();}):null;
+  var myRank=me?pieTotals.findIndex(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();})+1:-1;
+  var standingBlock='';
+  if(myData&&myRank>0){
+    var rl=["1st","2nd","3rd","4th"][myRank-1]||(myRank+'th');
+    var pc=ALL_COLORS[myData.ci%ALL_COLORS.length];
+    standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:12px 20px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:16px;cursor:pointer;flex-shrink:0">'
+      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:72px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
+      +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:5px;display:inline-block">'+esc(me)+'</span>'
+      +'<div style="font-size:9px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:3px">'+myData.total.toFixed(1)+'% cup odds</div>'
+      +'</div>';
+  }
+  var pool=getActivePool();
+  var items=(pool?pool.players:[]).map(function(p,i){var pc=ALL_COLORS[i%ALL_COLORS.length];
+    var abbrev=(p.abbrev||p.name.substring(0,3)).toUpperCase();
+    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted)"> — '+esc(p.name)+'</span></div>';
+  }).join('');
+  if(!pieSvg)return'<div class="legend">'+items+'</div>';
+  return'<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px">'
+    +standingBlock
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">'+items+'</div>'
+    +pieSvg+'</div>';
+}
 var R1W = [{t:"COL",b:"LAK"},{t:"DAL",b:"MIN"},{t:"VGK",b:"UTA"},{t:"EDM",b:"ANA"}];
 var R1E = [{t:"CAR",b:"OTT"},{t:"TBL",b:"MTL"},{t:"BUF",b:"BOS"},{t:"PIT",b:"PHI"}];
 
@@ -787,14 +829,7 @@ function parseSeries(arr){
     r3:["M","N"].map(function(l){return byLetter[l]||null;}),r4:byLetter["O"]||null};
 }
 function buildLegend(pieSvg){
-  var pool=getActivePool();if(!pool)return"";
-  var items=pool.players.map(function(p,i){var pc=ALL_COLORS[i%ALL_COLORS.length];
-    var abbrev=(p.abbrev||p.name.substring(0,3)).toUpperCase();
-    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted)"> — '+esc(p.name)+'</span></div>';}).join("");
-  if(!pieSvg) return '<div class="legend">'+items+'</div>';
-  return '<div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:24px">'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;">'+items+'</div>'
-    +pieSvg+'</div>';
+  return _buildMakerLegendPie(_makerState.pieTotals||[],pieSvg);
 }
 
 function buildPieChart(totals, colorList) {
@@ -824,9 +859,15 @@ function buildStandings(odds){
     var total=0;p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
     return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
   }).sort(function(a,b){return b.total-a.total;});
-  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds</div><div class="sgrid">'+
+  var me=getMyPlayer();
+  var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
+  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds'+hint+'</div><div class="sgrid">'+
     totals.map(function(p,i){var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
-      return '<div class="scard'+(i===0?" first":"")+'"><div class="srank">'+ranks[i]+'</div>'+
+      var abbrev=(p.abbrev||'').toUpperCase();
+      var isMe=me&&abbrev===me.toUpperCase();
+      return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+'">'+
+        (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
+        '<div class="srank">'+ranks[i]+'</div>'+
         '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
         '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
@@ -942,6 +983,7 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("swrap").innerHTML=buildStandings(odds)+buildTeamOdds(odds,roundOdds,historyData);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
