@@ -1066,5 +1066,66 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main").style.display!=="none")doRender();},300000);
 </script>
+
+<script>
+// PWA install banner — iOS guide or Android one-tap install
+(function(){
+  var KEY = 'pwa_banner_v1';
+  if (localStorage.getItem(KEY)) return;
+  var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode:standalone)').matches;
+  if (isStandalone) return;
+
+  var ua = navigator.userAgent;
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
+  var isSafari = isIOS && /safari/i.test(ua) && !/crios|fxios|opios|chromium/i.test(ua);
+  var isAndroid = /android/i.test(ua);
+  var deferredPrompt = null;
+
+  function dismiss() {
+    localStorage.setItem(KEY, '1');
+    var b = document.getElementById('pwa-banner');
+    if (b) { b.style.transform = 'translateY(110%)'; setTimeout(function(){ b.remove(); }, 350); }
+  }
+
+  function showBanner(type) {
+    var b = document.createElement('div');
+    b.id = 'pwa-banner';
+    b.style.cssText = 'position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#1a1f2e;border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -8px 32px rgba(0,0,0,0.5);padding:14px 16px;display:flex;align-items:center;gap:12px;transform:translateY(110%);transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1);';
+    var icon = '<svg width="36" height="36" viewBox="0 0 36 36" style="flex-shrink:0"><rect width="36" height="36" rx="8" fill="#3b82f6"/><path d="M18 8v13M13 13l5-5 5 5" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 22v4h14v-4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    if (type === 'ios') {
+      b.innerHTML = icon
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-family:Inter,sans-serif;font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:3px">Add to Home Screen</div>'
+        + '<div style="font-family:Inter,sans-serif;font-size:12px;color:#9ca3af;line-height:1.5">Tap&nbsp;<svg style="display:inline-block;vertical-align:-3px" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>&nbsp;Share, then <strong style="color:#e5e7eb">Add to Home Screen</strong></div>'
+        + '</div>'
+        + '<button onclick="(function(){localStorage.setItem(\'pwa_banner_v1\',\'1\');var b=document.getElementById(\'pwa-banner\');if(b){b.style.transform=\'translateY(110%)\';setTimeout(function(){b.remove()},350);}})()" style="flex-shrink:0;background:rgba(255,255,255,0.08);border:none;color:#9ca3af;font-size:13px;cursor:pointer;padding:6px 10px;border-radius:6px;font-family:Inter,sans-serif">Dismiss</button>';
+    } else {
+      b.innerHTML = icon
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-family:Inter,sans-serif;font-size:13px;font-weight:700;color:#f9fafb;margin-bottom:3px">Install App</div>'
+        + '<div style="font-family:Inter,sans-serif;font-size:12px;color:#9ca3af">Add to your home screen for quick access</div>'
+        + '</div>'
+        + '<button id="pwa-install-btn" style="flex-shrink:0;background:#3b82f6;border:none;color:#fff;font-family:Inter,sans-serif;font-size:12px;font-weight:700;padding:8px 14px;border-radius:8px;cursor:pointer;white-space:nowrap">Add</button>'
+        + '<button onclick="(function(){localStorage.setItem(\'pwa_banner_v1\',\'1\');var b=document.getElementById(\'pwa-banner\');if(b){b.style.transform=\'translateY(110%)\';setTimeout(function(){b.remove()},350);}})()" style="flex-shrink:0;background:rgba(255,255,255,0.08);border:none;color:#9ca3af;font-size:13px;cursor:pointer;padding:6px 10px;border-radius:6px;font-family:Inter,sans-serif">✕</button>';
+    }
+    document.body.appendChild(b);
+    setTimeout(function(){ b.style.transform = 'translateY(0)'; }, 100);
+    if (type === 'android') {
+      document.getElementById('pwa-install-btn').addEventListener('click', function(){
+        if (deferredPrompt) { deferredPrompt.prompt(); deferredPrompt.userChoice.then(function(){ dismiss(); }); }
+      });
+    }
+  }
+
+  if (isSafari) {
+    setTimeout(function(){ showBanner('ios'); }, 2500);
+  } else if (isAndroid) {
+    window.addEventListener('beforeinstallprompt', function(e){
+      e.preventDefault(); deferredPrompt = e;
+      setTimeout(function(){ showBanner('android'); }, 2500);
+    });
+  }
+})();
+</script>
 </body>
 </html>
