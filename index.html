@@ -157,6 +157,13 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .share-series-team { flex:1; display:flex; align-items:center; gap:4px; }
 .share-series-score { font-size:14px; font-weight:900; color:#f9fafb; font-family:'Barlow Condensed',sans-serif; letter-spacing:1px; flex-shrink:0; min-width:28px; text-align:center; }
 .share-btn { background:rgba(255,255,255,0.08); border:none; color:var(--muted); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:Inter,sans-serif; vertical-align:middle; }
+
+.pdot { cursor:pointer; transition:transform 0.15s; flex-shrink:0; }
+.pdot:active { transform:scale(0.88); }
+.color-palette { display:flex; flex-wrap:wrap; gap:6px; padding:8px 0 4px 0; }
+.cswatch { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform 0.12s, border-color 0.12s; flex-shrink:0; }
+.cswatch:active { transform:scale(0.85); }
+.cswatch.selected { border-color:#fff; }
 </style>
 </head>
 <body>
@@ -193,6 +200,13 @@ var ALL_COLORS = [
   {color:"#f97316",bg:"rgba(249,115,22,0.15)"},
   {color:"#84cc16",bg:"rgba(132,204,22,0.15)"}
 ];
+var PALETTE = [
+  "#3b82f6","#10b981","#f59e0b","#a855f7",
+  "#ec4899","#06b6d4","#f97316","#84cc16",
+  "#ef4444","#14b8a6","#8b5cf6","#f43f5e"
+];
+function hexToRgba(hex,a){var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return'rgba('+r+','+g+','+b+','+a+')';}
+function getPC(pool,idx){var def=ALL_COLORS[idx%ALL_COLORS.length];if(!pool||!pool.players||!pool.players[idx]||!pool.players[idx].color)return def;var c=pool.players[idx].color;return{color:c,bg:hexToRgba(c,0.15)};}
 var ALL_TEAMS = ["COL","EDM","TBL","LAK","BUF","MTL","PIT","ANA","MIN","OTT","PHI","UTA","CAR","VGK","DAL","BOS"];
 
 // My player — localStorage personalization per pool
@@ -218,7 +232,7 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
   var standingBlock='';
   if(myData&&myRank>0){
     var rl=["1st","2nd","3rd","4th"][myRank-1]||(myRank+'th');
-    var pc=ALL_COLORS[myData.ci%ALL_COLORS.length];
+    var pc=getPC(getActivePool(),myData.ci);
     standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:6px 10px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:12px;cursor:pointer;flex-shrink:0">'
       +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:42px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
       +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:3px;display:inline-block">'+esc(me)+'</span>'
@@ -226,7 +240,7 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
       +'</div>';
   }
   var pool=getActivePool();
-  var items=(pool?pool.players:[]).map(function(p,i){var pc=ALL_COLORS[i%ALL_COLORS.length];
+  var items=(pool?pool.players:[]).map(function(p,i){var pc=getPC(pool,i);
     var abbrev=(p.abbrev||p.name.substring(0,3)).toUpperCase();
     return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted);font-size:11px"> — '+esc(p.name)+'</span></div>';
   }).join('');
@@ -429,7 +443,7 @@ function startEditPool(id) {
   editingPoolId = id;
   setupTitle = pool.title || "Playoff Pool";
   setupPlayers = pool.players.map(function(p) {
-    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3).toUpperCase(), teams:p.teams.slice()};
+    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3).toUpperCase(), teams:p.teams.slice(), color:p.color||null};
   });
   showSection("setup");
   drawSetup();
@@ -486,7 +500,7 @@ function drawSetup() {
   wrap.appendChild(pl);
 
   setupPlayers.forEach(function(p,i) {
-    var pc = ALL_COLORS[i%ALL_COLORS.length];
+    var pc = setupPlayers[i].color ? {color:setupPlayers[i].color, bg:hexToRgba(setupPlayers[i].color,0.15)} : ALL_COLORS[i%ALL_COLORS.length];
     var block = document.createElement("div");
     block.className = "player-block";
     var head = document.createElement("div");
@@ -494,6 +508,31 @@ function drawSetup() {
     var dot = document.createElement("div");
     dot.className = "pdot";
     dot.style.background = pc.color;
+    dot.style.width = "18px";
+    dot.style.height = "18px";
+    dot.style.borderRadius = "50%";
+    dot.title = "Change colour";
+    (function(pi, dotEl, blockEl) {
+      dotEl.onclick = function() {
+        var existing = blockEl.querySelector('.color-palette');
+        if (existing) { existing.remove(); return; }
+        var pal = document.createElement('div');
+        pal.className = 'color-palette';
+        PALETTE.forEach(function(hex) {
+          var sw = document.createElement('div');
+          sw.className = 'cswatch' + (hex === (setupPlayers[pi].color || PALETTE[pi % PALETTE.length]) ? ' selected' : '');
+          sw.style.background = hex;
+          sw.onclick = function(e) {
+            e.stopPropagation();
+            readCurrentNames();
+            setupPlayers[pi].color = hex;
+            drawSetup();
+          };
+          pal.appendChild(sw);
+        });
+        blockEl.insertBefore(pal, blockEl.querySelector('.teams-grid'));
+      };
+    })(i, dot, block);
     head.appendChild(dot);
     var ai = document.createElement("input");
     ai.className = "pabbrev";
@@ -612,7 +651,7 @@ function getPlayerFor(team) {
 }
 function makePill(team) {
   var i=getPlayerFor(team); if(i===null)return '<span class="pill-empty"></span>';
-  var pool=getActivePool(); var pc=ALL_COLORS[i%ALL_COLORS.length];
+  var pool=getActivePool(); var pc=getPC(pool,i);
   var label=(pool.players[i].abbrev||pool.players[i].name.substring(0,3)).toUpperCase();
   return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+label+'</span>';
 }
@@ -716,7 +755,7 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
   var me=getMyPlayer();
   var pool=getActivePool();
   var myTeams=me&&pool?pool.players.filter(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();}).reduce(function(acc,p){return acc.concat(p.teams||[]);},[]):[];
-  var myColor=me&&pool?(function(){var idx=pool.players.findIndex(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();});return idx>=0?ALL_COLORS[idx%ALL_COLORS.length].color:'';})():'';
+  var myColor=me&&pool?(function(){var idx=pool.players.findIndex(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();});return idx>=0?getPC(pool,idx).color:'';})():'';
   var ranked=(ALL_TEAMS||[]).map(function(t){return{t:t,v:parseFloat((oddsMap[t]||'0%').replace('%',''))};})
     .sort(function(a,b){return b.v-a.v;});
   var col1=ranked.slice(0,8),col2=ranked.slice(8);
@@ -952,7 +991,7 @@ function buildShareSeriesRowMaker(s) {
   var o1 = getTeamOwnerMaker(s.topTeam), o2 = getTeamOwnerMaker(s.bottomTeam);
   function pill(o) {
     if (!o) return '';
-    var pc = ALL_COLORS[o.ci % ALL_COLORS.length];
+    var pc = getPC(getActivePool(), o.ci);
     return `<span style="background:${pc.color};color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:10px;flex-shrink:0">${o.abbrev}</span>`;
   }
   var t1elim = s.bottomWins === 4, t2elim = s.topWins === 4;
@@ -975,7 +1014,7 @@ function showShareOverlay() {
   var rankLabels = ['1ST','2ND','3RD','4TH'];
 
   var standingsHtml = st.pieTotals.map(function(p, i) {
-    var pc = ALL_COLORS[p.ci % ALL_COLORS.length];
+    var pc = p.color ? {color:p.color,bg:hexToRgba(p.color,0.15)} : getPC(getActivePool(), p.ci);
     var abbrev = (p.abbrev||'').toUpperCase();
     var isMe = me && abbrev === me.toUpperCase();
     return `<div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:10px 8px;text-align:center;position:relative">
@@ -1028,7 +1067,7 @@ function buildStandings(odds,histData){
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
   return '<div class="standings"><div class="stitle">Pool standings — combined cup odds'+hint+' <button class="share-btn" onclick="showShareOverlay()">📸 Share</button></div><div class="sgrid">'+
-    totals.map(function(p,i){var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
+    totals.map(function(p,i){var pc=p.color?{color:p.color,bg:hexToRgba(p.color,0.15)}:getPC(pool,p.ci);
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
       return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+'">'+
@@ -1158,7 +1197,7 @@ async function doRender(){
     var pieTotals2=(activePool?activePool.players:[]).map(function(p,i){
       var total=0;
       p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
-      return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
+      return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed};
