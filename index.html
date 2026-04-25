@@ -656,7 +656,7 @@ function buildSparkline(histData,team,liveVal){
   var raw=((histData)||[])
     .filter(function(d){return (d.team||'').toUpperCase()===team.toUpperCase()&&d.cup!=null&&d.cup!=='';})
     .sort(function(a,b){return(a.date||'').localeCompare(b.date||'');})
-    .map(function(d){return{date:d.date,val:normPct(d.cup)};})
+    .map(function(d){return{date:d.date,val:parseFloat(d.cup)};})
     .filter(function(d){return!isNaN(d.val);});
   if(liveVal!=null){var td=new Date().toISOString().substring(0,10);var ix=raw.findIndex(function(d){return d.date===td;});if(ix>=0)raw[ix].val=liveVal;else raw.push({date:td,val:liveVal});}
   if(raw.length<2)return'';
@@ -881,7 +881,7 @@ function buildPlayerSparkline(histData,teams,stroke){
   var points=dates.map(function(date){
     return teams.reduce(function(sum,team){
       var e=histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
-      return sum+(e?normPct(e.cup)||0:0);
+      return sum+(e?parseFloat(e.cup)||0:0);
     },0);
   });
   var min=Math.min.apply(null,points),max=Math.max.apply(null,points),range=max-min||1;
