@@ -144,6 +144,19 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .steams{font-size:10px;color:var(--muted);margin-top:6px;line-height:1.7;}
 .loading{text-align:center;padding:40px;color:var(--muted);}
 @media(max-width:640px){.four-col{grid-template-columns:1fr 1fr;}.sgrid{grid-template-columns:repeat(2,1fr);}.tname{font-size:14px;}.spct{font-size:28px;}.tr{gap:4px;padding:8px 12px;}.odds-wrap{width:54px;}.tlogo{width:16px;height:16px;}.pill{min-width:28px;padding:2px 4px;font-size:9px;}.pill-empty{min-width:28px;}}
+
+.team-odds-row.eliminated { opacity: 0.35; }
+.team-odds-row.eliminated .team-name-odds { text-decoration: line-through; }
+.ptc-bar-row { display:flex; align-items:center; gap:5px; }
+.ptc-bar-track { flex:1; background:rgba(255,255,255,0.07); border-radius:2px; height:3px; }
+.ptc-bar-fill { height:100%; border-radius:2px; opacity:0.75; }
+.ptc-label { font-size:9px; color:var(--muted); font-family:Inter,sans-serif; flex-shrink:0; }
+#share-overlay { position:fixed; inset:0; z-index:10000; background:#0d1117; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:16px 14px; box-sizing:border-box; }
+.share-section-label { font-size:9px; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; margin:12px 0 6px; font-family:Inter,sans-serif; }
+.share-series-row { display:flex; align-items:center; gap:6px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+.share-series-team { flex:1; display:flex; align-items:center; gap:4px; }
+.share-series-score { font-size:14px; font-weight:900; color:#f9fafb; font-family:'Barlow Condensed',sans-serif; letter-spacing:1px; flex-shrink:0; min-width:28px; text-align:center; }
+.share-btn { background:rgba(255,255,255,0.08); border:none; color:var(--muted); font-size:11px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:Inter,sans-serif; vertical-align:middle; }
 </style>
 </head>
 <body>
@@ -713,8 +726,9 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
     var ro=(roundOdds&&roundOdds[x.t])||{};
     var spark=buildSparkline(histData,x.t,x.v);
     var isMine=myTeams.indexOf(x.t)>=0;
+    var isElim=x.v<0.1;
     var myStyle=isMine?'border-left-color:'+myColor+';':'';
-    return'<div class="team-odds-row'+(isMine?' my-team':'')+'" style="'+myStyle+'" onclick="toggleTeamDetail(\''+x.t+'\')">'
+    return'<div class="team-odds-row'+(isMine?' my-team':'')+(isElim?' eliminated':'')+'" style="'+myStyle+'" onclick="toggleTeamDetail(\''+x.t+'\')">'
       +'<div class="tor-main">'
       +'<span class="team-rank">'+rank+'</span>'
       +'<img class="tlogo-sm" src="https://assets.nhle.com/logos/nhl/svg/'+x.t+'_light.svg" onerror="this.style.display=\'none\'">'
@@ -904,6 +918,106 @@ function buildPlayerSparkline(histData,teams,stroke){
     +dots+'</svg>';
 }
 
+
+function getTeamOwnerMaker(team) {
+  var pool = getActivePool();
+  if (!pool) return null;
+  for (var i = 0; i < pool.players.length; i++) {
+    var p = pool.players[i];
+    if ((p.teams||[]).indexOf(team) >= 0) return { abbrev: (p.abbrev||p.name.substring(0,3)).toUpperCase(), ci: i };
+  }
+  return null;
+}
+
+function buildPathToCup(teams, oddsMap, playerColor) {
+  var bars = teams
+    .map(function(t) { return { t: t, pct: parseFloat((oddsMap[t]||'0%').replace('%','')) }; })
+    .filter(function(x) { return x.pct > 0.05; })
+    .sort(function(a,b) { return b.pct - a.pct; });
+  if (!bars.length) return '';
+  var max = bars[0].pct;
+  var inner = bars.map(function(x) {
+    var w = Math.round((x.pct / max) * 100);
+    return `<div class="ptc-bar-row">
+      <span class="ptc-label" style="width:22px;text-align:right">${x.t}</span>
+      <div class="ptc-bar-track"><div class="ptc-bar-fill" style="width:${w}%;background:${playerColor}"></div></div>
+      <span class="ptc-label" style="width:30px">${x.pct.toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  return `<div style="margin-top:7px;display:flex;flex-direction:column;gap:4px;padding:0 2px">${inner}</div>`;
+}
+
+function buildShareSeriesRowMaker(s) {
+  if (!s || s.topTeam === 'TBD') return '';
+  var o1 = getTeamOwnerMaker(s.topTeam), o2 = getTeamOwnerMaker(s.bottomTeam);
+  function pill(o) {
+    if (!o) return '';
+    var pc = ALL_COLORS[o.ci % ALL_COLORS.length];
+    return `<span style="background:${pc.color};color:#fff;font-size:8px;font-weight:800;padding:1px 5px;border-radius:10px;flex-shrink:0">${o.abbrev}</span>`;
+  }
+  var t1elim = s.bottomWins === 4, t2elim = s.topWins === 4;
+  return `<div class="share-series-row">
+    <div class="share-series-team" style="${t1elim?'opacity:0.4':''}">
+      ${pill(o1)}<span style="font-size:11px;font-weight:700;color:#f9fafb;font-family:'Barlow Condensed',sans-serif">${s.topTeam}</span>
+    </div>
+    <div class="share-series-score">${s.topWins}–${s.bottomWins}</div>
+    <div class="share-series-team" style="justify-content:flex-end;${t2elim?'opacity:0.4':''}">
+      <span style="font-size:11px;font-weight:700;color:#f9fafb;font-family:'Barlow Condensed',sans-serif">${s.bottomTeam}</span>${pill(o2)}
+    </div>
+  </div>`;
+}
+
+function showShareOverlay() {
+  var st = _makerState;
+  if (!st.pieTotals) return;
+  var me = getMyPlayer();
+  var pool = getActivePool();
+  var rankLabels = ['1ST','2ND','3RD','4TH'];
+
+  var standingsHtml = st.pieTotals.map(function(p, i) {
+    var pc = ALL_COLORS[p.ci % ALL_COLORS.length];
+    var abbrev = (p.abbrev||'').toUpperCase();
+    var isMe = me && abbrev === me.toUpperCase();
+    return `<div style="background:rgba(255,255,255,0.05);border-radius:12px;padding:10px 8px;text-align:center;position:relative">
+      ${isMe ? '<div style="position:absolute;top:5px;right:5px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:rgba(255,255,255,0.07);padding:2px 5px;border-radius:4px">you</div>' : ''}
+      <div style="font-size:8px;color:var(--muted);letter-spacing:1px;margin-bottom:3px;font-family:Inter,sans-serif">${rankLabels[i]}</div>
+      <span style="background:${pc.color};color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:0.3px;font-family:Inter,sans-serif">${esc(abbrev)}</span>
+      <div style="font-size:10px;color:var(--muted);margin:3px 0 2px;font-family:Inter,sans-serif">${esc(p.name)}</div>
+      <div style="font-size:24px;font-weight:900;color:${pc.color};font-family:'Barlow Condensed',sans-serif;line-height:1.1;margin-bottom:3px">${p.total.toFixed(1)}%</div>
+      <div style="font-size:8px;color:var(--muted);font-family:Inter,sans-serif">${p.teams.join(' · ')}</div>
+    </div>`;
+  }).join('');
+
+  var seriesHtml = '';
+  if (st.parsed) {
+    var r1all = ((st.parsed.r1w||[]).concat(st.parsed.r1e||[])).filter(function(s) { return s && s.topTeam !== 'TBD'; });
+    var r2all = (st.parsed.r2||[]).filter(function(s) { return s && s.topTeam !== 'TBD'; });
+    var r3all = (st.parsed.r3||[]).filter(function(s) { return s && s.topTeam !== 'TBD'; });
+    if (r1all.length) seriesHtml += `<div class="share-section-label">Round 1</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">${r1all.map(buildShareSeriesRowMaker).join('')}</div>`;
+    if (r2all.length) seriesHtml += `<div class="share-section-label">Round 2</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">${r2all.map(buildShareSeriesRowMaker).join('')}</div>`;
+    if (r3all.length) seriesHtml += `<div class="share-section-label">Conference Finals</div>${r3all.map(buildShareSeriesRowMaker).join('')}`;
+    if (st.parsed.r4 && st.parsed.r4.topTeam !== 'TBD') seriesHtml += `<div class="share-section-label">Stanley Cup Final</div>${buildShareSeriesRowMaker(st.parsed.r4)}`;
+  }
+
+  var date = new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+  var title = pool ? esc(pool.title) : 'Playoff Pool';
+  var overlay = document.createElement('div');
+  overlay.id = 'share-overlay';
+  overlay.innerHTML = `<div style="max-width:440px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;color:#f9fafb">🏒 ${title.toUpperCase()}</div>
+        <div style="font-size:10px;color:var(--muted);font-family:Inter,sans-serif">${date}</div>
+      </div>
+      <button onclick="document.getElementById('share-overlay').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:7px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:12px">✕ Close</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">${standingsHtml}</div>
+    ${seriesHtml}
+    <div style="text-align:center;padding:16px 0 4px;font-size:10px;color:rgba(255,255,255,0.2);font-family:Inter,sans-serif">📸 take a screenshot to share</div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
 function buildStandings(odds,histData){
   var pool=getActivePool();if(!pool)return"";
   var ranks=["1st","2nd","3rd","4th","5th","6th","7th","8th"];
@@ -913,7 +1027,7 @@ function buildStandings(odds,histData){
   }).sort(function(a,b){return b.total-a.total;});
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
-  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds'+hint+'</div><div class="sgrid">'+
+  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds'+hint+' <button class="share-btn" onclick="showShareOverlay()">📸 Share</button></div><div class="sgrid">'+
     totals.map(function(p,i){var pc=ALL_COLORS[p.ci%ALL_COLORS.length];
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
@@ -922,7 +1036,7 @@ function buildStandings(odds,histData){
         '<div class="srank">'+ranks[i]+'</div>'+
         '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
-        buildPlayerSparkline(histData,p.teams,null)+
+        buildPlayerSparkline(histData,p.teams,null)+buildPathToCup(p.teams,odds,pc.color)+
         '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
 }
 
@@ -1050,7 +1164,7 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
-    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData};
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
