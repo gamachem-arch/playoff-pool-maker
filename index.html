@@ -976,7 +976,7 @@ async function doRender(){
     var [r1,r2,histRes]=await Promise.all([
       fetch(ODDS_API+"?t="+Date.now()),
       fetch(ODDS_API+"?action=scores&t="+Date.now()),
-      fetch(ODDS_API+"?action=history&t="+Date.now())
+      fetch(ODDS_API+"?action=history&t="+Date.now(),{cache:"no-store"})
     ]);
     var rawOdds=await r1.json();
     var nhlRaw=await r2.json();
