@@ -1083,6 +1083,8 @@ function buildStandings(odds,histData){
 function formatGameTime(utcStr) {
   var d = new Date(utcStr);
   var h = d.getHours(), m = d.getMinutes();
+  // NHL uses noon as placeholder when game time isn't confirmed
+  if (h === 12 && m === 0) return "TBD";
   var ampm = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return h + (m ? ":" + String(m).padStart(2,"0") : "") + " " + ampm;
