@@ -164,6 +164,64 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .cswatch { width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid transparent; transition:transform 0.12s, border-color 0.12s; flex-shrink:0; }
 .cswatch:active { transform:scale(0.85); }
 .cswatch.selected { border-color:#fff; }
+
+/* ── Bracket View ─────────────────────────────── */
+/* Tuned for iPhone 14/16 Pro (~393px viewport) */
+#bracket-section { margin:0 auto; padding:0 4px; }
+.bracket-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:12px 8px 14px; max-width:460px; margin:0 auto; }
+.bracket-conf-labels { display:flex; justify-content:space-between; padding:0 2px; margin-bottom:8px; }
+.bracket-conf-label { font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; letter-spacing:1.5px; color:var(--muted); text-transform:uppercase; }
+/* bracket-half: fills wrap width, capped by bracket-wrap max-width */
+.bracket-half { display:flex; align-items:center; margin-bottom:2px; }
+.bc-half-group { display:flex; gap:4px; flex:1; align-items:center; }
+.bc-center-gap { width:8px; flex-shrink:0; }
+.bc-r1-col { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
+.bc-r2-col { width:56px; flex-shrink:0; display:flex; flex-direction:column; align-items:stretch; }
+.bc-round-label { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:3px; }
+/* bracket-middle fills same way */
+.bracket-middle { display:flex; align-items:center; margin:4px 0 2px; }
+.bc-cf-col { flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center; }
+.bc-scf-col { width:60px; flex-shrink:0; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+/* Larger R1 cards */
+.bc-card-lg .bc-team { padding:7px 4px; }
+.bc-card-lg .bc-name { font-size:15px; }
+.bc-card-lg .bc-wins { font-size:17px; }
+.bc-card-lg .bc-logo { width:15px; height:15px; }
+.bc-cup-emoji { font-size:20px; line-height:1; }
+.bc-cup-year { font-family:'Barlow Condensed',sans-serif; font-size:7px; font-weight:700; letter-spacing:1.2px; color:var(--muted); text-transform:uppercase; margin-bottom:2px; }
+.bc-card { background:var(--surface2); border:1px solid var(--border); border-radius:7px; overflow:hidden; }
+.bc-card.bc-tbd { opacity:0.3; }
+.bc-card.bc-live { border-color:#f87171; box-shadow:0 0 0 1px #f8717133; }
+.bc-team { display:flex; align-items:center; gap:4px; padding:5px 8px 5px 4px; border-left:2px solid transparent; }
+.bc-team + .bc-team { border-top:1px solid var(--border); }
+.bc-logo { width:13px; height:13px; object-fit:contain; flex-shrink:0; }
+.bc-name { font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:700; flex:1; min-width:0; }
+.bc-wins { font-family:'Barlow Condensed',sans-serif; font-size:15px; font-weight:900; color:var(--muted); flex-shrink:0; min-width:14px; text-align:right; }
+.bc-wins.bc-lead { color:var(--green); }
+.bc-team.bc-elim { opacity:0.4; }
+.bc-team.bc-elim .bc-name { text-decoration:line-through; }
+.bc-card { cursor:pointer; }
+.bc-games-wrap { display:none; border-top:1px solid var(--border); padding:4px 3px 3px; }
+.bc-card.bc-open .bc-games-wrap { display:block; }
+.bc-games-wrap .game-row { display:flex; align-items:baseline; gap:2px; padding:1px 0; }
+.bc-games-wrap .game-num { font-family:'Barlow Condensed',sans-serif; font-size:8px; font-weight:700; color:var(--muted); min-width:14px; }
+.bc-games-wrap .game-date-col { font-size:8px; color:var(--muted); min-width:26px; flex-shrink:0; }
+.bc-games-wrap .game-result { font-size:8px; flex:1; }
+.bc-games-wrap .game-result.final { color:var(--text); }
+.bc-games-wrap .game-result.live { color:#f87171; }
+.bc-games-wrap .game-result.future { color:var(--muted); }
+.bc-gr { display:flex; align-items:baseline; gap:2px; font-family:'Barlow Condensed',sans-serif; font-size:11px; color:var(--muted); padding:1px 0; line-height:1.3; }
+.bc-gr .bc-gn { font-size:9px; font-weight:700; flex-shrink:0; min-width:14px; }
+.bc-gr .bc-win { color:#d1d5db; font-weight:700; }
+.bc-gr-live { color:#f87171; }
+/* Compact past-round cards: logo + pill only */
+.bc-card-sm .bc-name { display:none; }
+.bc-card-sm .bc-wins { display:none; }
+.bc-card-sm .bc-logo { width:16px; height:16px; }
+.bc-card-sm .bc-team { padding:6px 4px; justify-content:center; gap:5px; }
+.bc-card-sm .bc-pill { font-size:7px; }
+.bc-team.bc-loser { opacity:0.18; }
+.bc-pill { display:inline-flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; padding:1px 5px; border-radius:6px; letter-spacing:0.2px; flex-shrink:0; line-height:1; }
 </style>
 </head>
 <body>
@@ -172,10 +230,11 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   <div class="eyebrow">2026 NHL Postseason</div>
   <h1 id="pool-title">Playoff Pool</h1>
   <div class="sub" id="sub">Loading...</div>
-  <div style="margin-top:8px" id="header-btns">
-    <button class="btn" onclick="doRefresh()">↻ Refresh</button>
-    <button class="btn" onclick="showSetup()">⚙ Edit Pool</button>
-    <button class="btn" onclick="showPoolList()">☰ My Pools</button>
+  <div style="margin-top:8px;display:flex;flex-wrap:nowrap;justify-content:center;gap:6px;" id="header-btns">
+    <button class="btn" style="margin:0;padding:5px 10px" onclick="doRefresh()">↻ Refresh</button>
+    <button class="btn" style="margin:0;padding:5px 10px" onclick="showSetup()">⚙ Edit Pool</button>
+    <button class="btn" style="margin:0;padding:5px 10px" onclick="showPoolList()">☰ My Pools</button>
+    <button class="btn" style="margin:0;padding:5px 10px" onclick="toggleBracket()">🏒 Bracket</button>
   </div>
 </div>
 
@@ -184,6 +243,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 <div id="pool-list" style="display:none"></div>
 <div id="legwrap"></div>
 <div id="pie-wrap"></div>
+<div id="bracket-section" style="display:none;margin-top:16px;margin-bottom:16px"></div>
 <div id="main"><div class="loading">Loading...</div></div>
 <div id="swrap"></div>
 
@@ -958,6 +1018,193 @@ function buildPlayerSparkline(histData,teams,stroke){
 }
 
 
+
+// Compact game list for bracket card expand: finished + live games only, no date
+function buildBracketGames(t1, t2, gamesData) {
+  if (!gamesData || !gamesData.length) return '';
+  var games = gamesData.filter(function(g) {
+    return [g.away,g.home].indexOf(t1)>=0 && [g.away,g.home].indexOf(t2)>=0;
+  }).sort(function(a,b){ return new Date(a.startUTC)-new Date(b.startUTC); });
+  var rows = games.map(function(g, i) {
+    var as = g.awayScore||0, hs = g.homeScore||0;
+    var gn = '<span class="bc-gn">G' + (i+1) + '</span>';
+    if (g.state==='OFF'||g.state==='FINAL') {
+      var awayWin = as > hs, homeWin = hs > as;
+      var awayStr = (awayWin ? '<span class="bc-win">' : '') + g.away + ' ' + as + (awayWin ? '</span>' : '');
+      var homeStr = (homeWin ? '<span class="bc-win">' : '') + hs + ' ' + g.home + (homeWin ? '</span>' : '');
+      return '<div class="bc-gr">' + gn + '<span>' + awayStr + ' · ' + homeStr + '</span></div>';
+    } else if (g.state==='LIVE'||g.state==='CRIT') {
+      return '<div class="bc-gr bc-gr-live">' + gn + '<span style="color:#f87171;font-size:9px;margin-right:2px">LIVE</span><span>' + g.away + ' ' + as + ' · ' + hs + ' ' + g.home + (g.period?' P'+g.period:'') + '</span></div>';
+    } else {
+      return null; // skip future games
+    }
+  }).filter(Boolean).join('');
+  return rows;
+}
+
+// Detect which round is currently active (highest round with real teams)
+function getActiveRound(parsed) {
+  if (!parsed) return 1;
+  if (parsed.r4 && parsed.r4.topTeam && parsed.r4.topTeam !== 'TBD') return 4;
+  if ((parsed.r3||[]).some(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 3;
+  if ((parsed.r2||[]).some(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 2;
+  return 1;
+}
+
+// ── Bracket View ──────────────────────────────────────────────────────────
+function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
+  if (!s || !s.topTeam || s.topTeam === 'TBD') {
+    return '<div class="bc-card bc-tbd">'
+      + '<div class="bc-team"><span class="bc-name">TBD</span><span class="bc-wins">—</span></div>'
+      + '<div class="bc-team"><span class="bc-name">TBD</span><span class="bc-wins">—</span></div>'
+      + '</div>';
+  }
+  var pool = getActivePool();
+  var t1 = s.topTeam, t2 = s.bottomTeam;
+  var w1 = s.topWins || 0, w2 = s.bottomWins || 0;
+  var t1elim = w2 === 4, t2elim = w1 === 4;
+  var t1lead = w1 > w2, t2lead = w2 > w1;
+  var o1 = getTeamOwnerMaker(t1), o2 = getTeamOwnerMaker(t2);
+  var c1 = o1 ? getPC(pool, o1.ci).color : null;
+  var c2 = o2 ? getPC(pool, o2.ci).color : null;
+  var live = gamesData && isSeriesLive(gamesData, t1, t2);
+  var bg1 = c1 ? hexToRgba(c1, 0.2) : null;
+  var bg2 = c2 ? hexToRgba(c2, 0.2) : null;
+  var p1pill = o1 ? '<span class="bc-pill" style="background:' + bg1 + ';color:' + c1 + '">' + o1.abbrev + '</span>' : '';
+  var p2pill = o2 ? '<span class="bc-pill" style="background:' + bg2 + ';color:' + c2 + '">' + o2.abbrev + '</span>' : '';
+  // Compact (past round): just logo + pill, winner lit / loser faded
+  if (isCompact && !shareMode) {
+    var t1loser = w2 === 4, t2loser = w1 === 4;
+    return '<div class="bc-card bc-card-sm' + (live ? ' bc-live' : '') + '">'
+      + '<div class="bc-team' + (t1loser ? ' bc-loser' : '') + '" style="border-left-color:' + (c1||'transparent') + '">'
+      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_light.svg" onerror="this.style.display=\'none\'">'
+      + p1pill + '</div>'
+      + '<div class="bc-team' + (t2loser ? ' bc-loser' : '') + '" style="border-left-color:' + (c2||'transparent') + '">'
+      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
+      + p2pill + '</div>'
+      + '</div>';
+  }
+  var gamesHtml = (!shareMode && gamesData) ? buildBracketGames(t1, t2, gamesData) : '';
+  var clickAttr = (!shareMode && gamesHtml) ? ' onclick="toggleBracketCard(this)"' : '';
+  return '<div class="bc-card' + (live ? ' bc-live' : '') + (isLarge ? ' bc-card-lg' : '') + '"' + clickAttr + '>'
+    + '<div class="bc-team' + (t1elim ? ' bc-elim' : '') + '" style="border-left-color:' + (c1 || 'transparent') + '">'
+    + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_light.svg" onerror="this.style.display=\'none\'">'
+    + '<span class="bc-name">' + t1 + '</span>'
+    + p1pill
+    + '<span class="bc-wins' + (t1lead ? ' bc-lead' : '') + '">' + w1 + '</span>'
+    + '</div>'
+    + '<div class="bc-team' + (t2elim ? ' bc-elim' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
+    + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
+    + '<span class="bc-name">' + t2 + '</span>'
+    + p2pill
+    + '<span class="bc-wins' + (t2lead ? ' bc-lead' : '') + '">' + w2 + '</span>'
+    + '</div>'
+    + (gamesHtml ? '<div class="bc-games-wrap">' + gamesHtml + '</div>' : '')
+    + '</div>';
+}
+
+function buildBracket(shareMode) {
+  var st = _makerState;
+  if (!st || !st.parsed) return '<div class="loading">Loading...</div>';
+  var p = st.parsed;
+  var r1w = p.r1w || [], r1e = p.r1e || [];
+  var r2 = p.r2 || [null,null,null,null];
+  var r3 = p.r3 || [null,null];
+  var r4 = p.r4 || null;
+  var gd = st.gamesData || [];
+
+  var ar = getActiveRound(p);
+  // col widths: compact past cols (50px), active col (80px), default r2 (56px)
+  var cw1 = ar === 1 ? '' : 'width:50px';
+  var cw2 = ar === 2 ? 'width:80px' : (ar > 2 ? 'width:50px' : '');
+  var cw3 = ar === 3 ? 'width:90px' : (ar > 3 ? 'width:50px' : '');
+  var cw4 = ar === 4 ? 'width:72px' : '';
+  function c(s, round) { return buildBracketCard(s, gd, ar===round, shareMode, round < ar); }
+  function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1); }
+
+  var shareBtn = shareMode ? '' : '<button onclick="showBracketShareOverlay()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--muted);font-family:Inter,sans-serif;font-size:10px;padding:3px 8px;border-radius:8px;cursor:pointer">📸</button>';
+  return '<div class="bracket-wrap">'
+    + '<div class="bracket-conf-labels"><span class="bracket-conf-label">Western Conference</span>' + shareBtn + '<span class="bracket-conf-label">Eastern Conference</span></div>'
+
+    // Top half: [R1-W + R2-W] | center gap | [R2-E + R1-E]
+    + '<div class="bracket-half">'
+    + '<div class="bc-half-group">'
+    +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1w[0]) + cl(r1w[1]) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[0], 2) + '</div>'
+    + '</div>'
+    + '<div class="bc-center-gap"></div>'
+    + '<div class="bc-half-group" style="flex-direction:row-reverse">'
+    +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1e[0]) + cl(r1e[1]) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[2], 2) + '</div>'
+    + '</div>'
+    + '</div>'
+
+    // Middle: CF-W | SCF | CF-E
+    + '<div class="bracket-middle">'
+    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[0]) + '</div>'
+    + '<div class="bc-scf-col" style="' + cw4 + '">'
+    + '<div class="bc-cup-emoji">🏆</div>'
+    + '<div class="bc-cup-year">Stanley Cup Final</div>'
+    + c(r4, 4)
+    + '</div>'
+    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[1]) + '</div>'
+    + '</div>'
+
+    // Bottom half: [R1-W + R2-W] | center gap | [R2-E + R1-E]
+    + '<div class="bracket-half">'
+    + '<div class="bc-half-group">'
+    +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1w[2]) + cl(r1w[3]) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[1], 2) + '</div>'
+    + '</div>'
+    + '<div class="bc-center-gap"></div>'
+    + '<div class="bc-half-group" style="flex-direction:row-reverse">'
+    +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1e[2]) + cl(r1e[3]) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[3], 2) + '</div>'
+    + '</div>'
+    + '</div>'
+
+    + '</div>';
+}
+
+function toggleBracket() {
+  var bs = document.getElementById('bracket-section');
+  if (!bs) return;
+  var showing = bs.style.display !== 'none';
+  bs.style.display = showing ? 'none' : 'block';
+  if (!showing) bs.innerHTML = buildBracket();
+}
+
+function refreshBracketIfOpen() {
+  var bs = document.getElementById('bracket-section');
+  if (bs && bs.style.display !== 'none') bs.innerHTML = buildBracket();
+}
+
+function toggleBracketCard(el) { el.classList.toggle('bc-open'); }
+
+function showBracketShareOverlay() {
+  var pool = getActivePool();
+  if (!pool) return;
+  var existing = document.getElementById('share-overlay');
+  if (existing) existing.remove();
+  var date = new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+  var title = pool ? esc(pool.title) : 'Playoff Pool';
+  var bracketHtml = buildBracket(true);
+  var overlay = document.createElement('div');
+  overlay.id = 'share-overlay';
+  overlay.innerHTML = `<div style="max-width:480px;margin:0 auto">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:20px">
+      <button onclick="document.getElementById('share-overlay').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:12px">✕ Close</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:900;letter-spacing:1px;color:#f9fafb">🏒 ${title.toUpperCase()}</div>
+      <div style="font-size:10px;color:var(--muted);font-family:Inter,sans-serif">${date}</div>
+    </div>
+    ${bracketHtml}
+    <div style="text-align:center;padding:24px 0 40px;font-size:10px;color:rgba(255,255,255,0.2);font-family:Inter,sans-serif">📸 take a screenshot to share</div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+
 function getTeamOwnerMaker(team) {
   var pool = getActivePool();
   if (!pool) return null;
@@ -1202,10 +1449,11 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
-    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed};
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
+    refreshBracketIfOpen();
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
     document.getElementById("sub").textContent="Failed to load";
