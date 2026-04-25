@@ -1117,26 +1117,25 @@ async function doRender(){
       if(typeof v==='string'){odds[team]=v;}
       else if(typeof v==='object'&&v!==null){if(v.cup)odds[team]=v.cup;roundOdds[team]={r2:v.r2||'',r3:v.r3||'',r4:v.r4||'',cup:v.cup||''};}
     });
-    // Odds delta — compare live odds to most recent historical snapshot from a previous day
+    // Odds delta — walk back per team to find most recent snapshot where odds actually differed
     var deltaMap={};
     try{
       if(historyData&&historyData.length>0){
         var todayStr=new Date().toISOString().substring(0,10);
-        var histDates=[...new Set(historyData.map(function(r){return r.date;}).filter(Boolean))].sort();
-        var prevDate=null;
-        for(var di=histDates.length-1;di>=0;di--){if(histDates[di]<todayStr){prevDate=histDates[di];break;}}
-        if(prevDate){
-          var prevSnap={};
-          historyData.filter(function(r){return r.date===prevDate;}).forEach(function(r){
-            if(r.team)prevSnap[r.team.toUpperCase()]=parseFloat(r.cup)||0;
-          });
-          Object.keys(odds).forEach(function(t){
-            if(prevSnap[t]!==undefined){
-              var cur=parseFloat((odds[t]||'0%').replace('%',''));
-              var d=parseFloat((cur-prevSnap[t]).toFixed(1));
+        var histDates=[...new Set(historyData.map(function(r){return r.date;}).filter(Boolean))].sort()
+          .filter(function(d){return d<todayStr;});
+        Object.keys(odds).forEach(function(t){
+          var cur=parseFloat((odds[t]||'0%').replace('%',''));
+          for(var di=histDates.length-1;di>=0;di--){
+            var snap=historyData.find(function(r){return r.date===histDates[di]&&r.team&&r.team.toUpperCase()===t;});
+            if(snap){
+              var prev=parseFloat(snap.cup)||0;
+              var d=parseFloat((cur-prev).toFixed(1));
               if(Math.abs(d)>=0.1)deltaMap[t]=d;
+              break;
             }
-          });
+          }
+        });
         }
       }
     }catch(e){}
