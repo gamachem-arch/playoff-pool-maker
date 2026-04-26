@@ -978,16 +978,19 @@ function buildPieChart(totals, colorList) {
   return '<svg width="44" height="44" viewBox="0 0 80 80" style="flex-shrink:0">'+slices+'</svg>';
 }
 
-function buildPlayerSparkline(histData,teams,stroke){
+function buildPlayerSparkline(histData,teams,stroke,liveTotal){
   if(!histData||histData.length<2)return'';
   var dates=[...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
   if(dates.length<2)return'';
+  var today=new Date().toISOString().substring(0,10);
   var points=dates.map(function(date){
+    if(date===today&&liveTotal!=null)return liveTotal;
     return teams.reduce(function(sum,team){
       var e=histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
       return sum+(e?parseFloat(e.cup)||0:0);
     },0);
   });
+  if(!dates.includes(today)&&liveTotal!=null){dates.push(today);points.push(liveTotal);}
   var min=Math.min.apply(null,points),max=Math.max.apply(null,points),range=max-min||1;
   var W=160,H=28,padX=4,padY=4;
   var xs=points.map(function(_,i){return padX+(i/(points.length-1))*(W-padX*2);});
@@ -1139,11 +1142,7 @@ function buildBracket(shareMode) {
     // Middle: CF-W | SCF | CF-E
     + '<div class="bracket-middle">'
     + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[0]) + '</div>'
-    + '<div class="bc-scf-col" style="' + cw4 + '">'
-    + '<div class="bc-cup-emoji">🏆</div>'
-    + '<div class="bc-cup-year">Stanley Cup Final</div>'
-    + c(r4, 4)
-    + '</div>'
+    + '<div class="bc-scf-col" style="' + cw4 + '"><div class="bc-trophy">🏆</div><div class="bc-scf-label">Stanley Cup<br>Final</div>' + c(r4, 4) + '</div>'
     + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[1]) + '</div>'
     + '</div>'
 
@@ -1444,7 +1443,7 @@ function buildStandings(odds,histData){
         '<div class="srank">'+ranks[i]+'</div>'+
         '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
-        buildPlayerSparkline(histData,p.teams,null)+buildPathToCup(p.teams,odds,pc.color)+
+        buildPlayerSparkline(histData,p.teams,null,p.total)+buildPathToCup(p.teams,odds,pc.color)+
         '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
 }
 
