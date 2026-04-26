@@ -221,7 +221,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .bc-card-sm .bc-wins { display:none; }
 .bc-card-sm .bc-logo { width:16px; height:16px; }
 .bc-card-sm .bc-team { padding:3px 3px; justify-content:center; gap:3px; }
-.bc-card-sm .bc-pill { font-size:8px; padding:1px 4px; }
+.bc-card-sm .bc-pill { display:none; }
 .bc-team.bc-loser { opacity:0.18; }
 .bc-team.bc-winner { background:rgba(74,222,128,0.08); border-left-color:#4ade80 !important; }
 .bc-pill { display:inline-flex; align-items:center; justify-content:center; font-family:'Barlow Condensed',sans-serif; font-size:9px; font-weight:700; padding:1px 5px; border-radius:6px; letter-spacing:0.2px; flex-shrink:0; line-height:1; }
@@ -1095,6 +1095,15 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
   var gamesHtml = (!shareMode && gamesData) ? buildBracketGames(t1, t2, gamesData) : '';
   var clickAttr = (!shareMode && gamesHtml) ? ' onclick="toggleBracketCard(this)"' : '';
   var t1win = w1 === 4, t2win = w2 === 4;
+  var t2isTBD = !t2 || t2 === 'TBD';
+  var row2 = t2isTBD
+    ? '<div class="bc-team"><span class="bc-name" style="color:var(--muted);font-weight:400">TBD</span><span class="bc-wins" style="opacity:0.3">—</span></div>'
+    : '<div class="bc-team' + (t2elim ? ' bc-elim' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
+      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
+      + '<span class="bc-name">' + t2 + '</span>'
+      + p2pill
+      + '<span class="bc-wins' + (t2lead ? ' bc-lead' : '') + '">' + w2 + '</span>'
+      + '</div>';
   return '<div class="bc-card' + (live ? ' bc-live' : '') + (isLarge ? ' bc-card-lg' : '') + '"' + clickAttr + '>'
     + '<div class="bc-team' + (t1elim ? ' bc-elim' : t1win ? ' bc-winner' : '') + '" style="border-left-color:' + (c1 || 'transparent') + '">'
     + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_light.svg" onerror="this.style.display=\'none\'">'
@@ -1102,12 +1111,7 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
     + p1pill
     + '<span class="bc-wins' + (t1lead ? ' bc-lead' : '') + '">' + w1 + '</span>'
     + '</div>'
-    + '<div class="bc-team' + (t2elim ? ' bc-elim' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
-    + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
-    + '<span class="bc-name">' + t2 + '</span>'
-    + p2pill
-    + '<span class="bc-wins' + (t2lead ? ' bc-lead' : '') + '">' + w2 + '</span>'
-    + '</div>'
+    + row2
     + (gamesHtml ? '<div class="bc-games-wrap">' + gamesHtml + '</div>' : '')
     + '</div>';
 }
