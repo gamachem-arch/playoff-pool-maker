@@ -913,6 +913,7 @@ function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2){
 }
 function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
+  if(s.isPredicted){var pt1=s.topTeam==='TBD'?'?':s.topTeam,pt2=s.bottomTeam==='TBD'?'?':s.bottomTeam;return '<div class="series"><div class="sh" style="display:flex;justify-content:space-between;align-items:center">'+label+'<span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">upcoming</span></div><div class="tbd-r"><span style="opacity:0.5">'+pt1+'</span></div><div class="tbd-r" style="border-top:1px solid var(--border)"><span style="opacity:0.5">'+pt2+'</span></div></div>';}
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
   var d1=dm&&dm[t1]!==undefined?dm[t1]:null,d2=dm&&dm[t2]!==undefined?dm[t2]:null;
@@ -1072,7 +1073,29 @@ function getActiveRound(parsed) {
 }
 
 // ── Bracket View ──────────────────────────────────────────────────────────
+function getSeriesLeader(sr) {
+  if (!sr || !sr.topTeam || sr.topTeam === 'TBD') return 'TBD';
+  if (sr.topWins === 4) return sr.topTeam;
+  if (sr.bottomWins === 4) return sr.bottomTeam;
+  if (sr.topWins > sr.bottomWins) return sr.topTeam;
+  if (sr.bottomWins > sr.topWins) return sr.bottomTeam;
+  return 'TBD';
+}
+function predictedMatchup(s1, s2) {
+  var t1 = getSeriesLeader(s1), t2 = getSeriesLeader(s2);
+  if (t1 === 'TBD' && t2 === 'TBD') return null;
+  return {topTeam: t1, bottomTeam: t2, topWins: 0, bottomWins: 0, isPredicted: true};
+}
+
 function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
+  if (s && s.isPredicted) {
+    var pt1 = s.topTeam === 'TBD' ? '?' : s.topTeam;
+    var pt2 = s.bottomTeam === 'TBD' ? '?' : s.bottomTeam;
+    return '<div class="bc-card bc-tbd">'
+      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt1 + '</span><span class="bc-wins" style="opacity:0.25">—</span></div>'
+      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt2 + '</span><span class="bc-wins" style="opacity:0.25">—</span></div>'
+      + '</div>';
+  }
   if (!s || !s.topTeam || s.topTeam === 'TBD') {
     return '<div class="bc-card bc-tbd">'
       + '<div class="bc-team"><span class="bc-name">TBD</span><span class="bc-wins">—</span></div>'
@@ -1138,6 +1161,12 @@ function buildBracket(shareMode) {
   var r3 = p.r3 || [null,null];
   var r4 = p.r4 || null;
   var gd = st.gamesData || [];
+  var pr2 = [
+    r2[0] || predictedMatchup(r1w[0], r1w[1]),
+    r2[1] || predictedMatchup(r1w[2], r1w[3]),
+    r2[2] || predictedMatchup(r1e[0], r1e[1]),
+    r2[3] || predictedMatchup(r1e[2], r1e[3]),
+  ];
 
   var ar = getActiveRound(p);
   // col widths: compact past cols (50px), active col (80px), default r2 (56px)
@@ -1156,12 +1185,12 @@ function buildBracket(shareMode) {
     + '<div class="bracket-half">'
     + '<div class="bc-half-group">'
     +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1w[0]) + cl(r1w[1]) + '</div>'
-    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[0], 2) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(pr2[0], 2) + '</div>'
     + '</div>'
     + '<div class="bc-center-gap"></div>'
     + '<div class="bc-half-group" style="flex-direction:row-reverse">'
     +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1e[0]) + cl(r1e[1]) + '</div>'
-    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[2], 2) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(pr2[2], 2) + '</div>'
     + '</div>'
     + '</div>'
 
@@ -1176,12 +1205,12 @@ function buildBracket(shareMode) {
     + '<div class="bracket-half">'
     + '<div class="bc-half-group">'
     +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1w[2]) + cl(r1w[3]) + '</div>'
-    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[1], 2) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(pr2[1], 2) + '</div>'
     + '</div>'
     + '<div class="bc-center-gap"></div>'
     + '<div class="bc-half-group" style="flex-direction:row-reverse">'
     +   '<div class="bc-r1-col" style="' + cw1 + '">' + cl(r1e[2]) + cl(r1e[3]) + '</div>'
-    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(r2[3], 2) + '</div>'
+    +   '<div class="bc-r2-col" style="' + cw2 + '"><div class="bc-round-label">Rd 2</div>' + c(pr2[3], 2) + '</div>'
     + '</div>'
     + '</div>'
 
@@ -1365,19 +1394,21 @@ function showRoundupOverlayMaker() {
 function buildPathToCup(teams, oddsMap, playerColor) {
   var bars = teams
     .map(function(t) { return { t: t, pct: parseFloat((oddsMap[t]||'0%').replace('%','')) }; })
-    .filter(function(x) { return x.pct > 0.05; })
     .sort(function(a,b) { return b.pct - a.pct; });
-  if (!bars.length) return '';
-  var max = bars[0].pct;
+  if (bars.every(function(x){return x.pct===0;})) return '';
+  var alive = bars.filter(function(x){return x.pct>=0.1;});
+  var max = alive.length ? alive[0].pct : Math.max.apply(null, bars.map(function(x){return x.pct;}).concat([0.1]));
   var inner = bars.map(function(x) {
-    var w = Math.round((x.pct / max) * 100);
-    return `<div class="ptc-bar-row">
-      <span class="ptc-label" style="width:22px;text-align:right">${x.t}</span>
-      <div class="ptc-bar-track"><div class="ptc-bar-fill" style="width:${w}%;background:${playerColor}"></div></div>
-      <span class="ptc-label" style="width:30px">${x.pct.toFixed(1)}%</span>
-    </div>`;
+    var isElim = x.pct < 0.1;
+    var w = isElim ? Math.max(4, Math.round((x.pct/max)*100)) : Math.round((x.pct/max)*100);
+    var fill = isElim ? 'rgba(156,163,175,0.5)' : playerColor;
+    return '<div class="ptc-bar-row"'+(isElim?' style="opacity:0.45"':'')+'>'+
+      '<span class="ptc-label" style="width:22px;text-align:right">'+x.t+'</span>'+
+      '<div class="ptc-bar-track"><div class="ptc-bar-fill" style="width:'+w+'%;background:'+fill+'"></div></div>'+
+      '<span class="ptc-label" style="width:30px">'+x.pct.toFixed(1)+'%</span>'+
+      '</div>';
   }).join('');
-  return `<div style="margin-top:7px;display:flex;flex-direction:column;gap:4px;padding:0 2px">${inner}</div>`;
+  return '<div style="margin-top:7px;display:flex;flex-direction:column;gap:4px;padding:0 2px">'+inner+'</div>';
 }
 
 function buildShareSeriesRowMaker(s) {
@@ -1456,21 +1487,27 @@ function buildStandings(odds,histData){
   var ranks=["1st","2nd","3rd","4th","5th","6th","7th","8th"];
   var totals=pool.players.map(function(p,i){
     var total=0;p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
-    return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i};
+    var alive=p.teams.filter(function(t){return parseFloat((odds[t]||"0%").replace("%",""))>=0.1;}).length;
+    return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,alive:alive};
   }).sort(function(a,b){return b.total-a.total;});
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
-  return '<div class="standings"><div class="stitle">Pool standings — combined cup odds'+hint+' <button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button> <button class="share-btn" onclick="showShareOverlay()">📸 Share</button></div><div class="sgrid">'+
+  return '<div class="standings"><div class="stitle"><div>Pool standings — combined cup odds'+hint+'</div>'+
+    '<div style="display:flex;gap:6px;margin-top:4px"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button> <button class="share-btn" onclick="showShareOverlay()">📸 Share</button></div></div><div class="sgrid">'+
     totals.map(function(p,i){var pc=p.color?{color:p.color,bg:hexToRgba(p.color,0.15)}:getPC(pool,p.ci);
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
+      var teamsList=p.teams.map(function(t){
+        return parseFloat((odds[t]||"0%").replace("%",""))<0.1?'<span style="text-decoration:line-through;opacity:0.4">'+t+'</span>':t;
+      }).join(" · ");
       return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+'">'+
         (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
         '<div class="srank">'+ranks[i]+'</div>'+
-        '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
+        '<div style="display:flex;align-items:center;gap:4px"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
+        '<span style="font-size:9px;color:var(--muted)">'+p.alive+'/'+p.teams.length+'</span></div>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
         buildPlayerSparkline(histData,p.teams,null,p.total)+buildPathToCup(p.teams,odds,pc.color)+
-        '<div class="steams">'+p.teams.join(" · ")+'</div></div>';}).join("")+'</div></div>';
+        '<div class="steams">'+teamsList+'</div></div>';}).join("")+'</div></div>';
 }
 
 
@@ -1575,6 +1612,12 @@ async function doRender(){
     var parsed=parseSeries(nhlRaw)||{r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
       r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
     var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
+    var r2disp=[
+      r2f[0]||predictedMatchup(rw[0],rw[1]),
+      r2f[1]||predictedMatchup(rw[2],rw[3]),
+      r2f[2]||predictedMatchup(re[0],re[1]),
+      r2f[3]||predictedMatchup(re[2],re[3]),
+    ];
     var r2HasTeams=r2f.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
@@ -1583,7 +1626,7 @@ async function doRender(){
       +'<div class="four-col">'+rw.map(function(s,i){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData)+seriesCard(re[i],"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
     var html=makeRoundSection('r1','Round 1',r1body,r2AllTeams);
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
+      +'<div class="four-col">'+seriesCard(r2disp[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams);
     var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams);
