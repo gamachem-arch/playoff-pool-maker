@@ -913,7 +913,17 @@ function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2){
 }
 function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
-  if(s.isPredicted){var pt1=s.topTeam==='TBD'?'?':s.topTeam,pt2=s.bottomTeam==='TBD'?'?':s.bottomTeam;return '<div class="series"><div class="sh" style="display:flex;justify-content:space-between;align-items:center">'+label+'<span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px">upcoming</span></div><div class="tbd-r"><span style="opacity:0.5">'+pt1+'</span></div><div class="tbd-r" style="border-top:1px solid var(--border)"><span style="opacity:0.5">'+pt2+'</span></div></div>';}
+  if(s.isPredicted){
+    var pt1=s.topTeam==='TBD'?'?':s.topTeam,pt2=s.bottomTeam==='TBD'?'?':s.bottomTeam;
+    function predSlotRow(ts,bt){
+      var bts=bt?'border-top:1px solid var(--border);':'';
+      if(ts==='?')return '<div class="tbd-r" style="'+bts+'"><span style="opacity:0.5">?</span></div>';
+      if(ts.indexOf('/')>-1){var ab=ts.split('/'),pa=ab[0],pb=ab[1],oa=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r2)||'',ob=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r2)||'';return '<div class="tbd-r" style="'+bts+'display:flex;align-items:center;justify-content:center;gap:2px"><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pa+'</span>'+(oa?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+oa+'</span>':'')+'<span style="opacity:0.2;margin:0 6px">/</span><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pb+'</span>'+(ob?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+ob+'</span>':'')+'</div>';}
+      var p=(roundOdds&&roundOdds[ts]&&roundOdds[ts].r2)||'';
+      return '<div class="tbd-r" style="'+bts+'justify-content:space-between;padding:0 10px"><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+ts+'</span>'+(p?'<span style="opacity:0.4;font-size:10px;font-family:Inter,sans-serif">'+p+'</span>':'')+'</div>';
+    }
+    return '<div class="series"><div class="sh">'+label+'</div>'+predSlotRow(pt1,false)+predSlotRow(pt2,true)+'</div>';
+  }
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
   var d1=dm&&dm[t1]!==undefined?dm[t1]:null,d2=dm&&dm[t2]!==undefined?dm[t2]:null;
@@ -931,8 +941,11 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   var live=isSeriesLive(gd,t1,t2);
   var liveDot=live?'<span class="live-dot"></span>':'';
   var t2isTBD=!t2||t2==='TBD';
+  var t2isPred=t2&&t2.includes('/');
   var row2=t2isTBD
     ?'<div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div>'
+    :t2isPred
+      ?(function(){var ab=t2.split('/'),pa=ab[0],pb=ab[1],oa=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r2)||'',ob=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r2)||'';return '<div class="tbd-r" style="border-top:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:2px"><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pa+'</span>'+(oa?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+oa+'</span>':'')+'<span style="opacity:0.2;margin:0 6px">/</span><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pb+'</span>'+(ob?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+ob+'</span>':'')+'</div>';})()
     :'<div class="tr'+(t2won?' series-winner':t1won?' series-elim':'')+'">'+makePill(t2)+l2+'<span class="tname'+(t1won?" elim":"")+(t2won?" champ":"")+'">'+t2+'</span><div class="odds-wrap">'+deltaBadge(d2)+(o2?'<span class="todds">'+o2+'</span>':"")+
     '</div><span class="twins'+(w2>w1?" lead":"")+'">'+w2+'</span></div>';
   return '<div class="series'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+liveDot+label+badge+'</div>'+
@@ -1077,14 +1090,26 @@ function getSeriesLeader(sr) {
   if (!sr || !sr.topTeam || sr.topTeam === 'TBD') return 'TBD';
   if (sr.topWins === 4) return sr.topTeam;
   if (sr.bottomWins === 4) return sr.bottomTeam;
-  if (sr.topWins > sr.bottomWins) return sr.topTeam;
-  if (sr.bottomWins > sr.topWins) return sr.bottomTeam;
-  return 'TBD';
+  return sr.topTeam + '/' + sr.bottomTeam;
 }
 function predictedMatchup(s1, s2) {
   var t1 = getSeriesLeader(s1), t2 = getSeriesLeader(s2);
   if (t1 === 'TBD' && t2 === 'TBD') return null;
   return {topTeam: t1, bottomTeam: t2, topWins: 0, bottomWins: 0, isPredicted: true};
+}
+function augmentPartialR2(series, s1, s2) {
+  if (!series || series.isPredicted) return series;
+  var topTBD = !series.topTeam || series.topTeam === 'TBD';
+  var botTBD = !series.bottomTeam || series.bottomTeam === 'TBD';
+  if (!topTBD && !botTBD) return series;
+  var knownTeam = topTBD ? series.bottomTeam : series.topTeam;
+  var s1has = s1 && (s1.topTeam === knownTeam || s1.bottomTeam === knownTeam);
+  var otherSeries = s1has ? s2 : s1;
+  var pred = getSeriesLeader(otherSeries);
+  if (!pred || pred === 'TBD') return series;
+  var out = Object.assign({}, series);
+  if (topTBD) out.topTeam = pred; else out.bottomTeam = pred;
+  return out;
 }
 
 function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
@@ -1092,14 +1117,14 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
     var pt1 = s.topTeam === 'TBD' ? '?' : s.topTeam;
     var pt2 = s.bottomTeam === 'TBD' ? '?' : s.bottomTeam;
     return '<div class="bc-card bc-tbd">'
-      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt1 + '</span><span class="bc-wins" style="opacity:0.25">—</span></div>'
-      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt2 + '</span><span class="bc-wins" style="opacity:0.25">—</span></div>'
+      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt1 + '</span></div>'
+      + '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + pt2 + '</span></div>'
       + '</div>';
   }
   if (!s || !s.topTeam || s.topTeam === 'TBD') {
     return '<div class="bc-card bc-tbd">'
-      + '<div class="bc-team"><span class="bc-name">TBD</span><span class="bc-wins">—</span></div>'
-      + '<div class="bc-team"><span class="bc-name">TBD</span><span class="bc-wins">—</span></div>'
+      + '<div class="bc-team" style="justify-content:center"><span class="bc-name" style="color:var(--muted)">TBD</span></div>'
+      + '<div class="bc-team" style="justify-content:center"><span class="bc-name" style="color:var(--muted)">TBD</span></div>'
       + '</div>';
   }
   var pool = getActivePool();
@@ -1132,9 +1157,12 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
   var clickAttr = (!shareMode && gamesHtml) ? ' onclick="toggleBracketCard(this)"' : '';
   var t1win = w1 === 4, t2win = w2 === 4;
   var t2isTBD = !t2 || t2 === 'TBD';
+  var t2isPred = t2 && t2.includes('/');
   var row2 = t2isTBD
-    ? '<div class="bc-team"><span class="bc-name" style="color:var(--muted);font-weight:400">TBD</span><span class="bc-wins" style="opacity:0.3">—</span></div>'
-    : '<div class="bc-team' + (t2elim ? ' bc-elim' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
+    ? '<div class="bc-team" style="justify-content:center"><span class="bc-name" style="color:var(--muted);font-weight:400">TBD</span></div>'
+    : t2isPred
+      ? '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + t2 + '</span></div>'
+      : '<div class="bc-team' + (t2elim ? ' bc-elim' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
       + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
       + '<span class="bc-name">' + t2 + '</span>'
       + p2pill
@@ -1161,11 +1189,17 @@ function buildBracket(shareMode) {
   var r3 = p.r3 || [null,null];
   var r4 = p.r4 || null;
   var gd = st.gamesData || [];
+  function predBracket(s1, s2) {
+    var s1done = s1 && (s1.topWins === 4 || s1.bottomWins === 4);
+    var s2done = s2 && (s2.topWins === 4 || s2.bottomWins === 4);
+    if (!s1done && !s2done) return null;
+    return predictedMatchup(s1, s2);
+  }
   var pr2 = [
-    r2[0] || predictedMatchup(r1w[0], r1w[1]),
-    r2[1] || predictedMatchup(r1w[2], r1w[3]),
-    r2[2] || predictedMatchup(r1e[0], r1e[1]),
-    r2[3] || predictedMatchup(r1e[2], r1e[3]),
+    augmentPartialR2(r2[0] || predBracket(r1w[0], r1w[1]), r1w[0], r1w[1]),
+    augmentPartialR2(r2[1] || predBracket(r1w[2], r1w[3]), r1w[2], r1w[3]),
+    augmentPartialR2(r2[2] || predBracket(r1e[0], r1e[1]), r1e[0], r1e[1]),
+    augmentPartialR2(r2[3] || predBracket(r1e[2], r1e[3]), r1e[2], r1e[3]),
   ];
 
   var ar = getActiveRound(p);
@@ -1613,10 +1647,10 @@ async function doRender(){
       r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
     var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
     var r2disp=[
-      r2f[0]||predictedMatchup(rw[0],rw[1]),
-      r2f[1]||predictedMatchup(rw[2],rw[3]),
-      r2f[2]||predictedMatchup(re[0],re[1]),
-      r2f[3]||predictedMatchup(re[2],re[3]),
+      augmentPartialR2(r2f[0]||predictedMatchup(rw[0],rw[1]),rw[0],rw[1]),
+      augmentPartialR2(r2f[1]||predictedMatchup(rw[2],rw[3]),rw[2],rw[3]),
+      augmentPartialR2(r2f[2]||predictedMatchup(re[0],re[1]),re[0],re[1]),
+      augmentPartialR2(r2f[3]||predictedMatchup(re[2],re[3]),re[2],re[3]),
     ];
     var r2HasTeams=r2f.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
