@@ -299,7 +299,7 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
     +pieSvg+'</div></div>';
 }
 var R1W = [{t:"COL",b:"LAK"},{t:"DAL",b:"MIN"},{t:"VGK",b:"UTA"},{t:"EDM",b:"ANA"}];
-var R1E = [{t:"CAR",b:"OTT"},{t:"TBL",b:"MTL"},{t:"BUF",b:"BOS"},{t:"PIT",b:"PHI"}];
+var R1E = [{t:"BUF",b:"BOS"},{t:"TBL",b:"MTL"},{t:"CAR",b:"OTT"},{t:"PIT",b:"PHI"}];
 
 var setupPlayers = [];
 var setupTitle = "Playoff Pool";
@@ -942,17 +942,43 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
-  var byTeams={},byLetter={};
+  var byTeams={};
   arr.forEach(function(s){
     var t1=(s.topTeam||"").toUpperCase(),t2=(s.bottomTeam||"").toUpperCase();
-    var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0};
+    var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0,round:s.round||1};
     if(t1&&t2)byTeams[[t1,t2].sort().join("-")]=e;
-    if(s.letter)byLetter[s.letter.toUpperCase()]=e;
   });
   function find(t1,t2){return byTeams[[t1,t2].sort().join("-")]||{topTeam:t1,bottomTeam:t2,topWins:0,bottomWins:0};}
-  return{r1w:R1W.map(function(m){return find(m.t,m.b);}),r1e:R1E.map(function(m){return find(m.t,m.b);}),
-    r2:["I","J","K","L"].map(function(l){return byLetter[l]||null;}),
-    r3:["M","N"].map(function(l){return byLetter[l]||null;}),r4:byLetter["O"]||null};
+  var r1w=R1W.map(function(m){return find(m.t,m.b);});
+  var r1e=R1E.map(function(m){return find(m.t,m.b);});
+  var westUpper=new Set(R1W.slice(0,2).reduce(function(a,m){return a.concat([m.t,m.b]);},[]));
+  var westLower=new Set(R1W.slice(2,4).reduce(function(a,m){return a.concat([m.t,m.b]);},[]));
+  var eastUpper=new Set(R1E.slice(0,2).reduce(function(a,m){return a.concat([m.t,m.b]);},[]));
+  var eastLower=new Set(R1E.slice(2,4).reduce(function(a,m){return a.concat([m.t,m.b]);},[]));
+  var allWest=new Set(Array.from(westUpper).concat(Array.from(westLower)));
+  var allEast=new Set(Array.from(eastUpper).concat(Array.from(eastLower)));
+  var r2=[null,null,null,null],r3=[null,null],r4=null;
+  arr.forEach(function(s){
+    var round=s.round||1;
+    if(round<2)return;
+    var t1=(s.topTeam||"").toUpperCase(),t2=(s.bottomTeam||"").toUpperCase();
+    var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0,round:round};
+    var teams=[t1,t2].filter(function(t){return t&&t!=="TBD";});
+    if(round===2){
+      for(var i=0;i<teams.length;i++){
+        if(westUpper.has(teams[i])){r2[0]=e;break;}
+        if(westLower.has(teams[i])){r2[1]=e;break;}
+        if(eastUpper.has(teams[i])){r2[2]=e;break;}
+        if(eastLower.has(teams[i])){r2[3]=e;break;}
+      }
+    }else if(round===3){
+      for(var j=0;j<teams.length;j++){
+        if(allWest.has(teams[j])){r3[0]=e;break;}
+        if(allEast.has(teams[j])){r3[1]=e;break;}
+      }
+    }else if(round===4){r4=e;}
+  });
+  return{r1w:r1w,r1e:r1e,r2:r2,r3:r3,r4:r4};
 }
 function buildLegend(pieSvg){
   return _buildMakerLegendPie(_makerState.pieTotals||[],pieSvg);
@@ -1554,10 +1580,10 @@ async function doRender(){
     var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+rw.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+re.map(function(s){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
+      +'<div class="four-col">'+rw.map(function(s,i){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData)+seriesCard(re[i],"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
     var html=makeRoundSection('r1','Round 1',r1body,r2AllTeams);
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
-      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
+      +'<div class="four-col">'+seriesCard(r2f[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2f[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams);
     var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams);
