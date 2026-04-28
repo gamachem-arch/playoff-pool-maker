@@ -215,41 +215,15 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .bc-gr-live { color:#f87171; }
 
   /* Pull-to-refresh */
-  #ptr-pill {
-    position: fixed;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 0;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 24px;
-    padding: 8px 20px 9px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: 'Inter', sans-serif;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    white-space: nowrap;
-    pointer-events: none;
-    -webkit-user-select: none;
-    user-select: none;
-  }
-  #ptr-icon {
-    font-size: 15px;
-    display: inline-block;
-    will-change: transform;
-    transition: transform 0.1s ease;
-  }
+  #ptr-pill { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 0; pointer-events: none; -webkit-user-select: none; user-select: none; }
+  #ptr-icon { font-size: 22px; display: inline-block; color: var(--muted); will-change: transform; transition: transform 0.1s ease; }
   @keyframes ptr-spin { to { transform: rotate(360deg); } }
   #ptr-icon.ptr-spin { animation: ptr-spin 0.65s linear infinite; transition: none; }
 </style>
 </head>
 <body>
 
-<div id="ptr-pill"><span id="ptr-icon">↻</span><span id="ptr-text">Pull to refresh</span></div>
+<div id="ptr-pill"><span id="ptr-icon">↻</span></div>
 
 <div id="page-wrap">
 <div class="header">
@@ -2125,7 +2099,7 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
 
 /* ── Pull-to-refresh ── */
 (function() {
-  var pill, icon, txt, wrap;
+  var pill, icon, wrap;
   var startY = 0, startX = 0, lastY = 0;
   var active = false, busy = false;
   var THRESH = 62;
@@ -2135,7 +2109,6 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
   function init() {
     pill = document.getElementById('ptr-pill');
     icon = document.getElementById('ptr-icon');
-    txt  = document.getElementById('ptr-text');
     wrap = document.getElementById('page-wrap');
     document.addEventListener('touchstart', ts, { passive: true });
     document.addEventListener('touchmove',  tm, { passive: false });
@@ -2179,15 +2152,8 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
     wrap.style.transition = 'none';
     wrap.style.transform  = 'translateY(' + v + 'px)';
 
-    if (v >= THRESH) {
-      icon.style.transform = 'rotate(180deg)';
-      txt.textContent      = 'Release to refresh';
-      pill.style.color     = 'var(--text)';
-    } else {
-      icon.style.transform = 'rotate(' + (prog * 180) + 'deg)';
-      txt.textContent      = 'Pull to refresh';
-      pill.style.color     = 'var(--muted)';
-    }
+    icon.style.transform = 'rotate(' + (prog * 180) + 'deg)';
+    icon.style.color     = v >= THRESH ? 'var(--text)' : 'var(--muted)';
   }
 
   function te() {
@@ -2203,19 +2169,17 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
   function snap() {
     wrap.style.transition = 'transform 0.42s cubic-bezier(0.25,1,0.5,1)';
     wrap.style.transform  = 'translateY(0)';
-    pill.style.color      = 'var(--muted)';
     icon.style.transform  = '';
-    txt.textContent       = 'Pull to refresh';
+    icon.style.color      = 'var(--muted)';
   }
 
   function go() {
     busy = true;
     wrap.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
     wrap.style.transform  = 'translateY(' + HOLD + 'px)';
-    pill.style.color      = 'var(--text)';
     icon.style.transform  = '';
+    icon.style.color      = 'var(--text)';
     icon.className        = 'ptr-spin';
-    txt.textContent       = 'Refreshing...';
 
     doRender().then(done).catch(function() { busy = false; snap(); });
   }
@@ -2223,16 +2187,13 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
   function done() {
     icon.className   = '';
     icon.textContent = '✓';
-    pill.style.color = '#22c55e';
-    txt.textContent  = 'Updated!';
+    icon.style.color = '#22c55e';
     setTimeout(function() {
       wrap.style.transition = 'transform 0.58s cubic-bezier(0.25,1,0.5,1)';
       wrap.style.transform  = 'translateY(0)';
       setTimeout(function() {
-        icon.textContent     = '↻';
-        icon.style.transform = '';
-        pill.style.color     = 'var(--muted)';
-        txt.textContent      = 'Pull to refresh';
+        icon.textContent = '↻';
+        icon.style.color = 'var(--muted)';
         busy = false;
       }, 600);
     }, 850);
