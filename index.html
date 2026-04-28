@@ -142,7 +142,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 .scard{background:var(--surface2);border-radius:12px;padding:16px 12px;text-align:center;border:1px solid var(--border);position:relative;overflow:hidden;}
 .scard.first::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#fbbf24,transparent);}
-.streak-badge{position:absolute;top:6px;left:6px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid;line-height:1.2;}
+.streak-badge{position:absolute;top:6px;left:6px;white-space:nowrap;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid;line-height:1.2;}
 .srank{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 .sname{font-size:12px;color:var(--muted);margin:4px 0 6px;}
 .spct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;line-height:1;}
@@ -1877,12 +1877,12 @@ function buildStandings(odds,histData){
         (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
         buildStreakBadge(histData,p.teams,p.total)+
         '<div class="srank">'+ranks[i]+'</div>'+
-        '<div style="display:flex;align-items:center;gap:4px"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
-        '<span style="font-size:9px;color:var(--muted)">'+p.alive+'/'+p.teams.length+'</span></div>'+
+        '<div style="display:flex;align-items:center;justify-content:center"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span></div>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
         '<div onclick="event.stopPropagation();showSparklineDetailMaker(\''+esc(abbrev)+'\',\''+p.teams.join(',')+'\',\''+pc.color+'\',\''+esc(p.name)+'\')" style="cursor:pointer;border-radius:6px;margin:0 -4px;padding:0 4px;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseleave="this.style.background=\'\'">'+
         buildPlayerSparkline(histData,p.teams,null,p.total)+'</div>'+buildPathToCup(p.teams,odds,pc.color)+
-        '<div class="steams">'+teamsList+'</div></div>';}).join("")+'</div></div>';
+        '<div class="steams">'+teamsList+'</div>'+
+        '<div style="font-size:9px;color:var(--muted);margin-top:2px">'+p.alive+'/'+p.teams.length+'</div></div>';}).join("")+'</div></div>';
 }
 
 
