@@ -1052,7 +1052,7 @@ function buildPieChart(totals, colorList) {
   return '<svg width="44" height="44" viewBox="0 0 80 80" style="flex-shrink:0">'+slices+'</svg>';
 }
 
-function buildPlayerSparkline(histData,teams,stroke,liveTotal){
+function buildPlayerSparkline(histData,teams,stroke,liveTotal,W,H){
   if(!histData||histData.length<2)return'';
   var dates=[...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
   if(dates.length<2)return'';
@@ -1066,16 +1066,18 @@ function buildPlayerSparkline(histData,teams,stroke,liveTotal){
   });
   if(!dates.includes(today)&&liveTotal!=null){dates.push(today);points.push(liveTotal);}
   var min=Math.min.apply(null,points),max=Math.max.apply(null,points),range=max-min||1;
-  var W=160,H=28,padX=4,padY=4;
+  W=W||160; H=H||28; var padX=4,padY=4;
   var xs=points.map(function(_,i){return padX+(i/(points.length-1))*(W-padX*2);});
   var ys=points.map(function(v){return padY+(H-padY*2)*(1-(v-min)/range);});
   var poly=xs.map(function(x,i){return x.toFixed(1)+','+ys[i].toFixed(1);}).join(' ');
   var area='M'+xs[0].toFixed(1)+','+H+' '+xs.map(function(x,i){return'L'+x.toFixed(1)+','+ys[i].toFixed(1);}).join(' ')+' L'+xs[xs.length-1].toFixed(1)+','+H+' Z';
   var trend=points[points.length-1]-points[0];
   var color=stroke||(trend>0.5?'#4ade80':trend<-0.5?'#f87171':'#9ca3af');
-  var gradId='psg-'+teams[0];
-  var dots=xs.map(function(x,i){return'<circle cx="'+x.toFixed(1)+'" cy="'+ys[i].toFixed(1)+'" r="'+(i===points.length-1?2.5:1.5)+'" fill="'+color+'"/>';}).join('');
-  return'<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block;height:32px;margin-top:6px">'
+  var gradId='psg-'+teams[0]+(W!==160?'-lg':'');
+  var dotR=H>30?3:1.5;
+  var dots=xs.map(function(x,i){return'<circle cx="'+x.toFixed(1)+'" cy="'+ys[i].toFixed(1)+'" r="'+(i===points.length-1?dotR+1:dotR)+'" fill="'+color+'"/>';}).join('');
+  var svgH=H>30?H+'px':'32px';
+  return'<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block;height:'+svgH+';margin-top:6px">'
     +'<defs><linearGradient id="'+gradId+'" x1="0" y1="0" x2="0" y2="1">'
     +'<stop offset="0%" stop-color="'+color+'" stop-opacity="0.3"/>'
     +'<stop offset="100%" stop-color="'+color+'" stop-opacity="0"/>'
@@ -1083,6 +1085,85 @@ function buildPlayerSparkline(histData,teams,stroke,liveTotal){
     +'<path d="'+area+'" fill="url(#'+gradId+')"/>'
     +'<polyline points="'+poly+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
     +dots+'</svg>';
+}
+
+function showSparklineDetailMaker(abbrev, teamsStr, color, playerName) {
+  var st = _makerState;
+  if (!st || !st.historyData || !st.odds) return;
+  var hist = st.historyData, odds = st.odds;
+  var teams = teamsStr.split(',');
+  var today = new Date().toISOString().substring(0,10);
+
+  var dates = [...new Set(hist.map(function(d){return d.date;}).filter(Boolean))].sort();
+  if (!dates.includes(today)) dates.push(today);
+
+  var rows = dates.map(function(date) {
+    var isLive = date === today;
+    var teamVals = teams.map(function(team) {
+      if (isLive) return parseFloat((odds[team]||'0%').replace('%',''));
+      var e = hist.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
+      return e ? parseFloat(e.cup)||0 : 0;
+    });
+    var total = teamVals.reduce(function(a,b){return a+b;},0);
+    return {date:date, isLive:isLive, teamVals:teamVals, total:total};
+  });
+
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(s) {
+    if (s===today) return 'NOW';
+    var p=s.split('-');
+    return months[parseInt(p[1])-1]+' '+parseInt(p[2]);
+  }
+
+  var liveTotal = rows[rows.length-1].total;
+  var largeSvg = buildPlayerSparkline(hist, teams, color, liveTotal, 320, 56);
+
+  var tableRows = rows.slice().reverse().map(function(row, ri, arr) {
+    var prev = arr[ri+1];
+    var delta = prev ? row.total - prev.total : null;
+    var deltaStr = delta===null ? '' : (delta>0?'+':'')+delta.toFixed(1)+'%';
+    var deltaColor = delta>0.2?'#4ade80':delta<-0.2?'#f87171':'#6b7280';
+    var rowBg = row.isLive ? 'background:rgba(255,255,255,0.06);' : '';
+    var dateStyle = 'padding:9px 8px;font-size:12px;white-space:nowrap;'+(row.isLive?'font-weight:700;color:#f9fafb':'color:#6b7280');
+    var teamCells = row.teamVals.map(function(v, i) {
+      var isElim = v < 0.1;
+      return '<td style="padding:9px 4px;text-align:right;font-size:12px;color:'+(isElim?'#6b7280':color)+';'+(isElim?'opacity:0.3;text-decoration:line-through':'')+'">'+(isElim?'—':v.toFixed(1)+'%')+'</td>';
+    }).join('');
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);'+rowBg+'">'
+      +'<td style="'+dateStyle+'">'+fmtDate(row.date)+'</td>'
+      +teamCells
+      +'<td style="padding:9px 8px;text-align:right;font-size:13px;font-weight:700;color:'+color+'">'+row.total.toFixed(1)+'%</td>'
+      +'<td style="padding:9px 4px 9px 0;text-align:right;font-size:11px;color:'+deltaColor+'">'+deltaStr+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var headerCells = teams.map(function(t) {
+    return '<th style="padding:6px 4px;text-align:right;font-size:10px;color:'+color+';font-weight:700;letter-spacing:.5px">'+t+'</th>';
+  }).join('');
+
+  var overlay = document.createElement('div');
+  overlay.id = 'sparkline-detail-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#0d1117;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px;box-sizing:border-box;';
+  overlay.innerHTML =
+    '<div style="max-width:480px;margin:0 auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;color:#f9fafb">'
+        +'<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:13px;background:'+hexToRgba(color,0.2)+';color:'+color+'">'+abbrev+'</span> '+esc(playerName)+' — Cup %'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'sparkline-detail-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0">✕</button>'
+    +'</div>'
+    +'<div style="margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:12px;padding:12px 10px">'+largeSvg+'</div>'
+    +'<table style="width:100%;border-collapse:collapse">'
+      +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.12)">'
+        +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">DATE</th>'
+        +headerCells
+        +'<th style="padding:6px 8px;text-align:right;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">TOTAL</th>'
+        +'<th style="padding:6px 4px 6px 0;text-align:right;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">Δ</th>'
+      +'</tr></thead>'
+      +'<tbody>'+tableRows+'</tbody>'
+    +'</table>'
+    +'</div>';
+  document.body.appendChild(overlay);
 }
 
 
@@ -1574,7 +1655,8 @@ function buildStandings(odds,histData){
         '<div style="display:flex;align-items:center;gap:4px"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
         '<span style="font-size:9px;color:var(--muted)">'+p.alive+'/'+p.teams.length+'</span></div>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+pc.color+'">'+p.total.toFixed(1)+'%</div>'+
-        buildPlayerSparkline(histData,p.teams,null,p.total)+buildPathToCup(p.teams,odds,pc.color)+
+        '<div onclick="event.stopPropagation();showSparklineDetailMaker(\''+esc(abbrev)+'\',\''+p.teams.join(',')+'\',\''+pc.color+'\',\''+esc(p.name)+'\')" style="cursor:pointer;border-radius:6px;margin:0 -4px;padding:0 4px;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseleave="this.style.background=\'\'">'+
+        buildPlayerSparkline(histData,p.teams,null,p.total)+'</div>'+buildPathToCup(p.teams,odds,pc.color)+
         '<div class="steams">'+teamsList+'</div></div>';}).join("")+'</div></div>';
 }
 
