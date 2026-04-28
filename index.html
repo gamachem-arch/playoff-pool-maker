@@ -260,6 +260,7 @@ var ALL_TEAMS = ["COL","EDM","TBL","LAK","BUF","MTL","PIT","ANA","MIN","OTT","PH
 
 // My player — localStorage personalization per pool
 var _makerState = {};
+var _detailStateMaker = null;
 function _myPlayerKey(){var p=getActivePool();return p?'myPlayer_'+(p.id||p.title):null;}
 function getMyPlayer(){try{var k=_myPlayerKey();return k?localStorage.getItem(k):null;}catch(e){return null;}}
 function setMyPlayer(abbrev){
@@ -1087,16 +1088,136 @@ function buildPlayerSparkline(histData,teams,stroke,liveTotal,W,H){
     +dots+'</svg>';
 }
 
+function buildDetailChart(histData, series, gradId) {
+  if (!histData || histData.length < 2 || !series || !series.length) return '';
+  var today = new Date().toISOString().substring(0,10);
+  var dates = [...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
+  if (!dates.includes(today)) dates.push(today);
+  if (dates.length < 2) return '';
+
+  var allSeries = series.map(function(s) {
+    var pts = dates.map(function(date) {
+      if (date === today && s.liveTotal != null) return s.liveTotal;
+      return s.teams.reduce(function(sum, team) {
+        var e = histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
+        return sum+(e?parseFloat(e.cup)||0:0);
+      }, 0);
+    });
+    return {teams:s.teams, color:s.color, liveTotal:s.liveTotal, isPrimary:s.isPrimary, points:pts};
+  });
+
+  var allPts = allSeries.reduce(function(acc,s){return acc.concat(s.points);}, []);
+  var dataMin=Math.min.apply(null,allPts), dataMax=Math.max.apply(null,allPts);
+  var pad=Math.max(2,(dataMax-dataMin)*0.25);
+  var yMin=Math.max(0,dataMin-pad), yMax=Math.min(100,dataMax+pad);
+  if(yMax===yMin){yMin=Math.max(0,yMin-5);yMax=Math.min(100,yMax+5);}
+
+  var W=340,H=190,padL=30,padR=10,padT=20,padB=38;
+  var cW=W-padL-padR, cH=H-padT-padB;
+  var n=dates.length;
+  function gx(i){return padL+(n>1?(i/(n-1))*cW:cW/2);}
+  function gy(v){return padT+cH*(1-(v-yMin)/(yMax-yMin));}
+
+  var rawRange=yMax-yMin;
+  var niceSteps=[0.5,1,2,5,10,15,20,25,50];
+  var step=niceSteps.find(function(s){return rawRange/s<=5;}) || 25;
+  var gridVals=[];
+  for(var g=Math.ceil(yMin/step)*step; g<=yMax+0.001; g+=step) gridVals.push(Math.round(g*10)/10);
+  var grid=gridVals.map(function(v){
+    var y=gy(v).toFixed(1);
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>'
+      +'<text x="'+(padL-4)+'" y="'+(gy(v)+3.5).toFixed(1)+'" text-anchor="end" font-size="8" font-family="Inter,sans-serif" fill="#4b5563">'+v+'%</text>';
+  }).join('');
+
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtD(d){
+    if(d===today)return'Now';
+    var p=d.split('-');return months[parseInt(p[1])-1]+' '+parseInt(p[2]);
+  }
+  var dateEls=dates.map(function(d,i){
+    var x=gx(i),baseY=padT+cH+5;
+    return '<text transform="rotate(-40,'+x.toFixed(1)+','+baseY+')" x="'+x.toFixed(1)+'" y="'+baseY+'" text-anchor="end" font-size="8" font-family="Inter,sans-serif" fill="#6b7280">'+fmtD(d)+'</text>';
+  }).join('');
+
+  var solo=series.length===1;
+  var nonPrimary=allSeries.filter(function(s){return !s.isPrimary;});
+  var primary=allSeries.filter(function(s){return s.isPrimary;});
+  var renderOrder=nonPrimary.concat(primary);
+
+  var defs='<defs>';
+  var paths='';
+  renderOrder.forEach(function(s) {
+    var pts=s.points;
+    var linePts=pts.map(function(v,i){return gx(i).toFixed(1)+','+gy(v).toFixed(1);}).join(' ');
+    if (s.isPrimary) {
+      var gid=gradId||'sdg-p';
+      defs+='<linearGradient id="'+gid+'" x1="0" y1="0" x2="0" y2="1">'
+        +'<stop offset="0%" stop-color="'+s.color+'" stop-opacity="0.2"/>'
+        +'<stop offset="100%" stop-color="'+s.color+'" stop-opacity="0"/>'
+        +'</linearGradient>';
+      var areaD='M'+gx(0).toFixed(1)+','+(padT+cH)+' '
+        +pts.map(function(v,i){return'L'+gx(i).toFixed(1)+','+gy(v).toFixed(1);}).join(' ')
+        +' L'+gx(n-1).toFixed(1)+','+(padT+cH)+' Z';
+      paths+='<path d="'+areaD+'" fill="url(#'+gid+')"/>';
+    }
+    paths+='<polyline points="'+linePts+'" fill="none" stroke="'+s.color+'" stroke-width="'+(s.isPrimary?2:1.5)+'" stroke-linecap="round" stroke-linejoin="round" opacity="'+(s.isPrimary?1:0.7)+'"/>';
+    pts.forEach(function(v,i) {
+      var x=gx(i),y=gy(v),isLast=i===n-1;
+      paths+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(isLast?4:s.isPrimary?3:2.5)+'" fill="'+s.color+'" opacity="'+(s.isPrimary?1:0.75)+'"/>';
+      if (solo) {
+        var lY=(i%2===0)?(y-7):(y+13);
+        if(y-7<padT)lY=y+13;
+        if(lY>padT+cH-2)lY=y-7;
+        paths+='<text x="'+x.toFixed(1)+'" y="'+lY.toFixed(1)+'" text-anchor="middle" font-size="8.5" font-family="Inter,sans-serif" fill="'+s.color+'" font-weight="'+(isLast?'700':'400')+'">'+v.toFixed(1)+'%</text>';
+      } else if (isLast) {
+        var lY2=y-8; if(lY2<padT)lY2=y+12;
+        paths+='<text x="'+x.toFixed(1)+'" y="'+lY2.toFixed(1)+'" text-anchor="middle" font-size="8.5" font-family="Inter,sans-serif" fill="'+s.color+'" font-weight="700">'+v.toFixed(1)+'%</text>';
+      }
+    });
+  });
+  defs+='</defs>';
+
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block">'
+    +defs+grid+paths+dateEls+'</svg>';
+}
+
+function toggleDetailPlayerMaker(abbrev) {
+  if (!_detailStateMaker || abbrev === _detailStateMaker.primary) return;
+  if (_detailStateMaker.visible.has(abbrev)) {
+    _detailStateMaker.visible.delete(abbrev);
+  } else {
+    _detailStateMaker.visible.add(abbrev);
+  }
+  var series = _detailStateMaker.allPlayers
+    .filter(function(p){return _detailStateMaker.visible.has(p.abbrev);})
+    .map(function(p){return {teams:p.teams, color:p.color, liveTotal:p.liveTotal, isPrimary:p.abbrev===_detailStateMaker.primary};});
+  var wrap = document.getElementById('sdg-chart-wrap');
+  if (wrap) wrap.innerHTML = buildDetailChart(_detailStateMaker.hist, series, 'sdg-'+_detailStateMaker.primary);
+  _detailStateMaker.allPlayers.forEach(function(p) {
+    var pill = document.getElementById('sdg-pill-'+p.abbrev);
+    if (pill) pill.style.opacity = _detailStateMaker.visible.has(p.abbrev) ? '1' : '0.28';
+  });
+}
+
 function showSparklineDetailMaker(abbrev, teamsStr, color, playerName) {
   var st = _makerState;
   if (!st || !st.historyData || !st.odds) return;
   var hist = st.historyData, odds = st.odds;
   var teams = teamsStr.split(',');
   var today = new Date().toISOString().substring(0,10);
+  var pool = st.pool;
+
+  var allPlayers = (pool && pool.players ? pool.players : []).map(function(p, i) {
+    var pc = p.color ? {color:p.color} : getPC(pool, i);
+    var ab = (p.abbrev || p.name.substring(0,3)).toUpperCase();
+    var liveTotal = p.teams.reduce(function(sum,t){return sum+parseFloat((odds[t]||'0%').replace('%',''));},0);
+    return {abbrev:ab, name:p.name, teams:p.teams, color:pc.color, liveTotal:liveTotal};
+  });
+
+  _detailStateMaker = {hist:hist, odds:odds, primary:abbrev, visible:new Set([abbrev]), allPlayers:allPlayers};
 
   var dates = [...new Set(hist.map(function(d){return d.date;}).filter(Boolean))].sort();
   if (!dates.includes(today)) dates.push(today);
-
   var rows = dates.map(function(date) {
     var isLive = date === today;
     var teamVals = teams.map(function(team) {
@@ -1116,7 +1237,17 @@ function showSparklineDetailMaker(abbrev, teamsStr, color, playerName) {
   }
 
   var liveTotal = rows[rows.length-1].total;
-  var largeSvg = buildPlayerSparkline(hist, teams, color, liveTotal, 320, 56);
+  var chartSvg = buildDetailChart(hist, [{teams:teams, color:color, liveTotal:liveTotal, isPrimary:true}], 'sdg-'+abbrev);
+
+  var pillsHtml = allPlayers.map(function(p) {
+    var isPrimary = p.abbrev === abbrev;
+    return '<span id="sdg-pill-'+p.abbrev+'" '
+      +(isPrimary?'':'onclick="toggleDetailPlayerMaker(\''+p.abbrev+'\')" ')
+      +'style="display:inline-block;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;font-family:Inter,sans-serif;'
+      +'background:'+hexToRgba(p.color,0.18)+';color:'+p.color+';'
+      +'opacity:'+(isPrimary?1:0.28)+';cursor:'+(isPrimary?'default':'pointer')+';transition:opacity .15s">'
+      +esc(p.abbrev)+'</span>';
+  }).join('');
 
   var tableRows = rows.slice().reverse().map(function(row, ri, arr) {
     var prev = arr[ri+1];
@@ -1146,13 +1277,17 @@ function showSparklineDetailMaker(abbrev, teamsStr, color, playerName) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#0d1117;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px;box-sizing:border-box;';
   overlay.innerHTML =
     '<div style="max-width:480px;margin:0 auto">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
       +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:1px;color:#f9fafb">'
         +'<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:13px;background:'+hexToRgba(color,0.2)+';color:'+color+'">'+abbrev+'</span> '+esc(playerName)+' — Cup %'
       +'</div>'
       +'<button onclick="document.getElementById(\'sparkline-detail-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0">✕</button>'
     +'</div>'
-    +'<div style="margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:12px;padding:12px 10px">'+largeSvg+'</div>'
+    +'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">'
+      +'<span style="font-size:10px;color:#4b5563;font-family:Inter,sans-serif">compare:</span>'
+      +pillsHtml
+    +'</div>'
+    +'<div id="sdg-chart-wrap" style="margin-bottom:20px;background:rgba(255,255,255,0.03);border-radius:12px;padding:12px 10px">'+chartSvg+'</div>'
     +'<table style="width:100%;border-collapse:collapse">'
       +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.12)">'
         +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">DATE</th>'
@@ -1790,7 +1925,7 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
-    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap};
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool()};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
