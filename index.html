@@ -142,6 +142,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 .scard{background:var(--surface2);border-radius:12px;padding:16px 12px;text-align:center;border:1px solid var(--border);position:relative;overflow:hidden;}
 .scard.first::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#fbbf24,transparent);}
+.streak-badge{position:absolute;top:6px;left:6px;font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;padding:2px 5px;border-radius:4px;border:1px solid;line-height:1.2;}
 .srank{font-family:'Barlow Condensed',sans-serif;font-size:10px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 .sname{font-size:12px;color:var(--muted);margin:4px 0 6px;}
 .spct{font-family:'Barlow Condensed',sans-serif;font-size:36px;font-weight:900;line-height:1;}
@@ -1088,6 +1089,45 @@ function buildPlayerSparkline(histData,teams,stroke,liveTotal,W,H){
     +dots+'</svg>';
 }
 
+function computePlayerStreak(histData,teams,liveTotal){
+  if(!histData||histData.length<2)return null;
+  var dates=[...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
+  if(dates.length<2)return null;
+  var today=new Date().toISOString().substring(0,10);
+  var points=dates.map(function(date){
+    if(date===today&&liveTotal!=null)return liveTotal;
+    return teams.reduce(function(sum,team){
+      var e=histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
+      return sum+(e?parseFloat(e.cup)||0:0);
+    },0);
+  });
+  if(!dates.includes(today)&&liveTotal!=null)points.push(liveTotal);
+  if(points.length<2)return null;
+  var n=points.length-1;
+  var lastDiff=points[n]-points[n-1];
+  if(Math.abs(lastDiff)<0.05)return null;
+  var dir=lastDiff>0?1:-1;
+  var count=1;
+  for(var i=n-1;i>=1;i--){
+    var diff=points[i]-points[i-1];
+    if(Math.abs(diff)<0.05)break;
+    if((diff>0?1:-1)===dir)count++;
+    else break;
+  }
+  return count>=2?{dir:dir>0?'up':'down',days:count}:null;
+}
+
+function buildStreakBadge(histData,teams,liveTotal){
+  var streak=computePlayerStreak(histData,teams,liveTotal);
+  if(!streak)return'';
+  var isUp=streak.dir==='up';
+  var arrow=isUp?'▲':'▼';
+  var fire=isUp&&streak.days>=3?' 🔥':'';
+  var color=isUp?'#4ade80':'#f87171';
+  var bg=isUp?'rgba(74,222,128,0.12)':'rgba(248,113,113,0.12)';
+  return'<div class="streak-badge" style="color:'+color+';background:'+bg+';border-color:'+color+'33">'+arrow+streak.days+' DAYS'+fire+'</div>';
+}
+
 function buildDetailChart(histData, series, gradId) {
   if (!histData || histData.length < 2 || !series || !series.length) return '';
   var today = new Date().toISOString().substring(0,10);
@@ -1766,6 +1806,55 @@ function showShareOverlay() {
   document.body.appendChild(overlay);
 }
 
+function buildRaceSparklineMaker(histData, odds, pool) {
+  if (!histData || histData.length < 2 || !pool) return '';
+  var today = new Date().toISOString().substring(0,10);
+  var dates = [...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
+  if (!dates.includes(today)) dates.push(today);
+  if (dates.length < 2) return '';
+
+  var players = pool.players.map(function(p, i) {
+    var pc = p.color ? {color:p.color} : getPC(pool, i);
+    var abbrev = (p.abbrev || p.name.substring(0,3)).toUpperCase();
+    var pts = dates.map(function(date) {
+      if (date === today) return p.teams.reduce(function(sum,t){return sum+parseFloat((odds[t]||'0%').replace('%',''));},0);
+      return p.teams.reduce(function(sum,team){
+        var e=histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
+        return sum+(e?parseFloat(e.cup)||0:0);
+      },0);
+    });
+    return {abbrev:abbrev, color:pc.color, points:pts};
+  });
+
+  var allPts=players.reduce(function(acc,p){return acc.concat(p.points);},[]);
+  var dataMin=Math.min.apply(null,allPts), dataMax=Math.max.apply(null,allPts);
+  var pad=Math.max(1,(dataMax-dataMin)*0.15);
+  var yMin=Math.max(0,dataMin-pad), yMax=Math.min(100,dataMax+pad);
+  if(yMax===yMin){yMin=0;yMax=50;}
+
+  var W=320,H=72,padL=4,padR=42,padT=6,padB=6;
+  var cW=W-padL-padR, cH=H-padT-padB, n=dates.length;
+  function gx(i){return padL+(n>1?(i/(n-1))*cW:cW/2);}
+  function gy(v){return padT+cH*(1-(v-yMin)/(yMax-yMin));}
+
+  var labels=players.map(function(p){
+    return {abbrev:p.abbrev, color:p.color, y:gy(p.points[p.points.length-1])};
+  }).sort(function(a,b){return a.y-b.y;});
+  for(var i=1;i<labels.length;i++){if(labels[i].y-labels[i-1].y<12)labels[i].y=labels[i-1].y+12;}
+  var labelY={};labels.forEach(function(l){labelY[l.abbrev]=l.y;});
+
+  var lines=players.map(function(p){
+    var linePts=p.points.map(function(v,i){return gx(i).toFixed(1)+','+gy(v).toFixed(1);}).join(' ');
+    var lx=gx(n-1), dotY=gy(p.points[p.points.length-1]);
+    return '<polyline points="'+linePts+'" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+      +'<circle cx="'+lx.toFixed(1)+'" cy="'+dotY.toFixed(1)+'" r="2.5" fill="rgba(255,255,255,0.25)"/>'
+      +'<text x="'+(lx+6).toFixed(1)+'" y="'+(labelY[p.abbrev]+4).toFixed(1)+'" font-size="9.5" font-weight="700" font-family="Barlow Condensed,sans-serif" fill="'+p.color+'">'+p.abbrev+'</text>';
+  }).join('');
+
+  return '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);opacity:0.45">'
+    +'<svg width="85%" viewBox="0 0 '+W+' '+H+'" style="display:block;overflow:visible;margin:0 auto">'+lines+'</svg></div>';
+}
+
 function buildStandings(odds,histData){
   var pool=getActivePool();if(!pool)return"";
   var ranks=["1st","2nd","3rd","4th","5th","6th","7th","8th"];
@@ -1786,6 +1875,7 @@ function buildStandings(odds,histData){
       }).join(" · ");
       return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+'">'+
         (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
+        buildStreakBadge(histData,p.teams,p.total)+
         '<div class="srank">'+ranks[i]+'</div>'+
         '<div style="display:flex;align-items:center;gap:4px"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span>'+
         '<span style="font-size:9px;color:var(--muted)">'+p.alive+'/'+p.teams.length+'</span></div>'+
