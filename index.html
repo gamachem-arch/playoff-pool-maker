@@ -20,7 +20,8 @@
 <style>
 :root{--bg:#0a0e1a;--surface:#111827;--surface2:#1a2236;--border:rgba(255,255,255,0.08);--text:#f0f4ff;--muted:#6b7a99;--green:#10b981;}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;padding:24px 16px 48px;}
+body{background:var(--bg);color:var(--text);font-family:'Barlow',sans-serif;min-height:100vh;}
+#page-wrap{padding:24px 16px 48px;background:var(--bg);position:relative;z-index:1;will-change:transform;min-height:100vh;}
 .header{text-align:center;margin-bottom:24px;}
 .eyebrow{font-family:'Barlow Condensed',sans-serif;font-size:11px;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
 h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font-weight:900;text-transform:uppercase;letter-spacing:2px;background:linear-gradient(135deg,#fff,#93c5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
@@ -212,10 +213,45 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .bc-gr .bc-gn { font-size:9px; font-weight:700; flex-shrink:0; min-width:14px; }
 .bc-gr .bc-win { color:#d1d5db; font-weight:700; }
 .bc-gr-live { color:#f87171; }
+
+  /* Pull-to-refresh */
+  #ptr-pill {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 8px 20px 9px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    white-space: nowrap;
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #ptr-icon {
+    font-size: 15px;
+    display: inline-block;
+    will-change: transform;
+    transition: transform 0.1s ease;
+  }
+  @keyframes ptr-spin { to { transform: rotate(360deg); } }
+  #ptr-icon.ptr-spin { animation: ptr-spin 0.65s linear infinite; transition: none; }
 </style>
 </head>
 <body>
 
+<div id="ptr-pill"><span id="ptr-icon">↻</span><span id="ptr-text">Pull to refresh</span></div>
+
+<div id="page-wrap">
 <div class="header">
   <div class="eyebrow">2026 NHL Postseason</div>
   <h1 id="pool-title">Playoff Pool</h1>
@@ -236,6 +272,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 <div id="bracket-section" style="display:none;margin-top:16px;margin-bottom:16px"></div>
 <div id="main"><div class="loading">Loading...</div></div>
 <div id="swrap"></div>
+</div>
 
 <script>
 var ODDS_API = "https://script.google.com/macros/s/AKfycbyeMYsFI6sVfRnuPJgX_6-Ev9qr7dosfnpD-T-s9UtmMoQ03fjfHy6wuY3AJ63wU2wY/exec";
@@ -2083,6 +2120,128 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
       e.preventDefault(); deferredPrompt = e;
       setTimeout(function(){ showBanner('android'); }, 2500);
     });
+  }
+})();
+
+/* ── Pull-to-refresh ── */
+(function() {
+  var pill, icon, txt, wrap;
+  var startY = 0, startX = 0, lastY = 0;
+  var active = false, busy = false;
+  var THRESH = 62;
+  var MAX    = 115;
+  var HOLD   = 62;
+
+  function init() {
+    pill = document.getElementById('ptr-pill');
+    icon = document.getElementById('ptr-icon');
+    txt  = document.getElementById('ptr-text');
+    wrap = document.getElementById('page-wrap');
+    document.addEventListener('touchstart', ts, { passive: true });
+    document.addEventListener('touchmove',  tm, { passive: false });
+    document.addEventListener('touchend',   te, { passive: true });
+    document.addEventListener('touchcancel', tc, { passive: true });
+  }
+
+  function overlayOpen() {
+    var kids = document.body.children;
+    for (var i = 0; i < kids.length; i++) {
+      var id = kids[i].id;
+      if (id === 'ptr-pill' || id === 'page-wrap') continue;
+      if (parseInt(window.getComputedStyle(kids[i]).zIndex) >= 10000) return true;
+    }
+    return false;
+  }
+
+  function ts(e) {
+    if (busy) return;
+    startY = lastY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    active = false;
+  }
+
+  function tm(e) {
+    if (busy) return;
+    var t  = e.touches[0];
+    var dy = t.clientY - startY;
+    var dx = Math.abs(t.clientX - startX);
+    lastY  = t.clientY;
+
+    if (!active) {
+      if (window.scrollY > 10 || dy < 10 || dx > dy * 0.65 || overlayOpen()) return;
+      active = true;
+    }
+    e.preventDefault();
+
+    var v    = MAX * (1 - Math.exp(-dy / (MAX * 1.05)));
+    var prog = Math.min(v / THRESH, 1);
+
+    wrap.style.transition = 'none';
+    wrap.style.transform  = 'translateY(' + v + 'px)';
+
+    if (v >= THRESH) {
+      icon.style.transform = 'rotate(180deg)';
+      txt.textContent      = 'Release to refresh';
+      pill.style.color     = 'var(--text)';
+    } else {
+      icon.style.transform = 'rotate(' + (prog * 180) + 'deg)';
+      txt.textContent      = 'Pull to refresh';
+      pill.style.color     = 'var(--muted)';
+    }
+  }
+
+  function te() {
+    if (!active || busy) { active = false; return; }
+    active = false;
+    var dy = lastY - startY;
+    var v  = MAX * (1 - Math.exp(-dy / (MAX * 1.6)));
+    if (v >= THRESH) go(); else snap();
+  }
+
+  function tc() { active = false; if (!busy) snap(); }
+
+  function snap() {
+    wrap.style.transition = 'transform 0.42s cubic-bezier(0.25,1,0.5,1)';
+    wrap.style.transform  = 'translateY(0)';
+    pill.style.color      = 'var(--muted)';
+    icon.style.transform  = '';
+    txt.textContent       = 'Pull to refresh';
+  }
+
+  function go() {
+    busy = true;
+    wrap.style.transition = 'transform 0.45s cubic-bezier(0.34,1.56,0.64,1)';
+    wrap.style.transform  = 'translateY(' + HOLD + 'px)';
+    pill.style.color      = 'var(--text)';
+    icon.style.transform  = '';
+    icon.className        = 'ptr-spin';
+    txt.textContent       = 'Refreshing...';
+
+    doRender().then(done).catch(function() { busy = false; snap(); });
+  }
+
+  function done() {
+    icon.className   = '';
+    icon.textContent = '✓';
+    pill.style.color = '#22c55e';
+    txt.textContent  = 'Updated!';
+    setTimeout(function() {
+      wrap.style.transition = 'transform 0.58s cubic-bezier(0.25,1,0.5,1)';
+      wrap.style.transform  = 'translateY(0)';
+      setTimeout(function() {
+        icon.textContent     = '↻';
+        icon.style.transform = '';
+        pill.style.color     = 'var(--muted)';
+        txt.textContent      = 'Pull to refresh';
+        busy = false;
+      }, 600);
+    }, 850);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
   }
 })();
 </script>
