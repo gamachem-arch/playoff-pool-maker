@@ -1934,14 +1934,11 @@ async function doRender(){
   document.getElementById('legwrap').innerHTML = buildLegend(null);
   drawPoolSwitcher();
   try{
-    var [r1,r2,histRes]=await Promise.all([
-      fetch(ODDS_API+"?t="+Date.now()),
-      fetch(ODDS_API+"?action=scores&t="+Date.now()),
-      fetch(ODDS_API+"?action=history&t="+Date.now(),{cache:"no-store"})
+    var [rawOdds,nhlRaw,historyData]=await Promise.all([
+      fetch(ODDS_API+"?t="+Date.now()).then(function(r){return r.json();}).catch(function(){return {};}),
+      fetch(ODDS_API+"?action=scores&t="+Date.now()).then(function(r){return r.json();}).catch(function(){return null;}),
+      fetch(ODDS_API+"?action=history&t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return [];})
     ]);
-    var rawOdds=await r1.json();
-    var nhlRaw=await r2.json();
-    var historyData=[]; try{historyData=await histRes.json();}catch(e){}
     var gamesRaw=[];
     try{
       var nhlRes=await fetch(NHL_WORKER+"?action=nhl&t="+Date.now(),{cache:"no-store"});
