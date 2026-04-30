@@ -1608,6 +1608,16 @@ function getSeriesForTeamsMaker(t1, t2) {
   return all.find(function(s){ return (s.topTeam===t1&&s.bottomTeam===t2)||(s.topTeam===t2&&s.bottomTeam===t1); }) || null;
 }
 
+function toggleShareMenu() {
+  var menu = document.getElementById('standings-share-menu');
+  var btn  = document.getElementById('standings-share-btn');
+  if (!menu) return;
+  var open = menu.style.maxHeight && menu.style.maxHeight !== '0px';
+  menu.style.maxHeight = open ? '0px' : '200px';
+  menu.style.opacity   = open ? '0'   : '1';
+  btn.textContent      = open ? '📤 Share' : '✕ Close';
+}
+
 function showRoundupOverlayMaker() {
   var st = _makerState;
   if (!st.pieTotals || !st.gamesData) return;
@@ -1926,7 +1936,7 @@ function buildStandings(odds,histData){
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
   return '<div class="standings"><div class="stitle"><div>Pool standings — combined cup odds'+hint+'</div>'+
-    '<div style="display:flex;gap:6px;margin-top:4px"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button> <button class="share-btn" onclick="showShareOverlay()">📸 Share</button> <button class="share-btn" id="widget-copy-btn" onclick="copyWidgetConfig()">📲 Widget</button> <button class="share-btn" id="all-pools-copy-btn" onclick="copyAllPoolsConfig()">📲 All Pools</button></div></div><div class="sgrid">'+
+    '<div style="margin-top:4px"><button id="standings-share-btn" class="share-btn" onclick="toggleShareMenu()">📤 Share</button><div id="standings-share-menu" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;max-height:0;opacity:0;overflow:hidden;transition:max-height 0.22s ease,opacity 0.18s ease"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button><button class="share-btn" onclick="showShareOverlay()">📸 Share</button><button class="share-btn" id="widget-copy-btn" onclick="copyWidgetConfig()">📲 Widget</button><button class="share-btn" id="all-pools-copy-btn" onclick="copyAllPoolsConfig()">📲 All Pools</button></div></div></div><div class="sgrid">'+
     totals.map(function(p,i){var pc=p.color?{color:p.color,bg:hexToRgba(p.color,0.15)}:getPC(pool,p.ci);
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
