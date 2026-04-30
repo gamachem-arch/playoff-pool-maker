@@ -1615,7 +1615,8 @@ function toggleShareMenu() {
   var open = btn.textContent === '✕';
   menu.style.maxWidth = open ? '0px' : '600px';
   menu.style.opacity  = open ? '0'   : '1';
-  btn.textContent     = open ? '📤 Share' : '✕';
+  if (open) { setTimeout(function(){ btn.textContent = '📤 Share'; }, 250); }
+  else { btn.textContent = '✕'; }
 }
 
 function showRoundupOverlayMaker() {
