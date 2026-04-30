@@ -1766,6 +1766,30 @@ function buildShareSeriesRowMaker(s) {
   </div>`;
 }
 
+function copyWidgetConfig() {
+  var pool = getActivePool();
+  if (!pool) return;
+  var config = {
+    title: pool.title || "Playoff Pool",
+    url: "https://gamachem-arch.github.io/playoff-pool-maker/",
+    players: pool.players.map(function(p) {
+      return { name: p.name, abbrev: (p.abbrev || p.name.substring(0,3)).toUpperCase(), teams: p.teams };
+    })
+  };
+  var json = JSON.stringify(config);
+  var btn = document.getElementById('widget-copy-btn');
+  navigator.clipboard.writeText(json).then(function() {
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '📲 Widget'; }, 2000); }
+  }).catch(function() {
+    // fallback for older iOS
+    var ta = document.createElement('textarea');
+    ta.value = json; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '📲 Widget'; }, 2000); }
+  });
+}
+
 function showShareOverlay() {
   var st = _makerState;
   if (!st.pieTotals) return;
@@ -1877,7 +1901,7 @@ function buildStandings(odds,histData){
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
   return '<div class="standings"><div class="stitle"><div>Pool standings — combined cup odds'+hint+'</div>'+
-    '<div style="display:flex;gap:6px;margin-top:4px"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button> <button class="share-btn" onclick="showShareOverlay()">📸 Share</button></div></div><div class="sgrid">'+
+    '<div style="display:flex;gap:6px;margin-top:4px"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button> <button class="share-btn" onclick="showShareOverlay()">📸 Share</button> <button class="share-btn" id="widget-copy-btn" onclick="copyWidgetConfig()">📲 Widget</button></div></div><div class="sgrid">'+
     totals.map(function(p,i){var pc=p.color?{color:p.color,bg:hexToRgba(p.color,0.15)}:getPC(pool,p.ci);
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
