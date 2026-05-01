@@ -769,7 +769,8 @@ function buildSeriesGames(t1,t2,gamesData){
     var as=g.awayScore||0,hs=g.homeScore||0;
     if(g.state==='OFF'||g.state==='FINAL'){
       var ot=(g.periodType&&g.periodType!=='REG')?' OT':'';
-      return'<div class="game-row">'+num+dc+'<span class="game-result final">'+g.away+' '+as+' · '+hs+' '+g.home+ot+'</span></div>';
+      var doneClick=g.id?(' onclick="event.stopPropagation();showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="cursor:pointer"'):'';
+      return'<div class="game-row"'+doneClick+'>'+num+dc+'<span class="game-result final">'+g.away+' '+as+' · '+hs+' '+g.home+ot+'</span>'+(g.id?'<span style="color:#374151;font-size:10px;margin-left:auto">▶</span>':'')+'</div>';
     }else if(g.state==='LIVE'||g.state==='CRIT'){
       var liveClick=g.id?(' onclick="event.stopPropagation();showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="cursor:pointer"'):'';
       return'<div class="game-row"'+liveClick+'>'+num+'<span class="game-date-col" style="color:#f87171;font-weight:700">LIVE</span><span class="game-result live">'+g.away+' '+as+' · '+hs+' '+g.home+(g.period?' P'+g.period:'')+'</span><span style="color:#6b7280;font-size:10px;margin-left:auto">▶</span></div>';
