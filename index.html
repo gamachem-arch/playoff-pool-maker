@@ -1526,7 +1526,8 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     data.goals.forEach(function(g){
       var isHome=g.delta>0,scorer=isHome?home:away;
       var spill=ownerPill(scorer);
-      var o=getTeamOwnerMaker(scorer), spName=o?(pool&&pool.players&&pool.players[o.ci]?pool.players[o.ci].name:''):'';
+      var scorerMatch=g.desc&&g.desc.match(/#\d+\s+([A-Z''-]+)\(/);
+      var scorerName=scorerMatch?(scorerMatch[1].charAt(0)+scorerMatch[1].slice(1).toLowerCase()):'';
       var dcol=isHome?'#10b981':'#f87171',arrow=isHome?'↑':'↓';
       var gp=g.t<=1200?1:g.t<=2400?2:g.t<=3600?3:4,gs=g.t%1200,gm=Math.floor(gs/60),gc=gs%60;
       var tl='P'+gp+' '+gm+':'+(gc<10?'0':'')+gc;
@@ -1534,7 +1535,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
       html+='<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">'
         +'<td style="padding:5px 4px;font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap">'+tl+'</td>'
         +'<td style="padding:5px 4px"><div style="display:flex;align-items:center;gap:4px">'+logoSm(scorer)+'<span style="font-size:12px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+scorer+'</span></div></td>'
-        +'<td style="padding:5px 2px"><div style="display:flex;align-items:center;gap:3px">'+spill+(spName?'<span style="font-size:10px;color:#9ca3af;font-family:\'Barlow Condensed\',sans-serif">'+spName+'</span>':'')+'</div></td>'
+        +'<td style="padding:5px 2px"><div style="display:flex;align-items:center;gap:3px">'+spill+(scorerName?'<span style="font-size:11px;color:#e5e7eb;font-family:\'Barlow Condensed\',sans-serif;font-weight:600">'+scorerName+'</span>':'')+'</div></td>'
         +'<td style="padding:5px 4px;font-size:11px;color:#9ca3af;font-family:\'Barlow Condensed\',sans-serif">'+sc+'</td>'
         +'<td style="padding:5px 0 5px 4px;font-size:12px;font-weight:700;color:'+dcol+';font-family:\'Barlow Condensed\',sans-serif;text-align:right">'+ds+'</td>'
         +'</tr>';
