@@ -1435,16 +1435,18 @@ function buildWinProbChartM(timeline,goals){
     +'<path d="'+linePath+'" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>'
     +yLabels+periodLabels+goalMarkers+endDot+'</svg>';
 }
-function buildDualBarM(label,leftPct,rightPct){
+function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam){
   var leftW=(leftPct/(leftPct+rightPct||1)*100).toFixed(1);
+  var lLogo=leftTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+leftTeam+'_light.svg" style="width:16px;height:16px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+  var rLogo=rightTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+rightTeam+'_light.svg" style="width:16px;height:16px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
   return'<div style="margin-bottom:10px">'
     +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+label+'</div>'
-    +'<div style="display:flex;align-items:center;gap:6px">'
-    +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:36px;text-align:right">'+leftPct+'%</span>'
+    +'<div style="display:flex;align-items:center;gap:5px">'
+    +lLogo+'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px;text-align:right">'+leftPct+'%</span>'
     +'<div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden">'
     +'<div style="height:100%;width:'+leftW+'%;background:rgba(255,255,255,0.25);border-radius:4px"></div>'
     +'</div>'
-    +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:36px">'+rightPct+'%</span>'
+    +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px">'+rightPct+'%</span>'+rLogo
     +'</div></div>';
 }
 function renderLiveGameOverlayMaker(overlay,data,away,home){
@@ -1512,11 +1514,8 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     var hz=Math.round(c.homeZone*1000)/10,az=Math.round((1-c.homeZone)*1000)/10;
     var hs2=Math.round(c.homeCloseShots*1000)/10,as2=Math.round((1-c.homeCloseShots)*1000)/10;
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 10px 2px;margin-bottom:12px">';
-    html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
-    html+='<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px">GAME CONTROL</span>';
-    html+='<span style="font-size:10px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">'+away+' ← → '+home+'</span>';
-    html+='</div>';
-    html+=buildDualBarM('Zone Control',az,hz)+buildDualBarM('Shot Quality',as2,hs2);
+    html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">GAME CONTROL</div>';
+    html+=buildDualBarM('Zone Control',az,hz,away,home)+buildDualBarM('Shot Quality',as2,hs2,away,home);
     html+='</div>';
   }
   if(data.goals&&data.goals.length){
