@@ -771,7 +771,8 @@ function buildSeriesGames(t1,t2,gamesData){
       var ot=(g.periodType&&g.periodType!=='REG')?' OT':'';
       return'<div class="game-row">'+num+dc+'<span class="game-result final">'+g.away+' '+as+' · '+hs+' '+g.home+ot+'</span></div>';
     }else if(g.state==='LIVE'||g.state==='CRIT'){
-      return'<div class="game-row">'+num+'<span class="game-date-col" style="color:#f87171">LIVE</span><span class="game-result live">'+g.away+' '+as+' · '+hs+' '+g.home+(g.period?' P'+g.period:'')+'</span></div>';
+      var liveClick=g.id?(' onclick="event.stopPropagation();showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="cursor:pointer"'):'';
+      return'<div class="game-row"'+liveClick+'>'+num+'<span class="game-date-col" style="color:#f87171;font-weight:700">LIVE</span><span class="game-result live">'+g.away+' '+as+' · '+hs+' '+g.home+(g.period?' P'+g.period:'')+'</span><span style="color:#6b7280;font-size:10px;margin-left:auto">▶</span></div>';
     }else{
       return'<div class="game-row">'+num+dc+'<span class="game-result future">'+formatGameTime(g.startUTC)+'</span></div>';
     }
@@ -1384,6 +1385,196 @@ function getActiveRound(parsed) {
   if ((parsed.r3||[]).some(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 3;
   if ((parsed.r2||[]).every(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 2;
   return 1;
+}
+
+// ── Live Game Overlay (Maker) ─────────────────────────────────────────────
+function lgoPctM(v){return(Math.round(v*1000)/10).toFixed(1);}
+function lgoStatRowM(label,value){
+  return'<div style="display:flex;justify-content:space-between;align-items:baseline;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">'
+    +'<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+label+'</span>'
+    +'<span style="font-size:13px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+value+'</span>'
+    +'</div>';
+}
+function buildWinProbChartM(timeline,goals){
+  if(!timeline||timeline.length<2)return'';
+  var W=340,H=120,pL=30,pR=10,pT=8,pB=22,cW=W-pL-pR,cH=H-pT-pB;
+  var maxT=Math.max.apply(null,timeline.map(function(p){return p.t;}));
+  if(maxT<=1200)maxT=1200;else if(maxT<=2400)maxT=2400;else if(maxT<=3600)maxT=3600;else maxT=Math.ceil(maxT/300)*300;
+  function tx(t){return pL+(t/maxT)*cW;}function ty(wp){return pT+(1-wp)*cH;}
+  var pts=timeline.map(function(p){return tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
+  var linePath='M '+pts.join(' L ');
+  var y50=ty(0.5);
+  var fillPath='M '+tx(timeline[0].t).toFixed(1)+','+y50.toFixed(1);
+  timeline.forEach(function(p){fillPath+=' L '+tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
+  fillPath+=' L '+tx(timeline[timeline.length-1].t).toFixed(1)+','+y50.toFixed(1)+' Z';
+  var periodLines=[1200,2400,3600].filter(function(t){return t<maxT;}).map(function(t){
+    var x=tx(t).toFixed(1);
+    return'<line x1="'+x+'" y1="'+pT+'" x2="'+x+'" y2="'+(pT+cH)+'" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3,3"/>';
+  }).join('');
+  var pStarts=[0,1200,2400,3600],pNames=['P1','P2','P3','OT'],periodLabels='';
+  for(var i=0;i<pNames.length;i++){
+    if(pStarts[i]>=maxT)break;
+    var end=Math.min(pStarts[i+1]||maxT,maxT),mid=(pStarts[i]+end)/2;
+    periodLabels+='<text x="'+tx(mid).toFixed(1)+'" y="'+(H-5)+'" fill="#4b5563" font-size="9" font-family="Barlow Condensed,sans-serif" text-anchor="middle">'+pNames[i]+'</text>';
+  }
+  var fiftyLine='<line x1="'+pL+'" y1="'+y50.toFixed(1)+'" x2="'+(pL+cW)+'" y2="'+y50.toFixed(1)+'" stroke="rgba(255,255,255,0.18)" stroke-width="1" stroke-dasharray="4,3"/>';
+  var yLabels='<text x="'+(pL-4)+'" y="'+(pT+4)+'" fill="#4b5563" font-size="8" font-family="Barlow Condensed,sans-serif" text-anchor="end">100%</text>'
+    +'<text x="'+(pL-4)+'" y="'+(y50+4)+'" fill="#4b5563" font-size="8" font-family="Barlow Condensed,sans-serif" text-anchor="end">50%</text>'
+    +'<text x="'+(pL-4)+'" y="'+(pT+cH+4)+'" fill="#4b5563" font-size="8" font-family="Barlow Condensed,sans-serif" text-anchor="end">0%</text>';
+  var goalMarkers=(goals||[]).map(function(g){
+    var x=tx(g.t).toFixed(1),y=ty(g.homeWinProb).toFixed(1),isHome=g.delta>0,col=isHome?'#10b981':'#f87171';
+    return'<line x1="'+x+'" y1="'+pT+'" x2="'+x+'" y2="'+(pT+cH)+'" stroke="'+col+'" stroke-width="1" opacity="0.4"/>'
+      +'<circle cx="'+x+'" cy="'+y+'" r="3.5" fill="'+col+'" stroke="#0d1117" stroke-width="1.5"/>';
+  }).join('');
+  var last=timeline[timeline.length-1];
+  var endDot='<circle cx="'+tx(last.t).toFixed(1)+'" cy="'+ty(last.wp).toFixed(1)+'" r="3" fill="#3b82f6" stroke="#0d1117" stroke-width="1.5"/>';
+  return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block">'
+    +'<defs><linearGradient id="lgo-grad-m" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0.03"/></linearGradient></defs>'
+    +periodLines+fiftyLine
+    +'<path d="'+fillPath+'" fill="url(#lgo-grad-m)"/>'
+    +'<path d="'+linePath+'" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>'
+    +yLabels+periodLabels+goalMarkers+endDot+'</svg>';
+}
+function buildDualBarM(label,leftPct,rightPct){
+  var leftW=(leftPct/(leftPct+rightPct||1)*100).toFixed(1);
+  return'<div style="margin-bottom:10px">'
+    +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+label+'</div>'
+    +'<div style="display:flex;align-items:center;gap:6px">'
+    +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:36px;text-align:right">'+leftPct+'%</span>'
+    +'<div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden">'
+    +'<div style="height:100%;width:'+leftW+'%;background:rgba(255,255,255,0.25);border-radius:4px"></div>'
+    +'</div>'
+    +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:36px">'+rightPct+'%</span>'
+    +'</div></div>';
+}
+function renderLiveGameOverlayMaker(overlay,data,away,home){
+  var c=data.current||{};
+  var pool=getActivePool();
+  function ownerPill(team){
+    var o=getTeamOwnerMaker(team);
+    if(!o)return'';
+    var pc=getPC(pool,o.ci);
+    return'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';font-size:10px;padding:1px 5px;border-radius:4px;font-weight:700">'+o.abbrev+'</span>';
+  }
+  var secs=data.time||0,periodSecs=secs%1200,period=Math.max(1,Math.ceil(secs/1200));
+  var remaining=periodSecs===0?0:(1200-periodSecs);
+  var remMin=Math.floor(remaining/60),remSec=remaining%60;
+  var periodLabel=period<=3?'P'+period:'OT';
+  var timeStr=remaining>0?(periodLabel+' · '+remMin+':'+(remSec<10?'0':'')+remSec+' remaining'):(periodLabel+' · End');
+  var rawWP=c.liveHomeWinOverall!=null?c.liveHomeWinOverall:(c.homeWinProb||0.5);
+  var homeWinPct=lgoPctM(rawWP),awayWinPct=lgoPctM(1-rawWP);
+  var round=data.gameId?(parseInt(data.gameId[7])||1):1;
+  var homeAdv=round===1?c.liveHomeMakeR2:round===2?c.liveHomeMakeR3:round===3?c.liveHomeMakeR4:c.liveHomeWinCup;
+  var awayAdv=round===1?c.liveAwayMakeR2:round===2?c.liveAwayMakeR3:round===3?c.liveAwayMakeR4:c.liveAwayWinCup;
+  var awayPill=ownerPill(away),homePill=ownerPill(home);
+  var html='<div style="max-width:480px;margin:0 auto">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">';
+  html+='<div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:1px;color:#f9fafb">'
+    +awayPill+' '+away+' <span style="color:#4b5563">'+data.awayScore+'</span>'
+    +' <span style="color:#374151;font-size:20px;font-weight:400">·</span>'
+    +' <span style="color:#4b5563">'+data.homeScore+'</span> '+home+' '+homePill
+    +'</div>'
+    +'<div style="font-size:11px;color:'+(data.gameOver?'#6b7280':'#f87171')+';font-family:\'Barlow Condensed\',sans-serif;margin-top:3px;letter-spacing:.3px">'+(data.gameOver?'FINAL':'🔴 LIVE · '+timeStr)+'</div>'
+    +'</div>';
+  html+='<button onclick="document.getElementById(\'live-game-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0">✕</button>';
+  html+='</div>';
+  if(data.timeline&&data.timeline.length>1){
+    html+='<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:12px 8px 8px;margin-bottom:12px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding:0 4px">';
+    html+='<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px">WIN PROBABILITY</span>';
+    html+='<div style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif">'
+      +'<span style="color:#9ca3af">'+away+'</span> <span style="color:#f9fafb;font-weight:700">'+awayWinPct+'%</span>'
+      +' <span style="color:#374151;margin:0 4px">·</span>'
+      +'<span style="color:#f9fafb;font-weight:700">'+homeWinPct+'%</span> <span style="color:#9ca3af">'+home+'</span>'
+      +'</div></div>';
+    html+=buildWinProbChartM(data.timeline,data.goals);
+    html+='</div>';
+  }
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">';
+  var cols=[
+    {team:away,pill:awayPill,win:awayWinPct,adv:awayAdv,r3:c.liveAwayMakeR3,r4:c.liveAwayMakeR4,cup:c.liveAwayWinCup},
+    {team:home,pill:homePill,win:homeWinPct,adv:homeAdv,r3:c.liveHomeMakeR3,r4:c.liveHomeMakeR4,cup:c.liveHomeWinCup}
+  ];
+  cols.forEach(function(col){
+    html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px">';
+    html+='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:800;color:#f9fafb;margin-bottom:8px;display:flex;align-items:center;gap:5px">'+col.pill+'<span>'+col.team+'</span></div>';
+    html+=lgoStatRowM('Win game',col.win+'%');
+    html+=lgoStatRowM('Win series',lgoPctM(col.adv||0)+'%');
+    if(col.r3!=null)html+=lgoStatRowM('Make R'+(round+2),lgoPctM(col.r3)+'%');
+    if(col.r4!=null&&round<3)html+=lgoStatRowM('Make R'+(round+3),lgoPctM(col.r4)+'%');
+    html+=lgoStatRowM('Win Cup',lgoPctM(col.cup||0)+'%');
+    html+='</div>';
+  });
+  html+='</div>';
+  if(c.homeZone!=null){
+    var hz=Math.round(c.homeZone*1000)/10,az=Math.round((1-c.homeZone)*1000)/10;
+    var hs2=Math.round(c.homeCloseShots*1000)/10,as2=Math.round((1-c.homeCloseShots)*1000)/10;
+    html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 10px 2px;margin-bottom:12px">';
+    html+='<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
+    html+='<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px">GAME CONTROL</span>';
+    html+='<span style="font-size:10px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">'+away+' ← → '+home+'</span>';
+    html+='</div>';
+    html+=buildDualBarM('Zone Control',az,hz)+buildDualBarM('Shot Quality',as2,hs2);
+    html+='</div>';
+  }
+  if(data.goals&&data.goals.length){
+    html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">';
+    html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">SCORING SUMMARY</div>';
+    html+='<table style="width:100%;border-collapse:collapse">';
+    data.goals.forEach(function(g){
+      var isHome=g.delta>0,scorer=isHome?home:away;
+      var spill=ownerPill(scorer);
+      var dcol=isHome?'#10b981':'#f87171',arrow=isHome?'↑':'↓';
+      var gp=g.t<=1200?1:g.t<=2400?2:g.t<=3600?3:4,gs=g.t%1200,gm=Math.floor(gs/60),gc=gs%60;
+      var tl='P'+gp+' '+gm+':'+(gc<10?'0':'')+gc;
+      var sc=g.awayGoals+'-'+g.homeGoals,ds=arrow+(Math.round(Math.abs(g.delta)*1000)/10).toFixed(1)+'%';
+      html+='<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">'
+        +'<td style="padding:5px 4px;font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;white-space:nowrap">'+tl+'</td>'
+        +'<td style="padding:5px 4px;font-size:12px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+scorer+'</td>'
+        +'<td style="padding:5px 2px">'+spill+'</td>'
+        +'<td style="padding:5px 4px;font-size:11px;color:#9ca3af;font-family:\'Barlow Condensed\',sans-serif">'+sc+'</td>'
+        +'<td style="padding:5px 0 5px 4px;font-size:12px;font-weight:700;color:'+dcol+';font-family:\'Barlow Condensed\',sans-serif;text-align:right">'+ds+'</td>'
+        +'</tr>';
+    });
+    html+='</table></div>';
+  }
+  html+='<div style="text-align:center;font-size:10px;color:#374151;font-family:\'Barlow Condensed\',sans-serif;padding-bottom:24px">Updated '+new Date().toLocaleTimeString()+(data.gameOver?'':' · refreshes every 30s')+'</div>';
+  html+='</div>';
+  overlay.innerHTML=html;
+}
+function showLiveGameOverlayMaker(gameId,away,home,season){
+  var existing=document.getElementById('live-game-overlay');
+  if(existing)existing.remove();
+  var overlay=document.createElement('div');
+  overlay.id='live-game-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:#0d1117;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 32px;box-sizing:border-box;';
+  overlay.innerHTML='<div style="max-width:480px;margin:0 auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:#9ca3af">'+away+' vs '+home+'</div>'
+    +'<button onclick="document.getElementById(\'live-game-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px">✕</button>'
+    +'</div>'
+    +'<div style="color:#6b7280;font-size:13px;text-align:center;padding:60px 0">Loading…</div>'
+    +'</div>';
+  document.body.appendChild(overlay);
+  var url=ODDS_API+'?action=mpGame&id='+gameId+'&season='+(season||'20252026');
+  var gameOver=false;
+  function load(){
+    fetch(url,{cache:'no-store'}).then(function(r){return r.json();}).then(function(data){
+      var el=document.getElementById('live-game-overlay');
+      if(!el)return;
+      if(data.error){el.innerHTML='<div style="padding:40px;text-align:center;color:#f87171">'+data.error+'</div>';return;}
+      gameOver=!!data.gameOver;
+      renderLiveGameOverlayMaker(el,data,away,home);
+    }).catch(function(){
+      var el=document.getElementById('live-game-overlay');
+      if(el)el.innerHTML='<div style="padding:40px;text-align:center;color:#f87171">Failed to load</div>';
+    });
+  }
+  load();
+  var timer=setInterval(function(){
+    if(!document.getElementById('live-game-overlay')||gameOver){clearInterval(timer);return;}
+    load();
+  },30000);
 }
 
 // ── Bracket View ──────────────────────────────────────────────────────────
@@ -2017,7 +2208,8 @@ async function doRender(){
       (nhlJson.gamesByDate||[]).forEach(function(day){
         (day.games||[]).forEach(function(g){
           if(g.gameType!==3)return;
-          gamesRaw.push({away:g.awayTeam.abbrev,home:g.homeTeam.abbrev,
+          gamesRaw.push({id:String(g.id),season:String(g.season||20252026),
+            away:g.awayTeam.abbrev,home:g.homeTeam.abbrev,
             awayScore:g.awayTeam.score!=null?g.awayTeam.score:null,
             homeScore:g.homeTeam.score!=null?g.homeTeam.score:null,
             state:g.gameState,startUTC:g.startTimeUTC,
