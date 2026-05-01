@@ -1526,8 +1526,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     data.goals.forEach(function(g){
       var isHome=g.delta>0,scorer=isHome?home:away;
       var spill=ownerPill(scorer);
-      var scorerMatch=g.desc&&g.desc.match(/#\d+\s+([A-Z''-]+)\(/);
-      var scorerName=scorerMatch?(scorerMatch[1].charAt(0)+scorerMatch[1].slice(1).toLowerCase()):'';
+      var scorerName=g.desc&&g.desc.indexOf(' ')>0?g.desc.trim():(g.desc&&g.desc.match(/#\d+\s+([A-Z''-]+)\(/)?(function(m){return m[1].charAt(0)+m[1].slice(1).toLowerCase();})(g.desc.match(/#\d+\s+([A-Z''-]+)\(/)):'');
       var dcol=isHome?'#10b981':'#f87171',arrow=isHome?'↑':'↓';
       var gp=g.t<=1200?1:g.t<=2400?2:g.t<=3600?3:4,gs=g.t%1200,gm=Math.floor(gs/60),gc=gs%60;
       var tl='P'+gp+' '+gm+':'+(gc<10?'0':'')+gc;
