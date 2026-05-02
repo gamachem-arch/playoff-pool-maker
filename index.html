@@ -1481,7 +1481,7 @@ function buildShotMapM(shotData,awayTeam,homeTeam){
   var buckets={M:[],S:[],G:[]};
   shotData.forEach(function(s){
     var isHome=s.team==='H';
-    var sx=isHome?100+s.x:100-s.x,sy=42.5+s.y;
+    var sx=isHome?100+s.x:100-s.x,sy=42.5-s.y;
     sx=Math.max(0.5,Math.min(199.5,sx));sy=Math.max(0.5,Math.min(84.5,sy));
     var r=Math.min(5,1.5+(s.xg||0)*5);if(s.event==='G')r=Math.max(r,3.5);
     var ev=s.event==='G'?'G':s.event==='M'?'M':'S';
