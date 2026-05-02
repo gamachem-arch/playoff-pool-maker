@@ -1572,8 +1572,8 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 10px 2px;margin-bottom:12px">';
     html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">GAME CONTROL</div>';
     var awayOwner=getTeamOwnerMaker(away),homeOwner=getTeamOwnerMaker(home);
-    var awayColor=awayOwner?getPC(pool,awayOwner.ci).bg:'rgba(255,255,255,0.3)';
-    var homeColor=homeOwner?getPC(pool,homeOwner.ci).bg:'rgba(255,255,255,0.15)';
+    var awayColor=awayOwner?getPC(pool,awayOwner.ci).color:'rgba(255,255,255,0.3)';
+    var homeColor=homeOwner?getPC(pool,homeOwner.ci).color:'rgba(255,255,255,0.15)';
     html+=buildDualBarM('Zone Control',az,hz,away,home,awayColor,homeColor)+buildDualBarM('Shot Quality',as2,hs2,away,home,awayColor,homeColor);
     html+='</div>';
   }
