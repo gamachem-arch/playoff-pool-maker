@@ -1458,7 +1458,9 @@ function buildShotMapM(shotData,awayTeam,homeTeam){
   if(!shotData||!shotData.length)return'';
   var aC='#f97316',hC='#60a5fa',gC='#fbbf24';
   var els='';
-  els+='<rect x="0" y="0" width="200" height="85" rx="6" fill="#0d1520" stroke="#1f2937" stroke-width="0.8"/>';
+  els+='<defs><clipPath id="smrc"><rect x="0" y="0" width="200" height="85" rx="20" ry="20"/></clipPath></defs>';
+  els+='<rect x="0" y="0" width="200" height="85" rx="20" ry="20" fill="#0d1520" stroke="#1f2937" stroke-width="0.8"/>';
+  els+='<g clip-path="url(#smrc)">';
   els+='<line x1="11" y1="0" x2="11" y2="85" stroke="#dc2626" stroke-width="0.6" opacity="0.7"/>';
   els+='<line x1="189" y1="0" x2="189" y2="85" stroke="#dc2626" stroke-width="0.6" opacity="0.7"/>';
   els+='<line x1="64" y1="0" x2="64" y2="85" stroke="#3b82f6" stroke-width="0.8" opacity="0.7"/>';
@@ -1488,6 +1490,7 @@ function buildShotMapM(shotData,awayTeam,homeTeam){
   buckets.M.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+o.col+'" fill-opacity="0.2"/>';});
   buckets.S.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+o.col+'" fill-opacity="0.6" stroke="'+o.col+'" stroke-width="0.3" stroke-opacity="0.5"/>';});
   buckets.G.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+gC+'" stroke="#fff" stroke-width="0.8"/>';});
+  els+='</g>';
   var aSog=shotData.filter(function(s){return s.team!=='H'&&s.event!=='M';}).length;
   var hSog=shotData.filter(function(s){return s.team==='H'&&s.event!=='M';}).length;
   var aG=shotData.filter(function(s){return s.team!=='H'&&s.event==='G';}).length;
