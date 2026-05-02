@@ -1454,6 +1454,54 @@ function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam){
     +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px">'+rightPct+'%</span>'+rLogo
     +'</div></div>';
 }
+function buildShotMapM(shotData,awayTeam,homeTeam){
+  if(!shotData||!shotData.length)return'';
+  var aC='#f97316',hC='#60a5fa',gC='#fbbf24';
+  var els='';
+  els+='<rect x="0" y="0" width="200" height="85" rx="6" fill="#0d1520" stroke="#1f2937" stroke-width="0.8"/>';
+  els+='<line x1="11" y1="0" x2="11" y2="85" stroke="#dc2626" stroke-width="0.6" opacity="0.7"/>';
+  els+='<line x1="189" y1="0" x2="189" y2="85" stroke="#dc2626" stroke-width="0.6" opacity="0.7"/>';
+  els+='<line x1="64" y1="0" x2="64" y2="85" stroke="#3b82f6" stroke-width="0.8" opacity="0.7"/>';
+  els+='<line x1="136" y1="0" x2="136" y2="85" stroke="#3b82f6" stroke-width="0.8" opacity="0.7"/>';
+  els+='<line x1="100" y1="0" x2="100" y2="85" stroke="#dc2626" stroke-width="0.6" opacity="0.5"/>';
+  els+='<circle cx="100" cy="42.5" r="15" fill="none" stroke="#dc2626" stroke-width="0.5" opacity="0.4"/>';
+  els+='<circle cx="100" cy="42.5" r="0.8" fill="#dc2626" opacity="0.6"/>';
+  ['22','63'].forEach(function(fy){
+    els+='<circle cx="31" cy="'+fy+'" r="7" fill="none" stroke="#dc2626" stroke-width="0.4" opacity="0.3"/>';
+    els+='<circle cx="31" cy="'+fy+'" r="0.8" fill="#dc2626" opacity="0.5"/>';
+    els+='<circle cx="169" cy="'+fy+'" r="7" fill="none" stroke="#dc2626" stroke-width="0.4" opacity="0.3"/>';
+    els+='<circle cx="169" cy="'+fy+'" r="0.8" fill="#dc2626" opacity="0.5"/>';
+  });
+  els+='<rect x="7" y="38.5" width="4" height="8" fill="none" stroke="#6b7280" stroke-width="0.6"/>';
+  els+='<rect x="189" y="38.5" width="4" height="8" fill="none" stroke="#6b7280" stroke-width="0.6"/>';
+  els+='<path d="M 11 36.5 A 6 6 0 0 1 11 48.5 Z" fill="rgba(59,130,246,0.08)" stroke="#60a5fa" stroke-width="0.5" opacity="0.6"/>';
+  els+='<path d="M 189 36.5 A 6 6 0 0 0 189 48.5 Z" fill="rgba(59,130,246,0.08)" stroke="#60a5fa" stroke-width="0.5" opacity="0.6"/>';
+  var buckets={M:[],S:[],G:[]};
+  shotData.forEach(function(s){
+    var isHome=s.team==='H';
+    var sx=isHome?100+s.x:100-s.x,sy=isHome?42.5+s.y:42.5-s.y;
+    sx=Math.max(0.5,Math.min(199.5,sx));sy=Math.max(0.5,Math.min(84.5,sy));
+    var r=Math.min(5,1.5+(s.xg||0)*5);if(s.event==='G')r=Math.max(r,3.5);
+    var ev=s.event==='G'?'G':s.event==='M'?'M':'S';
+    buckets[ev].push({sx:sx.toFixed(1),sy:sy.toFixed(1),col:isHome?hC:aC,r:r.toFixed(1)});
+  });
+  buckets.M.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+o.col+'" fill-opacity="0.2"/>';});
+  buckets.S.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+o.col+'" fill-opacity="0.6" stroke="'+o.col+'" stroke-width="0.3" stroke-opacity="0.5"/>';});
+  buckets.G.forEach(function(o){els+='<circle cx="'+o.sx+'" cy="'+o.sy+'" r="'+o.r+'" fill="'+gC+'" stroke="#fff" stroke-width="0.8"/>';});
+  var aSog=shotData.filter(function(s){return s.team!=='H'&&s.event!=='M';}).length;
+  var hSog=shotData.filter(function(s){return s.team==='H'&&s.event!=='M';}).length;
+  var aG=shotData.filter(function(s){return s.team!=='H'&&s.event==='G';}).length;
+  var hG=shotData.filter(function(s){return s.team==='H'&&s.event==='G';}).length;
+  var h='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">';
+  h+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:6px">SHOT MAP</div>';
+  h+='<svg viewBox="0 0 200 85" style="width:100%;border-radius:4px;display:block">'+els+'</svg>';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af">';
+  h+='<span><span style="color:'+aC+'">●</span> '+awayTeam+' — '+aSog+' SOG'+(aG?' / '+aG+'G':'')+'</span>';
+  h+='<span style="font-size:10px"><svg width="8" height="8" style="vertical-align:middle;margin-right:2px"><circle cx="4" cy="4" r="3" fill="'+gC+'"/></svg>= goal</span>';
+  h+='<span>'+(hG?hG+'G / ':'')+hSog+' SOG — '+homeTeam+' <span style="color:'+hC+'">●</span></span>';
+  h+='</div></div>';
+  return h;
+}
 function renderLiveGameOverlayMaker(overlay,data,away,home){
   var c=data.current||{};
   var pool=getActivePool();
@@ -1523,6 +1571,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     html+=buildDualBarM('Zone Control',az,hz,away,home)+buildDualBarM('Shot Quality',as2,hs2,away,home);
     html+='</div>';
   }
+  if(data.shots&&data.shots.length)html+=buildShotMapM(data.shots,away,home);
   if(data.goals&&data.goals.length){
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">';
     html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">SCORING SUMMARY</div>';
