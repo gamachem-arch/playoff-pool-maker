@@ -1701,7 +1701,7 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
   var p1pill = o1 ? '<span class="bc-pill" style="background:' + bg1 + ';color:' + c1 + '">' + o1.abbrev + '</span>' : '';
   var p2pill = o2 ? '<span class="bc-pill" style="background:' + bg2 + ';color:' + c2 + '">' + o2.abbrev + '</span>' : '';
   // Compact (past round): just logo + pill, winner lit / loser faded
-  if (isCompact && !shareMode) {
+  if (isCompact) {
     var t1loser = w2 === 4, t2loser = w1 === 4;
     var t1win = w1 === 4, t2win = w2 === 4;
     var t1isPredC = t1 && t1.includes('/');
