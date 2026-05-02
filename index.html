@@ -1440,16 +1440,16 @@ function buildWinProbChartM(timeline,goals){
     +'<path d="'+linePath+'" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>'
     +yLabels+periodLabels+goalMarkers+endDot+'</svg>';
 }
-function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam){
+function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam,lColor,rColor){
   var leftW=(leftPct/(leftPct+rightPct||1)*100).toFixed(1);
+  var lc=lColor||'rgba(255,255,255,0.35)',rc=rColor||'rgba(255,255,255,0.15)';
   var lLogo=leftTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+leftTeam+'_light.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
   var rLogo=rightTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+rightTeam+'_light.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
   return'<div style="margin-bottom:10px">'
     +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+label+'</div>'
     +'<div style="display:flex;align-items:center;gap:5px">'
     +lLogo+'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px;text-align:right">'+leftPct+'%</span>'
-    +'<div style="flex:1;height:7px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden">'
-    +'<div style="height:100%;width:'+leftW+'%;background:rgba(255,255,255,0.25);border-radius:4px"></div>'
+    +'<div style="flex:1;height:9px;background:linear-gradient(to right,'+lc+' '+leftW+'%,'+rc+' '+leftW+'%)">'
     +'</div>'
     +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px">'+rightPct+'%</span>'+rLogo
     +'</div></div>';
@@ -1571,7 +1571,10 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     var hs2=Math.round(c.homeCloseShots*1000)/10,as2=Math.round((1-c.homeCloseShots)*1000)/10;
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 10px 2px;margin-bottom:12px">';
     html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">GAME CONTROL</div>';
-    html+=buildDualBarM('Zone Control',az,hz,away,home)+buildDualBarM('Shot Quality',as2,hs2,away,home);
+    var awayOwner=getTeamOwnerMaker(away),homeOwner=getTeamOwnerMaker(home);
+    var awayColor=awayOwner?getPC(pool,awayOwner.ci).bg:'rgba(255,255,255,0.3)';
+    var homeColor=homeOwner?getPC(pool,homeOwner.ci).bg:'rgba(255,255,255,0.15)';
+    html+=buildDualBarM('Zone Control',az,hz,away,home,awayColor,homeColor)+buildDualBarM('Shot Quality',as2,hs2,away,home,awayColor,homeColor);
     html+='</div>';
   }
   if(data.shots&&data.shots.length)html+=buildShotMapM(data.shots,away,home);
