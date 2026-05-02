@@ -204,8 +204,8 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .bc-scf-label { font-family:'Barlow Condensed',sans-serif; font-size:7px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); text-align:center; line-height:1.3; }
 .bc-card-sm .bc-name { display:none; }
 .bc-card-sm .bc-wins { display:none; }
-.bc-card-sm .bc-logo { width:24px; height:24px; }
-.bc-card-sm .bc-team { padding:4px 4px; justify-content:center; gap:3px; }
+.bc-card-sm .bc-logo { width:28px; height:28px; }
+.bc-card-sm .bc-team { padding:4px 2px; justify-content:center; gap:3px; }
 .bc-card-sm .bc-pill { display:none; }
 .bc-team.bc-loser { opacity:0.18; }
 .bc-team.bc-winner { background:rgba(74,222,128,0.08); border-left-color:#4ade80 !important; }
@@ -1774,7 +1774,7 @@ function buildBracket(shareMode) {
 
   var ar = getActiveRound(p);
   // col widths: compact past cols (50px), active col (80px), default r2 (56px)
-  var cw1 = ar === 1 ? '' : 'width:50px';
+  var cw1 = ar === 1 ? '' : 'width:36px;flex:none';
   var cw2 = ar === 2 ? 'flex:1;width:auto' : (ar > 2 ? 'width:50px' : '');
   var cw3 = ar === 3 ? 'width:90px' : (ar > 3 ? 'width:50px' : '');
   var cw4 = ar === 4 ? 'width:72px' : '';
