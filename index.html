@@ -1006,7 +1006,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
     '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>';
   return '<div class="series'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+liveDot+label+badge+'</div>'+
     row1+row2
-    +'<div class="series-games" id="sg-'+sid+'">'+dualSpark+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
+    +'<div class="series-games" id="sg-'+sid+'">'+(dualSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\','+roundNum+')" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+dualSpark+'</div>':'')+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
@@ -1360,6 +1360,184 @@ function showSparklineDetailMaker(abbrev, teamsStr, color, playerName) {
 }
 
 
+
+function buildSeriesDetailChart(histData, t1, t2, roundKey, lv1, lv2) {
+  var getMap = function(team) {
+    var map = {};
+    (histData||[])
+      .filter(function(d){ return (d.team||'').toUpperCase()===team.toUpperCase() && d[roundKey]!=null && d[roundKey]!==''; })
+      .sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); })
+      .forEach(function(d){ map[d.date] = normPct(d[roundKey]); });
+    return map;
+  };
+  var map1=getMap(t1), map2=getMap(t2);
+  var today=new Date().toISOString().substring(0,10);
+  if (lv1!=null) map1[today]=lv1;
+  if (lv2!=null) map2[today]=lv2;
+  var allDates=[...new Set([...Object.keys(map1),...Object.keys(map2)])].sort();
+  if (allDates.length<2) return '';
+  var THRESH=1.0, kept=[allDates[0]], fp1=map1[allDates[0]]!=null?map1[allDates[0]]:null, fp2=map2[allDates[0]]!=null?map2[allDates[0]]:null;
+  for (var ki=1; ki<allDates.length-1; ki++) {
+    var kd=allDates[ki], kv1=map1[kd]!=null?map1[kd]:fp1, kv2=map2[kd]!=null?map2[kd]:fp2;
+    var kchg=Math.max(fp1!=null?Math.abs(kv1-fp1):0, fp2!=null?Math.abs(kv2-fp2):0);
+    if (kchg>=THRESH){kept.push(kd);if(map1[kd]!=null)fp1=map1[kd];if(map2[kd]!=null)fp2=map2[kd];}
+  }
+  if (allDates.length>1) kept.push(allDates[allDates.length-1]);
+  allDates=[...new Set(kept)];
+  var v1arr=[], v2arr=[], last1=null, last2=null;
+  allDates.forEach(function(d){
+    if (map1[d]!=null) last1=map1[d];
+    if (map2[d]!=null) last2=map2[d];
+    v1arr.push(last1); v2arr.push(last2);
+  });
+  var allVals=[...v1arr,...v2arr].filter(function(v){return v!=null;});
+  if (!allVals.length) return '';
+  var dataMin=Math.min.apply(null,allVals), dataMax=Math.max.apply(null,allVals);
+  var pad=Math.max(3,(dataMax-dataMin)*0.25);
+  var yMin=Math.max(0,dataMin-pad), yMax=Math.min(100,dataMax+pad);
+  if (yMax===yMin){yMin=Math.max(0,yMin-10);yMax=Math.min(100,yMax+10);}
+  var W=340,H=185,padL=32,padR=12,padT=18,padB=40;
+  var cW=W-padL-padR, cH=H-padT-padB;
+  var n=allDates.length;
+  function gx(i){return padL+(n>1?(i/(n-1))*cW:cW/2);}
+  function gy(v){return padT+cH*(1-(v-yMin)/(yMax-yMin));}
+  var rawRange=yMax-yMin;
+  var niceSteps=[1,2,5,10,15,20,25,50];
+  var step=niceSteps.find(function(s){return rawRange/s<=5;})||25;
+  var gridVals=[];
+  for (var g=Math.ceil(yMin/step)*step; g<=yMax+0.001; g+=step) gridVals.push(Math.round(g*10)/10);
+  var grid=gridVals.map(function(v){
+    var y=gy(v).toFixed(1);
+    return '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>'
+      +'<text x="'+(padL-4)+'" y="'+(gy(v)+3.5).toFixed(1)+'" text-anchor="end" font-size="8" font-family="Barlow Condensed,sans-serif" fill="#4b5563">'+v+'%</text>';
+  }).join('');
+  var ref50=(yMin<=50&&yMax>=50)
+    ?'<line x1="'+padL+'" y1="'+gy(50).toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy(50).toFixed(1)+'" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="3,3"/>'
+    :'';
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtD(d){ if(d===today)return'Now'; var p=d.split('-');return months[parseInt(p[1])-1]+' '+parseInt(p[2]); }
+  var dateEls=allDates.map(function(d,i){
+    var x=gx(i), baseY=padT+cH+8;
+    return '<text transform="rotate(-40,'+x.toFixed(1)+','+baseY+')" x="'+x.toFixed(1)+'" y="'+baseY+'" text-anchor="end" font-size="9" font-family="Barlow Condensed,sans-serif" fill="#6b7280">'+fmtD(d)+'</text>';
+  }).join('');
+  var col1='#60a5fa', col2='#fb923c';
+  function buildLine(varr, col) {
+    var pts=[];
+    varr.forEach(function(v,i){if(v!=null)pts.push({x:gx(i),y:gy(v)});});
+    if (pts.length<2) return '';
+    var poly=pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');
+    var dots=pts.map(function(p,j){
+      return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(j===pts.length-1?3:2)+'" fill="'+col+'"/>';
+    }).join('');
+    return '<polyline points="'+poly+'" fill="none" stroke="'+col+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+dots;
+  }
+  return '<svg width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block">'
+    +grid+ref50+buildLine(v1arr,col1)+buildLine(v2arr,col2)+dateEls+'</svg>';
+}
+
+function showSeriesSparklineDetailMaker(t1, t2, roundNum) {
+  var st=_makerState;
+  if (!st||!st.historyData) return;
+  var hist=st.historyData, roundOdds=st.roundOdds||{}, gamesData=st.gamesData||[], pool=st.pool;
+  var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
+  var roundLabel={1:'Round 1',2:'Round 2',3:'Conf. Final',4:'Stanley Cup Final'}[roundNum]||'Series';
+  var lv1=roundOdds[t1]&&roundOdds[t1][roundKey]?parseFloat((roundOdds[t1][roundKey]||'0%').replace('%','')):null;
+  var lv2=roundOdds[t2]&&roundOdds[t2][roundKey]?parseFloat((roundOdds[t2][roundKey]||'0%').replace('%','')):null;
+  function findOwner(team){return pool&&pool.players?pool.players.find(function(p){return (p.teams||[]).includes(team);}):null;}
+  var ownerObj1=findOwner(t1), ownerObj2=findOwner(t2);
+  function ownerPill(o){
+    if (!o) return '';
+    var ab=(o.abbrev||o.name.substring(0,3)).toUpperCase();
+    return '<span class="pill" style="background:rgba(255,255,255,0.1);color:#f9fafb;font-size:10px;padding:2px 7px">'+esc(ab)+'</span>';
+  }
+  var logoBase='https://assets.nhle.com/logos/nhl/svg/';
+  var map1={}, map2={};
+  (hist||[]).forEach(function(d){
+    var team=(d.team||'').toUpperCase();
+    if (team===t1&&d[roundKey]!=null&&d[roundKey]!=='') map1[d.date]=normPct(d[roundKey]);
+    if (team===t2&&d[roundKey]!=null&&d[roundKey]!=='') map2[d.date]=normPct(d[roundKey]);
+  });
+  var today=new Date().toISOString().substring(0,10);
+  if (lv1!=null) map1[today]=lv1;
+  if (lv2!=null) map2[today]=lv2;
+  var allDates=[...new Set([...Object.keys(map1),...Object.keys(map2)])].sort();
+  var filled1={}, filled2={}, last1=null, last2=null;
+  allDates.forEach(function(d){
+    if (map1[d]!=null) last1=map1[d];
+    if (map2[d]!=null) last2=map2[d];
+    filled1[d]=last1; filled2[d]=last2;
+  });
+  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtDate(s){if(s===today)return'NOW';var p=s.split('-');return months[parseInt(p[1])-1]+' '+parseInt(p[2]);}
+  var tableRows=allDates.slice().reverse().map(function(date,ri,arr){
+    var prevDate=arr[ri+1];
+    var v1=filled1[date], v2=filled2[date];
+    var pv1=prevDate?filled1[prevDate]:null, pv2=prevDate?filled2[prevDate]:null;
+    var d1=(v1!=null&&pv1!=null)?v1-pv1:null;
+    var d2=(v2!=null&&pv2!=null)?v2-pv2:null;
+    function fmtD(d){return d===null||Math.abs(d)<0.05?'':(d>0?'+':'')+d.toFixed(1)+'%';}
+    function dc(d){return d>0.2?'#4ade80':d<-0.2?'#f87171':'#6b7280';}
+    var isLive=date===today;
+    var rowBg=isLive?'background:rgba(255,255,255,0.06);':'';
+    var ds='padding:8px 8px;font-size:12px;white-space:nowrap;'+(isLive?'font-weight:700;color:#f9fafb':'color:#6b7280');
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.05);'+rowBg+'">'
+      +'<td style="'+ds+'">'+fmtDate(date)+'</td>'
+      +'<td style="padding:8px 4px;text-align:right;font-size:12px;color:#60a5fa">'+(v1!=null?v1.toFixed(1)+'%':'—')+'</td>'
+      +'<td style="padding:8px 2px;text-align:right;font-size:10px;color:'+dc(d1)+'">'+fmtD(d1)+'</td>'
+      +'<td style="padding:8px 4px;text-align:right;font-size:12px;color:#fb923c">'+(v2!=null?v2.toFixed(1)+'%':'—')+'</td>'
+      +'<td style="padding:8px 2px 8px 0;text-align:right;font-size:10px;color:'+dc(d2)+'">'+fmtD(d2)+'</td>'
+      +'</tr>';
+  }).join('');
+  var chartSvg=buildSeriesDetailChart(hist,t1,t2,roundKey,lv1,lv2);
+  var gamesHtml=buildSeriesGames(t1,t2,gamesData);
+  var existing=document.getElementById('series-sparkline-overlay');
+  if (existing) existing.remove();
+  var overlay=document.createElement('div');
+  overlay.id='series-sparkline-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10000;background:#0d1117;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px;box-sizing:border-box;';
+  overlay.innerHTML='<div style="max-width:480px;margin:0 auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="display:flex;align-items:center;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;gap:4px">'
+          +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'
+            +ownerPill(ownerObj1)
+            +'<img src="'+logoBase+t1+'_light.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            +'<div>'
+              +'<div style="font-size:30px;color:#60a5fa;line-height:1;letter-spacing:1px">'+esc(t1)+'</div>'
+              +(lv1!=null?'<div style="font-size:13px;color:#60a5fa;opacity:0.8;font-weight:700;letter-spacing:.3px">'+lv1.toFixed(1)+'%</div>':'')
+            +'</div>'
+          +'</div>'
+          +'<span style="color:#374151;font-size:14px;flex-shrink:0;padding:0 2px;align-self:center">vs</span>'
+          +'<div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;flex-direction:row-reverse;min-width:0">'
+            +ownerPill(ownerObj2)
+            +'<img src="'+logoBase+t2+'_light.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            +'<div style="text-align:right">'
+              +'<div style="font-size:30px;color:#fb923c;line-height:1;letter-spacing:1px">'+esc(t2)+'</div>'
+              +(lv2!=null?'<div style="font-size:13px;color:#fb923c;opacity:0.8;font-weight:700;letter-spacing:.3px">'+lv2.toFixed(1)+'%</div>':'')
+            +'</div>'
+          +'</div>'
+        +'</div>'
+        +'<div style="font-size:10px;color:#4b5563;letter-spacing:1px;text-transform:uppercase;margin-top:8px;font-family:\'Barlow Condensed\',sans-serif">'+esc(roundLabel)+' — Win Series %</div>'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'series-sparkline-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0;margin-left:10px">✕</button>'
+    +'</div>'
+    +'<div style="background:rgba(255,255,255,0.03);border-radius:12px;padding:10px 10px 12px;margin-bottom:14px">'
+      +chartSvg
+    +'</div>'
+    +(gamesHtml?'<div style="background:rgba(255,255,255,0.02);border-radius:10px;padding:4px 8px;margin-bottom:14px">'+gamesHtml+'</div>':'')
+    +'<table style="width:100%;border-collapse:collapse">'
+      +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.12)">'
+        +'<th style="padding:6px 8px;text-align:left;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">DATE</th>'
+        +'<th style="padding:6px 4px;text-align:right;font-size:10px;color:#60a5fa;font-weight:700;letter-spacing:.5px">'+esc(t1)+'</th>'
+        +'<th style="padding:6px 2px;text-align:right;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">Δ</th>'
+        +'<th style="padding:6px 4px;text-align:right;font-size:10px;color:#fb923c;font-weight:700;letter-spacing:.5px">'+esc(t2)+'</th>'
+        +'<th style="padding:6px 2px 6px 0;text-align:right;font-size:10px;color:#6b7280;font-weight:600;letter-spacing:.5px">Δ</th>'
+      +'</tr></thead>'
+      +'<tbody>'+tableRows+'</tbody>'
+    +'</table>'
+    +'</div>';
+  document.body.appendChild(overlay);
+}
 
 // Compact game list for bracket card expand: finished + live games only, no date
 function buildBracketGames(t1, t2, gamesData) {
