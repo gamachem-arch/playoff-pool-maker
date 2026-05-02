@@ -763,7 +763,8 @@ function buildSeriesGames(t1,t2,gamesData){
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return games.map(function(g,i){
     var d=new Date(g.startUTC);
-    var dateStr=months[d.getUTCMonth()]+' '+d.getUTCDate();
+    var dET=new Date(d.getTime()-4*3600000);
+    var dateStr=months[dET.getUTCMonth()]+' '+dET.getUTCDate();
     var num='<span class="game-num">G'+(i+1)+'</span>';
     var dc='<span class="game-date-col">'+dateStr+'</span>';
     var as=g.awayScore||0,hs=g.homeScore||0;
@@ -2228,9 +2229,10 @@ function buildStandings(odds,histData){
 
 function formatGameTime(utcStr) {
   var d = new Date(utcStr);
-  var h = d.getHours(), m = d.getMinutes();
-  // NHL uses noon as placeholder when game time isn't confirmed
-  if (h === 12 && m === 0) return "TBD";
+  // NHL uses noon UTC as placeholder when game time isn't confirmed
+  if (d.getUTCHours() === 12 && d.getUTCMinutes() === 0) return "TBD";
+  var dET = new Date(d.getTime() - 4 * 3600000);
+  var h = dET.getUTCHours(), m = dET.getUTCMinutes();
   var ampm = h >= 12 ? "PM" : "AM";
   h = h % 12 || 12;
   return h + (m ? ":" + String(m).padStart(2,"0") : "") + " " + ampm;
