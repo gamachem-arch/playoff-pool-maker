@@ -2332,7 +2332,7 @@ async function doRender(){
       augmentPartialR2(r2f[3]||predictedMatchup(re[2],re[3]),re[2],re[3]),
     ];
     var r2HasTeams=r2f.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
-    var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
+    var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD"&&s.bottomTeam&&s.bottomTeam!=="TBD";});
     var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
