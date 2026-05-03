@@ -277,6 +277,7 @@ var ALL_TEAMS = ["COL","EDM","TBL","LAK","BUF","MTL","PIT","ANA","MIN","OTT","PH
 var _makerState = {};
 var _detailStateMaker = null;
 var _lgoReplayDataM = null;
+var _playerCards = {};
 function _myPlayerKey(){var p=getActivePool();return p?'myPlayer_'+(p.id||p.title):null;}
 function getMyPlayer(){try{var k=_myPlayerKey();return k?localStorage.getItem(k):null;}catch(e){return null;}}
 function setMyPlayer(abbrev){
@@ -2493,7 +2494,8 @@ function buildScoringLeaders(leaders, oddsMap) {
     var lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
     var g = p.goals||0, a = p.assists||0, pts = p.points||0;
     var shot = p.headshot || ('https://assets.nhle.com/mugs/nhl/01000/'+(p.playerId||0)+'.png');
-    html += '<div style="flex-shrink:0;width:62px;text-align:center">';
+    _playerCards['s_'+p.playerId] = Object.assign({type:'skater', pillHtml:pillHtml}, p);
+    html += '<div onclick="showPlayerCard(\'s_'+p.playerId+'\')" style="flex-shrink:0;width:62px;text-align:center;cursor:pointer">';
     html += '<div style="position:relative;display:inline-block">';
     html += '<img src="'+shot+'" style="width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937;display:block" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
@@ -2530,7 +2532,8 @@ function buildGoalieLeaders(goalies, oddsMap) {
     var gaa = (g.goalsAgainstAverage||0).toFixed(2);
     var svp = g.savePct != null ? (g.savePct*100).toFixed(1) : '—';
     var shot = g.headshot || ('https://assets.nhle.com/mugs/nhl/01000/'+(g.playerId||0)+'.png');
-    html += '<div style="flex-shrink:0;width:62px;text-align:center">';
+    _playerCards['g_'+g.playerId] = Object.assign({type:'goalie', pillHtml:pillHtml}, g);
+    html += '<div onclick="showPlayerCard(\'g_'+g.playerId+'\')" style="flex-shrink:0;width:62px;text-align:center;cursor:pointer">';
     html += '<div style="position:relative;display:inline-block">';
     html += '<img src="'+shot+'" style="width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937;display:block" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
@@ -2543,6 +2546,75 @@ function buildGoalieLeaders(goalies, oddsMap) {
   });
   html += '</div></div>';
   return html;
+}
+
+function _statGrid(stats) {
+  var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
+  stats.forEach(function(s) {
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 4px;text-align:center">';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:700;color:#f9fafb;line-height:1">'+s.val+'</div>';
+    html += '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:2px">'+s.label+'</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function showPlayerCard(key) {
+  var d = _playerCards[key]; if (!d) return;
+  var existing = document.getElementById('player-card-overlay');
+  if (existing) existing.remove();
+  var team = (d.teamAbbrevs||'').toUpperCase().split(',')[0].trim();
+  var isSkater = d.type === 'skater';
+  var fullName = isSkater ? (d.skaterFullName||'') : (d.goalieFullName||'');
+  var shot = d.headshot || '';
+  var statsHtml;
+  if (isSkater) {
+    var pm = d.plusMinus||0;
+    statsHtml = _statGrid([
+      {label:'GP',  val:d.gamesPlayed||0},
+      {label:'G',   val:d.goals||0},
+      {label:'A',   val:d.assists||0},
+      {label:'PTS', val:d.points||0},
+      {label:'+/−', val:(pm>0?'+':'')+pm},
+      {label:'SOG', val:d.shots||0}
+    ]);
+  } else {
+    statsHtml = _statGrid([
+      {label:'GS',  val:d.gamesStarted||0},
+      {label:'W',   val:d.wins||0},
+      {label:'L',   val:d.losses||0},
+      {label:'GAA', val:(d.goalsAgainstAverage||0).toFixed(2)},
+      {label:'SV%', val:d.savePct!=null?(d.savePct*100).toFixed(1)+'%':'—'},
+      {label:'SO',  val:d.shutouts||0}
+    ]);
+  }
+  var overlay = document.createElement('div');
+  overlay.id = 'player-card-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;display:flex;flex-direction:column;justify-content:flex-end;';
+  overlay.innerHTML =
+    '<div onclick="document.getElementById(\'player-card-overlay\').remove()" style="flex:1;background:rgba(0,0,0,0.6)"></div>' +
+    '<div style="background:#161b27;border-radius:20px 20px 0 0;padding:20px 20px 40px;position:relative">' +
+    '<div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px"></div>' +
+    '<button onclick="document.getElementById(\'player-card-overlay\').remove()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.08);border:none;color:#9ca3af;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;line-height:28px;text-align:center">✕</button>' +
+    '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">' +
+      '<div style="position:relative;flex-shrink:0">' +
+        '<img src="'+shot+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">' +
+        '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:22px;height:22px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:2px;object-fit:contain">' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:24px;font-weight:800;color:#f9fafb;line-height:1.1">'+fullName+'</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;margin-top:5px">' +
+          '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;object-fit:contain">' +
+          '<span style="font-size:12px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;font-weight:700">'+team+'</span>' +
+          (d.pillHtml||'') +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:14px"></div>' +
+    statsHtml +
+    '</div>';
+  document.body.appendChild(overlay);
 }
 
 function lgoReplayScrubM(val) {
