@@ -1733,7 +1733,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
       +'</div></div>';
     html+='<div id="lgo-chart-container">'+buildWinProbChartM(data.timeline,data.goals)+'</div>';
     if(data.gameOver){
-      _lgoReplayDataM={timeline:data.timeline,goals:data.goals,away:away,home:home};
+      _lgoReplayDataM={timeline:data.timeline,goals:data.goals,shots:data.shots||[],away:away,home:home};
       var maxIdx=data.timeline.length-1;
       html+='<div style="padding:8px 4px 2px">';
       html+='<input type="range" id="lgo-scrub" min="0" max="'+maxIdx+'" value="'+maxIdx+'" oninput="lgoReplayScrubM(this.value)" style="width:100%;accent-color:#3b82f6;cursor:pointer">';
@@ -1770,7 +1770,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     html+=buildDualBarM('Zone Control',az,hz,away,home,awayColor,homeColor)+buildDualBarM('Shot Quality',as2,hs2,away,home,awayColor,homeColor);
     html+='</div>';
   }
-  if(data.shots&&data.shots.length)html+=buildShotMapM(data.shots,away,home);
+  if(data.shots&&data.shots.length)html+='<div id="lgo-shotmap-container">'+buildShotMapM(data.shots,away,home)+'</div>';
   if(data.goals&&data.goals.length){
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">';
     html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">SCORING SUMMARY</div>';
@@ -2424,29 +2424,29 @@ function buildOnTheClock(gamesData, oddsMap) {
     var borderTop = i > 0 ? 'border-top:1px solid rgba(255,255,255,0.05);margin-top:6px;padding-top:6px;' : '';
     var cursor = g.id ? 'cursor:pointer;' : '';
     var onclick = g.id ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '';
-    html += '<div'+onclick+' style="display:flex;align-items:center;gap:8px;'+borderTop+cursor+'">';
+    html += '<div'+onclick+' style="display:flex;align-items:center;gap:7px;'+borderTop+cursor+'overflow:hidden">';
     if (isLive) {
-      html += '<div style="flex-shrink:0;min-width:52px">';
+      html += '<div style="flex-shrink:0;min-width:48px">';
       html += '<div style="font-size:10px;color:#f87171;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;display:flex;align-items:center"><span class="live-dot"></span>LIVE</div>';
       if (periodLabel) html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+periodLabel+'</div>';
       html += '</div>';
     } else {
-      html += '<span style="font-size:11px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0;min-width:52px">'+timeStr+'</span>';
+      html += '<span style="font-size:11px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+timeStr+'</span>';
     }
-    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.away+'_light.svg" style="width:24px;height:24px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
-    html += '<span style="font-size:15px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb">'+g.away+'</span>';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.away+'_light.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+    html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.away+'</span>';
     html += awayPill;
-    html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+awayCup.toFixed(1)+'%</span>';
+    html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+awayCup.toFixed(1)+'%</span>';
     if (isLive && g.awayScore != null) {
-      html += '<span style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:18px;color:#f9fafb;flex-shrink:0">'+g.awayScore+'<span style="color:#374151;font-weight:400;margin:0 3px">·</span>'+g.homeScore+'</span>';
+      html += '<span style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:17px;color:#f9fafb;flex-shrink:0">'+g.awayScore+' <span style="color:#374151;font-weight:400">·</span> '+g.homeScore+'</span>';
     } else {
       html += '<span style="font-size:11px;color:#374151;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">vs</span>';
     }
-    html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+homeCup.toFixed(1)+'%</span>';
+    html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+homeCup.toFixed(1)+'%</span>';
     html += homePill;
-    html += '<span style="font-size:15px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb">'+g.home+'</span>';
-    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_light.svg" style="width:24px;height:24px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
-    if (g.id) html += '<span style="font-size:9px;color:#374151;margin-left:auto;flex-shrink:0">▶</span>';
+    html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_light.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+    if (g.id) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
     html += '</div>';
   });
   html += '</div>';
@@ -2498,6 +2498,11 @@ function lgoReplayScrubM(val) {
   var subGoals = (d.goals||[]).filter(function(g){return g.t<=t;});
   var chartEl = document.getElementById('lgo-chart-container');
   if (chartEl) chartEl.innerHTML = buildWinProbChartM(sub, subGoals);
+  var shotEl = document.getElementById('lgo-shotmap-container');
+  if (shotEl && d.shots && d.shots.length) {
+    var subShots = d.shots.filter(function(s){return s.t<=t;});
+    shotEl.innerHTML = buildShotMapM(subShots, d.away, d.home);
+  }
   var wpEl = document.getElementById('lgo-wp-header');
   if (wpEl && last) {
     var homeWP = lgoPctM(last.wp), awayWP = lgoPctM(1-last.wp);
