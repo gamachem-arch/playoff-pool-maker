@@ -2441,8 +2441,9 @@ function buildOnTheClock(gamesData, oddsMap) {
       periodLabel = pt==='OT'?'OT':pt==='SO'?'SO':('P'+g.period);
     }
     var borderTop = i > 0 ? 'border-top:1px solid rgba(255,255,255,0.05);margin-top:6px;padding-top:6px;' : '';
-    var cursor = g.id ? 'cursor:pointer;' : '';
-    var onclick = g.id ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '';
+    var tappable = g.id && (isLive || isFinal);
+    var cursor = tappable ? 'cursor:pointer;' : '';
+    var onclick = tappable ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '';
     html += '<div'+onclick+' style="display:flex;align-items:center;gap:7px;'+borderTop+cursor+'overflow:hidden">';
     if (isLive) {
       html += '<div style="flex-shrink:0;min-width:48px">';
@@ -2467,7 +2468,7 @@ function buildOnTheClock(gamesData, oddsMap) {
     html += homePill;
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_'+logoSfx(g.home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
-    if (g.id) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
+    if (tappable) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
     html += '</div>';
   });
   html += '</div>';
