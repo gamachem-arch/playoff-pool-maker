@@ -786,6 +786,8 @@ function buildSeriesGames(t1,t2,gamesData){
   }).join('');
 }
 function normPct(v){var n=parseFloat(v);return(n>0&&n<1)?n*100:n;}
+function logoSfx(t){return t==='TBL'?'dark':'light';}
+
 
 function deltaBadge(d){
   if(d===null||d===undefined||d===0)return'';
@@ -872,7 +874,7 @@ function buildTeamOdds(oddsMap,roundOdds,histData){
     return'<div class="team-odds-row'+(isMine?' my-team':'')+(isElim?' eliminated':'')+'" style="'+myStyle+'" onclick="toggleTeamDetail(\''+x.t+'\')">'
       +'<div class="tor-main">'
       +'<span class="team-rank">'+rank+'</span>'
-      +'<img class="tlogo-sm" src="https://assets.nhle.com/logos/nhl/svg/'+x.t+'_light.svg" onerror="this.style.display=\'none\'">'
+      +'<img class="tlogo-sm" src="https://assets.nhle.com/logos/nhl/svg/'+x.t+'_'+logoSfx(x.t)+'.svg" onerror="this.style.display=\'none\'">'
       +'<span class="team-name-odds">'+x.t+'</span>'
       +makePill(x.t)
       +'<span class="team-cup-pct">'+x.v.toFixed(1)+'%</span>'
@@ -982,8 +984,8 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
   var t1=s.topTeam,t2=s.bottomTeam,w1=s.topWins,w2=s.bottomWins,t1won=w1===4,t2won=w2===4;
   var o1=odds[t1]||"",o2=odds[t2]||"";
   var d1=dm&&dm[t1]!==undefined?dm[t1]:null,d2=dm&&dm[t2]!==undefined?dm[t2]:null;
-  var l1='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_light.svg" onerror="this.style.display=\'none\'">';
-  var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_light.svg" onerror="this.style.display=\'none\'">';
+  var l1='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
+  var l2='<img class="tlogo" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
   var badge=s&&s.topTeam&&s.topTeam!=="TBD"?getGameBadge(gd,s.topTeam,s.bottomTeam):"";
   var sid=(t1+'-'+t2).toLowerCase();
   var roundKey={1:'r2',2:'r3',3:'r4',4:'cup'}[roundNum]||'r2';
@@ -1506,7 +1508,7 @@ function showSeriesSparklineDetailMaker(t1, t2, roundNum) {
         +'<div style="display:flex;align-items:center;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;gap:4px">'
           +'<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">'
             +ownerPill(ownerObj1)
-            +'<img src="'+logoBase+t1+'_light.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            +'<img src="'+logoBase+t1+'_'+logoSfx(t1)+'.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
             +'<div>'
               +'<div style="font-size:30px;color:#60a5fa;line-height:1;letter-spacing:1px">'+esc(t1)+'</div>'
               +(lv1!=null?'<div style="font-size:13px;color:#60a5fa;opacity:0.8;font-weight:700;letter-spacing:.3px">'+lv1.toFixed(1)+'%</div>':'')
@@ -1515,7 +1517,7 @@ function showSeriesSparklineDetailMaker(t1, t2, roundNum) {
           +'<span style="color:#374151;font-size:14px;flex-shrink:0;padding:0 2px;align-self:center">vs</span>'
           +'<div style="display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end;flex-direction:row-reverse;min-width:0">'
             +ownerPill(ownerObj2)
-            +'<img src="'+logoBase+t2+'_light.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            +'<img src="'+logoBase+t2+'_'+logoSfx(t2)+'.svg" style="width:52px;height:52px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">'
             +'<div style="text-align:right">'
               +'<div style="font-size:30px;color:#fb923c;line-height:1;letter-spacing:1px">'+esc(t2)+'</div>'
               +(lv2!=null?'<div style="font-size:13px;color:#fb923c;opacity:0.8;font-weight:700;letter-spacing:.3px">'+lv2.toFixed(1)+'%</div>':'')
@@ -1627,8 +1629,8 @@ function buildWinProbChartM(timeline,goals){
 function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam,lColor,rColor){
   var leftW=(leftPct/(leftPct+rightPct||1)*100).toFixed(1);
   var lc=lColor||'rgba(255,255,255,0.4)',rc=rColor||'rgba(255,255,255,0.15)';
-  var lLogo=leftTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+leftTeam+'_light.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
-  var rLogo=rightTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+rightTeam+'_light.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+  var lLogo=leftTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+leftTeam+'_'+logoSfx(leftTeam)+'.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
+  var rLogo=rightTeam?'<img src="https://assets.nhle.com/logos/nhl/svg/'+rightTeam+'_'+logoSfx(rightTeam)+'.svg" style="width:36px;height:36px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">':'';
   return'<div style="margin-bottom:10px">'
     +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+label+'</div>'
     +'<div style="display:flex;align-items:center;gap:5px">'
@@ -1711,8 +1713,8 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
   var homeAdv=round===1?c.liveHomeMakeR2:round===2?c.liveHomeMakeR3:round===3?c.liveHomeMakeR4:c.liveHomeWinCup;
   var awayAdv=round===1?c.liveAwayMakeR2:round===2?c.liveAwayMakeR3:round===3?c.liveAwayMakeR4:c.liveAwayWinCup;
   var awayPill=ownerPill(away),homePill=ownerPill(home);
-  var logoUrl=function(t){return'<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_light.svg" style="width:64px;height:64px;object-fit:contain;vertical-align:middle" onerror="this.style.display=\'none\'">';};
-  var logoSm=function(t){return'<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_light.svg" style="width:48px;height:48px;object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display=\'none\'">';};
+  var logoUrl=function(t){return'<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_'+logoSfx(t)+'.svg" style="width:64px;height:64px;object-fit:contain;vertical-align:middle" onerror="this.style.display=\'none\'">';};
+  var logoSm=function(t){return'<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_'+logoSfx(t)+'.svg" style="width:48px;height:48px;object-fit:contain;vertical-align:middle;flex-shrink:0" onerror="this.style.display=\'none\'">';};
   var html='<div style="max-width:480px;margin:0 auto">';
   html+='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">';
   html+='<div><div style="display:flex;align-items:center;gap:8px;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;letter-spacing:1px">'
@@ -1906,12 +1908,12 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
       + (t1isPredC
         ? '<div class="bc-team"><span class="bc-name" style="opacity:0.45;font-size:10px">' + t1 + '</span></div>'
         : '<div class="bc-team' + (t1loser ? ' bc-loser' : t1win ? ' bc-winner' : '') + '" style="border-left-color:' + (c1||'transparent') + '">'
-          + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_light.svg" onerror="this.style.display=\'none\'">'
+          + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">'
           + p1pill + '</div>')
       + (t2isPredC
         ? '<div class="bc-team"><span class="bc-name" style="opacity:0.45;font-size:10px">' + t2 + '</span></div>'
         : '<div class="bc-team' + (t2loser ? ' bc-loser' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2||'transparent') + '">'
-          + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
+          + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">'
           + p2pill + '</div>')
       + smScore
       + '</div>';
@@ -1925,7 +1927,7 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
   var row1 = t1isPred
     ? '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + t1 + '</span></div>'
     : '<div class="bc-team' + (t1elim ? ' bc-elim' : t1win ? ' bc-winner' : '') + '" style="border-left-color:' + (c1 || 'transparent') + '">'
-      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_light.svg" onerror="this.style.display=\'none\'">'
+      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t1 + '_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">'
       + '<span class="bc-name">' + t1 + '</span>'
       + p1pill
       + '<span class="bc-wins' + (t1lead ? ' bc-lead' : '') + '">' + w1 + '</span>'
@@ -1935,7 +1937,7 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
     : t2isPred
       ? '<div class="bc-team"><span class="bc-name" style="opacity:0.45">' + t2 + '</span></div>'
       : '<div class="bc-team' + (t2elim ? ' bc-elim' : t2win ? ' bc-winner' : '') + '" style="border-left-color:' + (c2 || 'transparent') + '">'
-      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_light.svg" onerror="this.style.display=\'none\'">'
+      + '<img class="bc-logo" src="https://assets.nhle.com/logos/nhl/svg/' + t2 + '_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">'
       + '<span class="bc-name">' + t2 + '</span>'
       + p2pill
       + '<span class="bc-wins' + (t2lead ? ' bc-lead' : '') + '">' + w2 + '</span>'
@@ -2443,7 +2445,7 @@ function buildOnTheClock(gamesData, oddsMap) {
     } else {
       html += '<span style="font-size:11px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+timeStr+'</span>';
     }
-    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.away+'_light.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.away+'_'+logoSfx(g.away)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.away+'</span>';
     html += awayPill;
     html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+awayCup.toFixed(1)+'%</span>';
@@ -2455,7 +2457,7 @@ function buildOnTheClock(gamesData, oddsMap) {
     html += '<span style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;flex-shrink:0">'+homeCup.toFixed(1)+'%</span>';
     html += homePill;
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
-    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_light.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_'+logoSfx(g.home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
     if (g.id) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
     html += '</div>';
   });
@@ -2485,8 +2487,8 @@ function buildScoringLeaders(leaders, oddsMap) {
     var shot = p.headshot || ('https://assets.nhle.com/mugs/nhl/01000/'+(p.playerId||0)+'.png');
     html += '<div style="flex-shrink:0;width:62px;text-align:center">';
     html += '<div style="position:relative;display:inline-block">';
-    html += '<img src="'+shot+'" style="width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937;display:block" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_light.svg\'">';
-    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_light.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
+    html += '<img src="'+shot+'" style="width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937;display:block" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
     html += '</div>';
     html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#f9fafb;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+p.skaterFullName+'">'+lastName+'</div>';
     html += '<div style="font-size:11px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+pts+'<span style="font-size:9px;font-weight:400;color:#6b7280"> pts</span></div>';
