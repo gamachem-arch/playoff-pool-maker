@@ -290,7 +290,7 @@ function _rebuildMakerUI(){
   if(!st.pieTotals)return;
   document.getElementById('legwrap').innerHTML=_buildMakerLegendPie(st.pieTotals,st.pieSvg);
   document.getElementById('tonight-wrap').innerHTML=buildOnTheClock(st.gamesData||[],st.odds);
-  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+buildScoringLeaders(st.leaders,st.odds);
+  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds);
 }
 function _buildMakerLegendPie(pieTotals,pieSvg){
   var me=getMyPlayer();
@@ -2402,6 +2402,14 @@ async function fetchScoringLeaders() {
   } catch(e) { return []; }
 }
 
+async function fetchGoalieLeaders() {
+  try {
+    var res = await fetch(ODDS_API + '?action=goalieLeaders&t=' + Date.now(), {cache:'no-store'});
+    var d = await res.json();
+    return d.data || [];
+  } catch(e) { return []; }
+}
+
 function buildOnTheClock(gamesData, oddsMap) {
   if (!gamesData || !gamesData.length) return '';
   var pool = getActivePool(); if (!pool) return '';
@@ -2493,6 +2501,43 @@ function buildScoringLeaders(leaders, oddsMap) {
     html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#f9fafb;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+p.skaterFullName+'">'+lastName+'</div>';
     html += '<div style="font-size:11px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+pts+'<span style="font-size:9px;font-weight:400;color:#6b7280"> pts</span></div>';
     html += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+g+'G '+a+'A</div>';
+    html += '<div style="display:flex;justify-content:center;margin-top:3px">'+pillHtml+'</div>';
+    html += '</div>';
+  });
+  html += '</div></div>';
+  return html;
+}
+
+function buildGoalieLeaders(goalies, oddsMap) {
+  if (!goalies || !goalies.length) return '';
+  var pool = getActivePool(); if (!pool) return '';
+  var poolTeams = new Set(pool.players.reduce(function(a,p){return a.concat(p.teams);},[]));
+  var rows = goalies.filter(function(g) {
+    var t = (g.teamAbbrevs||'').toUpperCase().split(',')[0].trim();
+    return poolTeams.has(t);
+  }).slice(0, 15);
+  if (!rows.length) return '';
+  var html = '<div style="margin-top:16px;padding:0 2px">';
+  html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Goalie Leaders</div>';
+  html += '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
+  rows.forEach(function(g) {
+    var team = (g.teamAbbrevs||'').toUpperCase().split(',')[0].trim();
+    var owner = getTeamOwnerMaker(team);
+    var pillHtml = owner ? (function(){var pc=getPC(pool,owner.ci);return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';font-size:8px;padding:0 4px;line-height:14px;border-radius:4px;font-weight:700">'+esc(owner.abbrev)+'</span>';})() : '';
+    var nameParts = (g.goalieFullName||'').split(' ');
+    var lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
+    var wins = g.wins||0;
+    var gaa = (g.goalsAgainstAverage||0).toFixed(2);
+    var svp = g.savePct != null ? (g.savePct*100).toFixed(1) : '—';
+    var shot = g.headshot || ('https://assets.nhle.com/mugs/nhl/01000/'+(g.playerId||0)+'.png');
+    html += '<div style="flex-shrink:0;width:62px;text-align:center">';
+    html += '<div style="position:relative;display:inline-block">';
+    html += '<img src="'+shot+'" style="width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937;display:block" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
+    html += '</div>';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#f9fafb;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+g.goalieFullName+'">'+lastName+'</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+wins+'<span style="font-size:9px;font-weight:400;color:#6b7280"> W</span></div>';
+    html += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+svp+'% · '+gaa+'</div>';
     html += '<div style="display:flex;justify-content:center;margin-top:3px">'+pillHtml+'</div>';
     html += '</div>';
   });
@@ -2622,11 +2667,12 @@ async function doRender(){
   document.getElementById('legwrap').innerHTML = buildLegend(null);
   drawPoolSwitcher();
   try{
-    var [rawOdds,nhlRaw,historyData,leaders]=await Promise.all([
+    var [rawOdds,nhlRaw,historyData,leaders,goalies]=await Promise.all([
       fetch(ODDS_API+"?t="+Date.now()).then(function(r){return r.json();}).catch(function(){return {};}),
       fetch(ODDS_API+"?action=scores&t="+Date.now()).then(function(r){return r.json();}).catch(function(){return null;}),
       fetch(ODDS_API+"?action=history&t="+Date.now(),{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return [];}),
-      fetchScoringLeaders()
+      fetchScoringLeaders(),
+      fetchGoalieLeaders()
     ]);
     var gamesRaw=[];
     try{
@@ -2702,10 +2748,10 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
-    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders};
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
-    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+buildScoringLeaders(leaders,odds);
+    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds);
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
   }catch(e){
