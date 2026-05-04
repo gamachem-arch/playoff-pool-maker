@@ -1892,6 +1892,252 @@ function showLiveGameOverlayMaker(gameId,away,home,season){
   },30000);
 }
 
+// ── Game Preview Overlay (Maker) ─────────────────────────────────────────
+function showGamePreviewOverlayM(gameId, away, home, season) {
+  var existing = document.getElementById('game-preview-overlay-m');
+  if (existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.id = 'game-preview-overlay-m';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:#0d1117;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 14px 40px;box-sizing:border-box;';
+  overlay.innerHTML = '<div style="max-width:480px;margin:0 auto">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+    + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;font-weight:700;color:#9ca3af">'+away+' vs '+home+'</div>'
+    + '<button onclick="document.getElementById(\'game-preview-overlay-m\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px">✕</button>'
+    + '</div>'
+    + '<div style="color:#6b7280;font-size:13px;text-align:center;padding:60px 0">Loading…</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+  fetch(ODDS_API + '?action=gamePreview&id=' + gameId, {cache:'no-store'})
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      var el = document.getElementById('game-preview-overlay-m');
+      if (!el) return;
+      if (data.error) { el.querySelector('div').innerHTML = '<div style="padding:40px;text-align:center;color:#f87171">'+data.error+'</div>'; return; }
+      renderGamePreviewOverlayM(el, data, away, home);
+    }).catch(function() {
+      var el = document.getElementById('game-preview-overlay-m');
+      if (el) el.querySelector('div').innerHTML = '<div style="padding:40px;text-align:center;color:#f87171">Failed to load</div>';
+    });
+}
+
+function gpFmtM(v) { return v != null ? (v * 100).toFixed(1) + '%' : '—'; }
+function gpOddsM(n) { if (!n) return '—'; return n > 0 ? '+' + n : '' + n; }
+
+function renderGamePreviewOverlayM(overlay, data, away, home) {
+  var pool = getActivePool();
+  var awayAbbrev = (data.awayTeam || {}).abbrev || away;
+  var homeAbbrev = (data.homeTeam || {}).abbrev || home;
+  var awayName   = (data.awayTeam || {}).name || away;
+  var homeName   = (data.homeTeam || {}).name || home;
+  var awayRec    = (data.awayTeam || {}).record || '';
+  var homeRec    = (data.homeTeam || {}).record || '';
+  var wp = data.winProb || {};
+  var gl = data.gameline || {};
+  var sims = data.simulations || {};
+  var awayAll = (sims.away || {}).ALL || {};
+  var homeAll = (sims.home || {}).ALL || {};
+  var awayWin  = (sims.away || {}).WINREG  || {};
+  var awayLose = (sims.away || {}).LOSSREG || {};
+  var homeWin  = (sims.home || {}).WINREG  || {};
+  var homeLose = (sims.home || {}).LOSSREG || {};
+
+  function getOwnerOfTeamM(abbrev) {
+    if (!pool) return null;
+    for (var i = 0; i < pool.players.length; i++) {
+      if ((pool.players[i].teams || []).indexOf(abbrev) >= 0) return pool.players[i].abbrev || pool.players[i].name;
+    }
+    return null;
+  }
+  function getPlayerCI(abbrev) {
+    if (!pool) return 0;
+    for (var i = 0; i < pool.players.length; i++) {
+      if ((pool.players[i].teams || []).indexOf(abbrev) >= 0) return i;
+    }
+    return 0;
+  }
+
+  var awayOwner = getOwnerOfTeamM(awayAbbrev), homeOwner = getOwnerOfTeamM(homeAbbrev);
+  var awayCI = getPlayerCI(awayAbbrev), homeCI = getPlayerCI(homeAbbrev);
+
+  function logo(abbrev, sz) {
+    return '<img src="https://assets.nhle.com/logos/nhl/svg/'+abbrev+'_'+logoSfx(abbrev)+'.svg" style="width:'+sz+'px;height:'+sz+'px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+  }
+  function pillM(owner, ci) {
+    if (!owner) return '';
+    var color = pool ? getPC(pool, ci).color : '#6b7280';
+    return '<span style="background:'+color+'22;color:'+color+';font-size:10px;padding:1px 6px;border-radius:9px;font-family:\'Barlow Condensed\',sans-serif;font-weight:700">'+owner+'</span>';
+  }
+
+  var timeStr = '';
+  try { timeStr = new Date(data.startTimeUTC).toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/New_York',hour12:true})+' ET'; } catch(e){}
+
+  var logoUrl = function(t,sz){ return '<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_'+logoSfx(t)+'.svg" style="width:'+sz+'px;height:'+sz+'px;object-fit:contain;flex-shrink:0;vertical-align:middle" onerror="this.style.display=\'none\'">'; };
+
+  var html = '<div style="max-width:480px;margin:0 auto">';
+
+  // ── Header ───────────────────────────────────────────────────────────────
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;gap:8px">';
+  html += '<div style="flex:1;min-width:0">';
+  // 3-col grid: away (right-aligned) | @ | home (left-aligned)
+  html += '<div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;margin-bottom:6px">';
+  // Away
+  html += '<div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;min-width:0">';
+  if (awayOwner) html += pillM(awayOwner, awayCI);
+  html += logoUrl(awayAbbrev, 48);
+  html += '<div style="text-align:right;min-width:0"><div style="font-size:22px;color:#f9fafb;line-height:1;white-space:nowrap">'+awayName+'</div><div style="font-size:13px;color:#6b7280;line-height:1.4">'+awayAbbrev+'</div></div>';
+  html += '</div>';
+  // @
+  html += '<div style="font-size:18px;color:#374151;font-family:\'Barlow Condensed\',sans-serif;font-weight:400;text-align:center;padding:0 2px">@</div>';
+  // Home
+  html += '<div style="display:flex;align-items:center;justify-content:flex-start;gap:6px;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;min-width:0">';
+  html += '<div style="text-align:left;min-width:0"><div style="font-size:22px;color:#f9fafb;line-height:1;white-space:nowrap">'+homeName+'</div><div style="font-size:13px;color:#6b7280;line-height:1.4">'+homeAbbrev+'</div></div>';
+  html += logoUrl(homeAbbrev, 48);
+  if (homeOwner) html += pillM(homeOwner, homeCI);
+  html += '</div>';
+  html += '</div>';
+  // Subtitle: records + time (centered)
+  html += '<div style="font-size:11px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;text-align:center">';
+  html += [awayRec, timeStr, homeRec].filter(Boolean).join(' · ');
+  html += '</div>';
+  html += '</div>';
+  html += '<button onclick="document.getElementById(\'game-preview-overlay-m\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0">✕</button>';
+  html += '</div>';
+
+  // ── Win Probability + Gameline ───────────────────────────────────────────
+  if (wp.away != null && wp.home != null) {
+    var awayPct = wp.away * 100, homePct = wp.home * 100;
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:12px">';
+    html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px">Chance of Winning</div>';
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:30px;font-weight:900;color:#f9fafb;min-width:60px;text-align:right;line-height:1">'+awayPct.toFixed(1)+'%</div>';
+    html += '<div style="flex:1;height:7px;border-radius:99px;overflow:hidden;background:#1f2937;position:relative">';
+    html += '<div style="position:absolute;left:0;top:0;bottom:0;width:'+awayPct.toFixed(1)+'%;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>';
+    html += '</div>';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:30px;font-weight:900;color:#f9fafb;min-width:60px;text-align:left;line-height:1">'+homePct.toFixed(1)+'%</div>';
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-bottom:'+(gl.awayOdds?'10':'0')+'px">';
+    html += '<span style="font-size:10px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">'+awayAbbrev+'</span>';
+    html += '<span style="font-size:10px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">'+homeAbbrev+'</span>';
+    html += '</div>';
+    if (gl.awayOdds || gl.homeOdds) {
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.06);text-align:center">';
+      html += '<div><div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px">'+awayAbbrev+' line</div>';
+      html += '<div style="font-size:15px;color:#e5e7eb;font-family:\'Barlow Condensed\',sans-serif;font-weight:800">'+gpOddsM(gl.awayOdds)+'</div></div>';
+      html += '<div><div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px">Book</div>';
+      html += '<div style="font-size:11px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;text-transform:capitalize">'+(gl.provider||'—')+'</div></div>';
+      html += '<div><div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:2px">'+homeAbbrev+' line</div>';
+      html += '<div style="font-size:15px;color:#e5e7eb;font-family:\'Barlow Condensed\',sans-serif;font-weight:800">'+gpOddsM(gl.homeOdds)+'</div></div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // ── Series Implications ──────────────────────────────────────────────────
+  function implPanelM(teamAbbrev, teamName, owner, ci, allOdds, winOdds, loseOdds) {
+    if (!allOdds || allOdds.cup == null) return '';
+    var cupSwing = (winOdds.cup||0) - (loseOdds.cup||0);
+    var r3Swing  = (winOdds.r3 ||0) - (loseOdds.r3 ||0);
+    if (cupSwing < 0.02 && r3Swing < 0.02) return '';
+    var s = '<div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:12px">';
+    s += '<div style="font-size:10px;color:#f59e0b;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">SERIES IMPLICATIONS</div>';
+    s += '<div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">';
+    s += logoUrl(teamAbbrev, 26);
+    s += '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;color:#f9fafb">'+teamName+'</span>';
+    if (owner) s += pillM(owner, ci);
+    s += '</div>';
+    var tiles = [
+      {label:'Make CF',  w:winOdds.r3,  l:loseOdds.r3,  a:allOdds.r3},
+      {label:'Make SCF', w:winOdds.r4,  l:loseOdds.r4,  a:allOdds.r4},
+      {label:'Win Cup',  w:winOdds.cup, l:loseOdds.cup, a:allOdds.cup}
+    ].filter(function(t){ return (t.a||0) >= 0.001 || (t.w||0) >= 0.001; });
+    s += '<div style="display:grid;grid-template-columns:repeat('+tiles.length+',1fr);gap:6px">';
+    tiles.forEach(function(t) {
+      s += '<div style="background:rgba(0,0,0,0.25);border-radius:10px;padding:10px 8px;text-align:center">';
+      s += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px">'+t.label+'</div>';
+      s += '<div style="font-size:19px;color:#22c55e;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;line-height:1">'+gpFmtM(t.w)+'</div>';
+      s += '<div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;margin-bottom:8px">if win</div>';
+      s += '<div style="height:1px;background:rgba(255,255,255,0.06);margin-bottom:8px"></div>';
+      s += '<div style="font-size:19px;color:#f87171;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;line-height:1">'+gpFmtM(t.l)+'</div>';
+      s += '<div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">if lose</div>';
+      s += '</div>';
+    });
+    s += '</div></div>';
+    return s;
+  }
+  html += implPanelM(awayAbbrev, awayName, awayOwner, awayCI, awayAll, awayWin, awayLose);
+  html += implPanelM(homeAbbrev, homeName, homeOwner, homeCI, homeAll, homeWin, homeLose);
+
+  // ── Goaltending ──────────────────────────────────────────────────────────
+  if ((data.awayGoalies && data.awayGoalies.length) || (data.homeGoalies && data.homeGoalies.length)) {
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:12px">';
+    html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.8px;text-transform:uppercase;margin-bottom:12px">Goaltending</div>';
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+    function goalieColM(goalies, totals, abbrev) {
+      var starter = (goalies||[])[0], backup = (goalies||[])[1];
+      var s = '<div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:10px">';
+      s += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:10px">';
+      s += logo(abbrev, 18);
+      var tr = (totals||{}).record||'';
+      if (tr) s += '<span style="font-size:11px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+tr+' team</span>';
+      s += '</div>';
+      if (starter) {
+        s += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">';
+        if (starter.headshot) s += '<img src="'+starter.headshot+'" style="width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.1)" onerror="this.style.display=\'none\'">';
+        s += '<div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;color:#f9fafb;line-height:1.1">'+starter.name+'</div>';
+        s += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#22c55e;font-weight:700;margin-top:1px">'+(starter.record||'')+'</div></div></div>';
+        s += '<div style="display:flex;gap:8px">';
+        s += '<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:6px;padding:5px 6px;text-align:center">';
+        s += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;color:#e5e7eb">'+(starter.gaa||0).toFixed(2)+'</div>';
+        s += '<div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">GAA</div></div>';
+        s += '<div style="flex:1;background:rgba(255,255,255,0.05);border-radius:6px;padding:5px 6px;text-align:center">';
+        s += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:800;color:#e5e7eb">.'+Math.round((starter.savePctg||0)*1000)+'</div>';
+        s += '<div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">SV%</div></div></div>';
+      }
+      if (backup && backup.gamesPlayed > 0) {
+        s += '<div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">';
+        if (backup.headshot) s += '<img src="'+backup.headshot+'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;opacity:0.7" onerror="this.style.display=\'none\'">';
+        s += '<div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#6b7280">'+backup.name+'</div>';
+        s += '<div style="font-size:10px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif">'+(backup.record||'')+' · '+(backup.gaa||0).toFixed(2)+' · .'+Math.round((backup.savePctg||0)*1000)+'</div></div></div>';
+      }
+      s += '</div>';
+      return s;
+    }
+    html += goalieColM(data.awayGoalies, data.awayGoalieTeamTotals, awayAbbrev);
+    html += goalieColM(data.homeGoalies, data.homeGoalieTeamTotals, homeAbbrev);
+    html += '</div></div>';
+  }
+
+  // ── Players to Watch ─────────────────────────────────────────────────────
+  if (data.skaterLeaders && data.skaterLeaders.length) {
+    html += '<div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:14px 16px;margin-bottom:12px">';
+    html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Players to Watch</div>';
+    data.skaterLeaders.forEach(function(cat) {
+      html += '<div style="display:grid;grid-template-columns:1fr auto 56px auto 1fr;align-items:center;gap:8px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.05)">';
+      // Away: headshot + name
+      html += '<div style="display:flex;align-items:center;gap:7px;overflow:hidden">';
+      if (cat.away.headshot) html += '<img src="'+cat.away.headshot+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">';
+      html += '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:800;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+cat.away.name+'</span>';
+      html += '</div>';
+      // Away stat
+      html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:24px;font-weight:900;color:#3b82f6;line-height:1;text-align:right">'+cat.away.value+'</div>';
+      // Category
+      html += '<div style="text-align:center;font-size:8px;color:#374151;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.6px;text-transform:uppercase;line-height:1.3">'+cat.category+'</div>';
+      // Home stat
+      html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:24px;font-weight:900;color:#3b82f6;line-height:1;text-align:left">'+cat.home.value+'</div>';
+      // Home: name + headshot
+      html += '<div style="display:flex;align-items:center;gap:7px;flex-direction:row-reverse;overflow:hidden">';
+      if (cat.home.headshot) html += '<img src="'+cat.home.headshot+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0" onerror="this.style.display=\'none\'">';
+      html += '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:800;color:#e5e7eb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;direction:rtl">'+cat.home.name+'</span>';
+      html += '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  overlay.innerHTML = html;
+}
+
 // ── Bracket View ──────────────────────────────────────────────────────────
 function getSeriesLeader(sr) {
   if (!sr || !sr.topTeam || sr.topTeam === 'TBD') return 'TBD';
@@ -2491,9 +2737,12 @@ function buildOnTheClock(gamesData, oddsMap) {
       periodLabel = pt==='OT'?'OT':pt==='SO'?'SO':('P'+g.period);
     }
     var borderTop = i > 0 ? 'border-top:1px solid rgba(255,255,255,0.05);margin-top:6px;padding-top:6px;' : '';
+    var isUpcoming = !isLive && !isFinal;
     var tappable = g.id && (isLive || isFinal);
-    var cursor = tappable ? 'cursor:pointer;' : '';
-    var onclick = tappable ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '';
+    var cursor = (tappable || (isUpcoming && g.id)) ? 'cursor:pointer;' : '';
+    var onclick = tappable
+      ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"'
+      : (isUpcoming && g.id ? ' onclick="showGamePreviewOverlayM(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '');
     html += '<div'+onclick+' style="display:flex;align-items:center;gap:7px;'+borderTop+cursor+'overflow:hidden">';
     if (isLive) {
       html += '<div style="flex-shrink:0;min-width:48px">';
@@ -2518,7 +2767,7 @@ function buildOnTheClock(gamesData, oddsMap) {
     html += homePill;
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_'+logoSfx(g.home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
-    if (tappable) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
+    if (tappable || (isUpcoming && g.id)) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
     html += '</div>';
   });
   html += '</div>';
