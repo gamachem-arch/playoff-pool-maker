@@ -1694,6 +1694,53 @@ function buildShotMapM(shotData,awayTeam,homeTeam){
   h+='</div></div>';
   return h;
 }
+function buildDeserveGauge(shots, awayTeam, homeTeam, aColor, hColor) {
+  var hXG=0,aXG=0;
+  (shots||[]).forEach(function(s){if(s.team==='H')hXG+=(s.xg||0);else aXG+=(s.xg||0);});
+  if(hXG+aXG<0.01)return'';
+  hXG=Math.max(hXG,0.01);aXG=Math.max(aXG,0.01);
+  function pSamp(lam){var L=Math.exp(-lam),k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;}
+  var N=1000,hW=0;
+  for(var i=0;i<N;i++){var h=pSamp(hXG),a=pSamp(aXG);if(h>a)hW++;else if(h===a)hW+=0.5;}
+  var hPct=Math.round(hW/N*1000)/10,aPct=Math.round((1-hW/N)*1000)/10;
+  var hC=Math.max(2,Math.min(98,hPct)),aC=100-hC;
+  var cx=150,cy=155,oR=110,iR=65;
+  function pt(r,pct){var a=Math.PI*(1-pct/100);return[cx+r*Math.cos(a),cy-r*Math.sin(a)];}
+  var lO=pt(oR,0),rO=pt(oR,100),lI=pt(iR,0),rI=pt(iR,100),mI=pt(iR,50);
+  var spO=pt(oR,aC),spI=pt(iR,aC);
+  function f(v){return v.toFixed(1);}
+  // sweep=1: positive SVG angle direction = through the top (our y-flip makes this correct)
+  var awayPath='M '+f(lO[0])+' '+f(lO[1])+' A '+oR+' '+oR+' 0 0 1 '+f(spO[0])+' '+f(spO[1])+' L '+f(spI[0])+' '+f(spI[1])+' A '+iR+' '+iR+' 0 0 0 '+f(lI[0])+' '+f(lI[1])+' Z';
+  var homePath='M '+f(spO[0])+' '+f(spO[1])+' A '+oR+' '+oR+' 0 0 1 '+f(rO[0])+' '+f(rO[1])+' L '+f(rI[0])+' '+f(rI[1])+' A '+iR+' '+iR+' 0 0 0 '+f(spI[0])+' '+f(spI[1])+' Z';
+  var innerBg='M '+f(lI[0])+' '+f(lI[1])+' A '+iR+' '+iR+' 0 0 1 '+f(mI[0])+' '+f(mI[1])+' A '+iR+' '+iR+' 0 0 1 '+f(rI[0])+' '+f(rI[1])+' Z';
+  var na=Math.PI*(1-aC/100),nx=cx+(oR+6)*Math.cos(na),ny=cy-(oR+6)*Math.sin(na);
+  var tks='';
+  for(var t=0;t<=100;t+=10){
+    var ta=Math.PI*(1-t/100),ca=Math.cos(ta),sa=Math.sin(ta);
+    tks+='<line x1="'+f(cx+(oR+1)*ca)+'" y1="'+f(cy-(oR+1)*sa)+'" x2="'+f(cx+(oR+9)*ca)+'" y2="'+f(cy-(oR+9)*sa)+'" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>';
+    tks+='<text x="'+f(cx+(oR+19)*ca)+'" y="'+f(cy-(oR+19)*sa)+'" text-anchor="middle" dominant-baseline="middle" font-size="8" fill="rgba(255,255,255,0.4)" font-family="Barlow Condensed,sans-serif">'+t+'%</text>';
+  }
+  for(var mt=5;mt<100;mt+=10){var mta=Math.PI*(1-mt/100);tks+='<line x1="'+f(cx+(oR+1)*Math.cos(mta))+'" y1="'+f(cy-(oR+1)*Math.sin(mta))+'" x2="'+f(cx+(oR+6)*Math.cos(mta))+'" y2="'+f(cy-(oR+6)*Math.sin(mta))+'" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>';}
+  var loTeam=aPct<=hPct?awayTeam:homeTeam,loPct=Math.min(aPct,hPct),ty=cy-iR*0.6;
+  var svg='<svg viewBox="-12 0 324 175" style="width:100%">'
+    +'<path d="'+awayPath+'" fill="'+aColor+'"/><path d="'+homePath+'" fill="'+hColor+'"/>'
+    +'<path d="'+innerBg+'" fill="#0d1117"/>'+tks
+    +'<line x1="'+cx+'" y1="'+cy+'" x2="'+f(nx)+'" y2="'+f(ny)+'" stroke="#fff" stroke-width="3" stroke-linecap="round"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="#fff"/>'
+    +'<text x="'+cx+'" y="'+f(ty)+'" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="700" fill="#f9fafb" font-family="Barlow Condensed,sans-serif">'+loTeam+' win</text>'
+    +'<text x="'+cx+'" y="'+f(ty+16)+'" text-anchor="middle" dominant-baseline="middle" font-size="19" font-weight="900" fill="#f9fafb" font-family="Barlow Condensed,sans-serif">'+loPct.toFixed(1)+'%</text>'
+    +'<text x="'+cx+'" y="'+f(ty+33)+'" text-anchor="middle" dominant-baseline="middle" font-size="8.5" fill="#6b7280" font-family="Barlow Condensed,sans-serif">of the time · '+N+' sims</text>'
+    +'</svg>';
+  function lImg(t){return'<img src="https://assets.nhle.com/logos/nhl/svg/'+t+'_'+logoSfx(t)+'.svg" style="width:26px;height:26px;object-fit:contain" onerror="this.style.display=\'none\'">';}
+  return'<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">'
+    +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:5px">DESERVE TO WIN O\'METER</div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px;margin-bottom:2px">'
+    +'<div style="display:flex;align-items:center;gap:5px">'+lImg(awayTeam)+'<span style="font-size:22px;font-weight:900;color:'+aColor+';font-family:\'Barlow Condensed\',sans-serif">'+aPct.toFixed(1)+'%</span></div>'
+    +'<div style="font-size:9px;color:#4b5563;font-family:\'Barlow Condensed\',sans-serif;text-align:center">xG: '+awayTeam+' '+aXG.toFixed(2)+' · '+homeTeam+' '+hXG.toFixed(2)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:5px"><span style="font-size:22px;font-weight:900;color:'+hColor+';font-family:\'Barlow Condensed\',sans-serif">'+hPct.toFixed(1)+'%</span>'+lImg(homeTeam)+'</div>'
+    +'</div>'
+    +svg+'</div>';
+}
 function renderLiveGameOverlayMaker(overlay,data,away,home){
   var c=data.current||{};
   var pool=getActivePool();
@@ -1768,6 +1815,8 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
   var awayOwnerM=getTeamOwnerMaker(away),homeOwnerM=getTeamOwnerMaker(home);
   var awayColorM=awayOwnerM?getPC(pool,awayOwnerM.ci).color:'rgba(255,255,255,0.4)';
   var homeColorM=homeOwnerM?getPC(pool,homeOwnerM.ci).color:'rgba(255,255,255,0.15)';
+  var gaugeAwayM=awayOwnerM?getPC(pool,awayOwnerM.ci).color:'#ef4444';
+  var gaugeHomeM=homeOwnerM?getPC(pool,homeOwnerM.ci).color:'#3b82f6';
   if(c.homeZone!=null){
     var hz=Math.round(c.homeZone*1000)/10,az=Math.round((1-c.homeZone)*1000)/10;
     var hs2=Math.round(c.homeCloseShots*1000)/10,as2=Math.round((1-c.homeCloseShots)*1000)/10;
@@ -1777,6 +1826,7 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
     html+='</div>';
   }
   if(data.shots&&data.shots.length)html+='<div id="lgo-shotmap-container">'+buildShotMapM(data.shots,away,home)+'</div>';
+  if(data.shots&&data.shots.length)html+=buildDeserveGauge(data.shots,away,home,gaugeAwayM,gaugeHomeM);
   if(data.goals&&data.goals.length){
     html+='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px;margin-bottom:12px">';
     html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">SCORING SUMMARY</div>';
