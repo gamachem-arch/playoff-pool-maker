@@ -291,7 +291,7 @@ function _rebuildMakerUI(){
   if(!st.pieTotals)return;
   document.getElementById('legwrap').innerHTML=_buildMakerLegendPie(st.pieTotals,st.pieSvg);
   document.getElementById('tonight-wrap').innerHTML=buildOnTheClock(st.gamesData||[],st.odds);
-  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds);
+  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds)+buildEdgeButton();
 }
 function _buildMakerLegendPie(pieTotals,pieSvg){
   var me=getMyPlayer();
@@ -2857,6 +2857,82 @@ function buildGoalieLeaders(goalies, oddsMap) {
   return html;
 }
 
+var _edgeCacheM = null;
+
+async function fetchEdgeLeaders() {
+  if (_edgeCacheM) return _edgeCacheM;
+  try {
+    var res = await fetch(ODDS_API + '?action=edgeLeaders&t=' + Date.now(), {cache:'no-store'});
+    var j = await res.json();
+    _edgeCacheM = j;
+    return j;
+  } catch(e) { return null; }
+}
+
+function buildEdgeButton() {
+  return '<div style="margin-top:20px;padding:0 2px;text-align:center">' +
+    '<button onclick="showEdgeModal()" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#9ca3af;border-radius:20px;padding:7px 20px;font-family:\'Barlow Condensed\',sans-serif;font-size:12px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;-webkit-tap-highlight-color:transparent">⚡ NHL Edge Leaders</button>' +
+    '</div>';
+}
+
+async function showEdgeModal() {
+  var existing = document.getElementById('edge-overlay');
+  if (existing) { existing.remove(); return; }
+  var overlay = document.createElement('div');
+  overlay.id = 'edge-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:#0d1117;z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain';
+  overlay.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;font-size:14px;letter-spacing:.5px">LOADING…</div>';
+  document.body.appendChild(overlay);
+  var data = await fetchEdgeLeaders();
+  if (!data || !data.leaders) { overlay.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">Failed to load</div>'; return; }
+  overlay.innerHTML = renderEdgeModal(data.leaders);
+}
+
+function renderEdgeModal(L) {
+  var pool = getActivePool();
+  function statNum(val, label) {
+    return '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:30px;font-weight:700;color:#f9fafb;line-height:1">'+val+'</div>' +
+           '<div style="font-size:9px;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-top:3px">'+label+'</div>';
+  }
+  function edgeCard(emoji, label, cat, statHtml) {
+    if (!cat || !cat.player) return '';
+    var p = cat.player;
+    var team = (p.team && p.team.abbrev) || '';
+    var owner = getTeamOwnerMaker(team);
+    var pillHtml = (owner && pool) ? (function(){var pc=getPC(pool,owner.ci);return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';font-size:8px;padding:0 5px;line-height:15px;border-radius:4px;font-weight:700">'+esc(owner.abbrev)+'</span>';})() : '';
+    var name = (p.firstName&&p.firstName.default||'') + ' ' + (p.lastName&&p.lastName.default||'');
+    var sfx = logoSfx(team);
+    var html = '<div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:16px 10px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:7px">';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:.7px;text-transform:uppercase">'+emoji+' '+label+'</div>';
+    html += '<div style="position:relative;display:inline-block">';
+    html += '<img src="'+p.headshot+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;object-position:top center;background:#1f2937" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+sfx+'.svg\'">';
+    html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+sfx+'.svg" style="width:20px;height:20px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:2px;object-fit:contain">';
+    html += '</div>';
+    html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700;color:#f9fafb;line-height:1.2">'+name+'</div>';
+    if (pillHtml) html += pillHtml;
+    html += statHtml;
+    html += '</div>';
+    return html;
+  }
+  var html = '';
+  html += '<div style="position:sticky;top:0;background:#0d1117;border-bottom:1px solid rgba(255,255,255,0.08);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:10">';
+  html += '<div><div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:700;color:#f9fafb;letter-spacing:.5px">⚡ NHL EDGE</div>';
+  html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-top:1px">PLAYOFFS 2025-26</div></div>';
+  html += '<button onclick="document.getElementById(\'edge-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#f9fafb;width:32px;height:32px;border-radius:50%;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0">×</button>';
+  html += '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px">';
+  html += edgeCard('💥','Hardest Shot',       L.hardestShot,        statNum((+(L.hardestShot&&L.hardestShot.shotSpeed&&L.hardestShot.shotSpeed.imperial||0)).toFixed(1),'mph'));
+  html += edgeCard('⚡','Max Skating Speed',   L.maxSkatingSpeed,    statNum((+(L.maxSkatingSpeed&&L.maxSkatingSpeed.skatingSpeed&&L.maxSkatingSpeed.skatingSpeed.imperial||0)).toFixed(2),'mph'));
+  html += edgeCard('🏃','Total Distance',      L.totalDistanceSkated,statNum((+(L.totalDistanceSkated&&L.totalDistanceSkated.distanceSkated&&L.totalDistanceSkated.distanceSkated.imperial||0)).toFixed(1),'mi total'));
+  html += edgeCard('📏','Most in One Game',    L.distanceMaxGame,    statNum((+(L.distanceMaxGame&&L.distanceMaxGame.distanceSkated&&L.distanceMaxGame.distanceSkated.imperial||0)).toFixed(2),'mi / game'));
+  html += edgeCard('🎯','High-Danger SOG',     L.highDangerSOG,      statNum(L.highDangerSOG&&L.highDangerSOG.sog||0,'hd sog'));
+  html += edgeCard('🏟','Offensive Zone Time', L.offensiveZoneTime,  statNum(((+(L.offensiveZoneTime&&L.offensiveZoneTime.zoneTime||0))*100).toFixed(1)+'%','oz time'));
+  html += edgeCard('🛡','Defensive Zone Time', L.defensiveZoneTime,  statNum(((+(L.defensiveZoneTime&&L.defensiveZoneTime.zoneTime||0))*100).toFixed(1)+'%','dz time'));
+  html += '</div>';
+  html += '<div style="height:40px"></div>';
+  return html;
+}
+
 function _statGrid(stats) {
   var html = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">';
   stats.forEach(function(s) {
@@ -3132,7 +3208,7 @@ async function doRender(){
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
-    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds);
+    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton();
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
   }catch(e){
