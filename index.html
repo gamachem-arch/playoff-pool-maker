@@ -171,10 +171,23 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .cswatch:active { transform:scale(0.85); }
 .cswatch.selected { border-color:#fff; }
 
+/* ── Width-constrained containers ── */
+#tonight-wrap { max-width:1120px; margin:0 auto; }
+
 /* ── Bracket View ─────────────────────────────── */
 /* Tuned for iPhone 14/16 Pro (~393px viewport) */
 #bracket-section { margin:0 auto; padding:0 4px; }
 .bracket-wrap { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:8px 6px 10px; max-width:460px; margin:0 auto; }
+@media (min-width:641px) {
+  .bracket-wrap { max-width:900px; padding:12px 10px 14px; }
+  .bc-r1-col { width:auto !important; flex:1 !important; }
+  .bc-r2-col { width:120px !important; }
+  .bc-card-sm .bc-name { display:block; }
+  .bc-card-sm .bc-wins { display:block; }
+  .bc-card-sm .bc-logo { width:28px; height:28px; }
+  .bc-card-sm .bc-team { padding:9px 8px 9px 6px; justify-content:flex-start; gap:4px; }
+  .bc-card-sm .bc-pill { display:inline-flex; }
+}
 .bracket-conf-labels { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:0 2px; }
 .bracket-conf-label { font-family:'Barlow Condensed',sans-serif; font-size:8px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); }
 .bracket-half { display:flex; align-items:center; margin-bottom:0; }
@@ -2284,7 +2297,7 @@ function buildBracket(shareMode) {
   var cw3 = ar === 3 ? 'width:90px' : (ar > 3 ? 'width:50px' : '');
   var cw4 = ar === 4 ? 'width:72px' : '';
   function c(s, round) { return buildBracketCard(s, gd, ar===round, shareMode, round < ar); }
-  function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1); }
+  function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1 && window.innerWidth <= 640); }
 
   var shareBtn = shareMode ? '' : '<button onclick="showBracketShareOverlay()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--muted);font-family:Inter,sans-serif;font-size:10px;padding:3px 8px;border-radius:8px;cursor:pointer">📸</button>';
   return '<div class="bracket-wrap">'
@@ -2792,7 +2805,7 @@ function buildScoringLeaders(leaders, oddsMap) {
     return poolTeams.has(t);
   }).slice(0, 20);
   if (!rows.length) return '';
-  var html = '<div style="margin-top:20px;padding:0 2px">';
+  var html = '<div style="margin-top:20px;padding:0 2px;max-width:1120px;margin-left:auto;margin-right:auto">';
   html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Scoring Leaders</div>';
   html += '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
   rows.forEach(function(p) {
@@ -2828,7 +2841,7 @@ function buildGoalieLeaders(goalies, oddsMap) {
     return poolTeams.has(t);
   }).slice(0, 15);
   if (!rows.length) return '';
-  var html = '<div style="margin-top:16px;padding:0 2px">';
+  var html = '<div style="margin-top:16px;padding:0 2px;max-width:1120px;margin-left:auto;margin-right:auto">';
   html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Goalie Leaders</div>';
   html += '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
   rows.forEach(function(g) {
