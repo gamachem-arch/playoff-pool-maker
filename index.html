@@ -2822,9 +2822,9 @@ function buildOnTheClock(gamesData, oddsMap) {
     var onclick = tappable
       ? ' onclick="showLiveGameOverlayMaker(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"'
       : (isUpcoming && g.id ? ' onclick="showGamePreviewOverlayM(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')"' : '');
-    html += '<div'+onclick+' style="display:flex;align-items:center;gap:7px;'+borderTop+cursor+'overflow:hidden">';
+    html += '<div'+onclick+' style="display:flex;align-items:center;gap:4px;'+borderTop+cursor+'overflow:hidden">';
     if (isLive) {
-      html += '<div style="flex-shrink:0;min-width:48px">';
+      html += '<div style="flex-shrink:0;min-width:36px">';
       html += '<div style="font-size:10px;color:#f87171;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;display:flex;align-items:center"><span class="live-dot"></span>LIVE</div>';
       if (periodLabel) html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+periodLabel+'</div>';
       html += '</div>';
@@ -2847,7 +2847,7 @@ function buildOnTheClock(gamesData, oddsMap) {
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_'+logoSfx(g.home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
     if (isLive && g.id) {
-      html += '<span onclick="event.stopPropagation();showGamePreviewOverlayM(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="font-size:9px;font-weight:700;color:#6b7280;margin-left:auto;flex-shrink:0;letter-spacing:.4px;cursor:pointer;padding:3px 7px;background:rgba(255,255,255,0.05);border-radius:4px;font-family:\'Barlow Condensed\',sans-serif;-webkit-tap-highlight-color:transparent">PREVIEW</span>';
+      html += '<span onclick="event.stopPropagation();showGamePreviewOverlayM(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="font-size:13px;color:#4b5563;margin-left:auto;flex-shrink:0;cursor:pointer;padding:2px 4px;-webkit-tap-highlight-color:transparent" title="Preview">ⓘ</span>';
       html += '<span style="font-size:11px;color:#4b5563;flex-shrink:0">&#9654;&#xFE0E;</span>';
     } else if (tappable || (isUpcoming && g.id)) {
       html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
