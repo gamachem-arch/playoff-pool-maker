@@ -291,6 +291,9 @@ var _makerState = {};
 var _detailStateMaker = null;
 var _lgoReplayDataM = null;
 var _playerCards = {};
+var _leadersCache = {};
+var _leadersTabActive = 'points';
+var _lgoPhysicalsCache = null;
 function _myPlayerKey(){var p=getActivePool();return p?'myPlayer_'+(p.id||p.title):null;}
 function getMyPlayer(){try{var k=_myPlayerKey();return k?localStorage.getItem(k):null;}catch(e){return null;}}
 function setMyPlayer(abbrev){
@@ -1658,9 +1661,12 @@ function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam,lColor,rColor){
     +'<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+label+'</div>'
     +'<div style="display:flex;align-items:center;gap:5px">'
     +lLogo+'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px;text-align:right">'+leftPct+'%</span>'
-    +'<div style="flex:1;height:8px;position:relative;border-radius:2px;overflow:hidden">'
+    +'<div style="flex:1;position:relative">'
+    +'<div style="height:8px;border-radius:2px;overflow:hidden;position:relative">'
     +'<div style="position:absolute;inset:0;background:linear-gradient(to right,'+lc+' '+leftW+'%,'+rc+' '+leftW+'%)"></div>'
     +'<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,0.18) 0%,transparent 100%)"></div>'
+    +'</div>'
+    +'<div style="position:absolute;left:50%;top:-3px;width:2px;height:14px;background:rgba(255,255,255,0.28);transform:translateX(-50%);border-radius:1px;pointer-events:none"></div>'
     +'</div>'
     +'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:32px">'+rightPct+'%</span>'+rLogo
     +'</div></div>';
@@ -1879,6 +1885,55 @@ function renderLiveGameOverlayMaker(overlay,data,away,home){
   html+='</div>';
   overlay.innerHTML=html;
 }
+async function _injectPhysicalsM(away, home) {
+  try {
+    if (!_lgoPhysicalsCache || _lgoPhysicalsCache._key !== away+home) {
+      var res = await fetch(ODDS_API+'?action=teamPhysicals&away='+away+'&home='+home+'&t='+Date.now(),{cache:'no-store'});
+      _lgoPhysicalsCache = await res.json();
+      _lgoPhysicalsCache._key = away+home;
+    }
+    var el = document.getElementById('lgo-physicals-container');
+    if (el) el.innerHTML = buildPhysicalsSectionM(_lgoPhysicalsCache, away, home);
+  } catch(e) {}
+}
+
+function buildPhysicalsSectionM(phys, away, home) {
+  var a=phys[away], h=phys[home];
+  if (!a||!h) return '';
+  var pool=getActivePool();
+  var awayOwnerM=getTeamOwnerMaker(away), homeOwnerM=getTeamOwnerMaker(home);
+  var aC=awayOwnerM&&pool?getPC(pool,awayOwnerM.ci).color:'rgba(255,255,255,0.4)';
+  var hC=homeOwnerM&&pool?getPC(pool,homeOwnerM.ci).color:'rgba(255,255,255,0.15)';
+  var aLg='<img src="https://assets.nhle.com/logos/nhl/svg/'+away+'_'+logoSfx(away)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+  var hLg='<img src="https://assets.nhle.com/logos/nhl/svg/'+home+'_'+logoSfx(home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
+  var stats=[
+    {label:'Hits',   av:a.hits,         hv:h.hits},
+    {label:'Blocks', av:a.blockedShots,  hv:h.blockedShots},
+    {label:'TK',     av:a.takeaways,    hv:h.takeaways},
+    {label:'GV',     av:a.giveaways,    hv:h.giveaways}
+  ];
+  var html='<div style="background:rgba(255,255,255,0.03);border-radius:10px;padding:10px 10px 2px;margin-bottom:12px">';
+  html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px">PHYSICAL</div>';
+  stats.forEach(function(s){
+    var total=(s.av+s.hv)||1, aW=(s.av/total*100).toFixed(1);
+    html+='<div style="margin-bottom:10px">';
+    html+='<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px;margin-bottom:4px">'+s.label+'</div>';
+    html+='<div style="display:flex;align-items:center;gap:5px">';
+    html+=aLg+'<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:28px;text-align:right">'+s.av+'</span>';
+    html+='<div style="flex:1;position:relative">';
+    html+='<div style="height:8px;border-radius:2px;overflow:hidden;position:relative">';
+    html+='<div style="position:absolute;inset:0;background:linear-gradient(to right,'+aC+' '+aW+'%,'+hC+' '+aW+'%)"></div>';
+    html+='<div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(255,255,255,0.18) 0%,transparent 100%)"></div>';
+    html+='</div>';
+    html+='<div style="position:absolute;left:50%;top:-3px;width:2px;height:14px;background:rgba(255,255,255,0.28);transform:translateX(-50%);border-radius:1px;pointer-events:none"></div>';
+    html+='</div>';
+    html+='<span style="font-size:11px;font-family:\'Barlow Condensed\',sans-serif;color:#9ca3af;min-width:28px">'+s.hv+'</span>'+hLg;
+    html+='</div></div>';
+  });
+  html+='</div>';
+  return html;
+}
+
 function showLiveGameOverlayMaker(gameId,away,home,season){
   var existing=document.getElementById('live-game-overlay');
   if(existing)existing.remove();
@@ -1936,6 +1991,7 @@ function showGamePreviewOverlayM(gameId, away, home, season) {
       if (!el) return;
       if (data.error) { el.querySelector('div').innerHTML = '<div style="padding:40px;text-align:center;color:#f87171">'+data.error+'</div>'; return; }
       renderGamePreviewOverlayM(el, data, away, home);
+      _injectPhysicalsM(away, home);
     }).catch(function() {
       var el = document.getElementById('game-preview-overlay-m');
       if (el) el.querySelector('div').innerHTML = '<div style="padding:40px;text-align:center;color:#f87171">Failed to load</div>';
@@ -2156,6 +2212,7 @@ function renderGamePreviewOverlayM(overlay, data, away, home) {
     html += '</div>';
   }
 
+  html += '<div id="lgo-physicals-container"></div>';
   html += '</div>';
   overlay.innerHTML = html;
 }
@@ -2789,7 +2846,12 @@ function buildOnTheClock(gamesData, oddsMap) {
     html += homePill;
     html += '<span style="font-size:14px;font-family:\'Barlow Condensed\',sans-serif;font-weight:800;color:#f9fafb;flex-shrink:0">'+g.home+'</span>';
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+g.home+'_'+logoSfx(g.home)+'.svg" style="width:22px;height:22px;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'">';
-    if (tappable || (isUpcoming && g.id)) html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
+    if (isLive && g.id) {
+      html += '<span onclick="event.stopPropagation();showGamePreviewOverlayM(\''+g.id+'\',\''+g.away+'\',\''+g.home+'\',\''+g.season+'\')" style="font-size:9px;font-weight:700;color:#6b7280;margin-left:auto;flex-shrink:0;letter-spacing:.4px;cursor:pointer;padding:3px 7px;background:rgba(255,255,255,0.05);border-radius:4px;font-family:\'Barlow Condensed\',sans-serif;-webkit-tap-highlight-color:transparent">PREVIEW</span>';
+      html += '<span style="font-size:11px;color:#4b5563;flex-shrink:0">&#9654;&#xFE0E;</span>';
+    } else if (tappable || (isUpcoming && g.id)) {
+      html += '<span style="font-size:11px;color:#4b5563;margin-left:auto;flex-shrink:0">&#9654;&#xFE0E;</span>';
+    }
     html += '</div>';
   });
   html += '</div>';
@@ -2799,22 +2861,51 @@ function buildOnTheClock(gamesData, oddsMap) {
 function buildScoringLeaders(leaders, oddsMap) {
   if (!leaders || !leaders.length) return '';
   var pool = getActivePool(); if (!pool) return '';
-  var poolTeams = new Set(pool.players.reduce(function(a,p){return a.concat(p.teams);},[]));
-  var rows = leaders.filter(function(p) {
-    var t = (p.teamAbbrevs||'').toUpperCase().split(',')[0].trim();
-    return poolTeams.has(t);
-  }).slice(0, 20);
-  if (!rows.length) return '';
+  _leadersCache['points'] = leaders;
+  var tabs = [
+    {cat:'points',       label:'PTS'},
+    {cat:'hits',         label:'HITS'},
+    {cat:'blockedShots', label:'BLK'},
+    {cat:'takeaways',    label:'TK'},
+    {cat:'giveaways',    label:'GV'},
+    {cat:'penaltiesDrawn',label:'PD'}
+  ];
   var html = '<div style="margin-top:20px;padding:0 2px;max-width:1120px;margin-left:auto;margin-right:auto">';
   html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Scoring Leaders</div>';
-  html += '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
-  rows.forEach(function(p) {
+  html += '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
+  tabs.forEach(function(t) {
+    var active = t.cat === _leadersTabActive;
+    html += '<button class="leaders-tab" data-cat="'+t.cat+'" onclick="switchLeadersTab(\''+t.cat+'\')" style="background:'+(active?'rgba(255,255,255,0.12)':'rgba(255,255,255,0.04)')+';border:1px solid '+(active?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.06)')+';color:'+(active?'#f9fafb':'#6b7280')+';border-radius:20px;padding:3px 10px;font-family:\'Barlow Condensed\',sans-serif;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;-webkit-tap-highlight-color:transparent">'+t.label+'</button>';
+  });
+  html += '</div>';
+  html += '<div id="leaders-scroll" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none">';
+  html += buildLeadersRow(leaders, 'points');
+  html += '</div></div>';
+  return html;
+}
+
+function buildLeadersRow(rows, cat) {
+  var pool = getActivePool(); if (!pool) return '';
+  var poolTeams = new Set(pool.players.reduce(function(a,p){return a.concat(p.teams);},[]))
+  var filtered = rows.filter(function(p) {
+    return poolTeams.has((p.teamAbbrevs||'').toUpperCase().split(',')[0].trim());
+  }).slice(0, 20);
+  var META = {
+    points:        {val:function(p){return p.points||0;},        sub:function(p){return (p.goals||0)+'G '+(p.assists||0)+'A';},  unit:'pts'},
+    hits:          {val:function(p){return p.hits||0;},          sub:function(p){return (p.gamesPlayed||0)+' GP';},              unit:'HIT'},
+    blockedShots:  {val:function(p){return p.blockedShots||0;},  sub:function(p){return (p.gamesPlayed||0)+' GP';},              unit:'BLK'},
+    takeaways:     {val:function(p){return p.takeaways||0;},     sub:function(p){return (p.gamesPlayed||0)+' GP';},              unit:'TK'},
+    giveaways:     {val:function(p){return p.giveaways||0;},     sub:function(p){return (p.gamesPlayed||0)+' GP';},              unit:'GV'},
+    penaltiesDrawn:{val:function(p){return p.penaltiesDrawn||0;},sub:function(p){return (p.gamesPlayed||0)+' GP';},              unit:'PD'}
+  };
+  var m = META[cat] || META.points;
+  var html = '';
+  filtered.forEach(function(p) {
     var team = (p.teamAbbrevs||'').toUpperCase().split(',')[0].trim();
     var owner = getTeamOwnerMaker(team);
     var pillHtml = owner ? (function(){var pc=getPC(pool,owner.ci);return '<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';font-size:8px;padding:0 4px;line-height:14px;border-radius:4px;font-weight:700">'+esc(owner.abbrev)+'</span>';})() : '';
     var nameParts = (p.skaterFullName||'').split(' ');
     var lastName = nameParts.slice(1).join(' ') || nameParts[0] || '';
-    var g = p.goals||0, a = p.assists||0, pts = p.points||0;
     var shot = p.headshot || ('https://assets.nhle.com/mugs/nhl/01000/'+(p.playerId||0)+'.png');
     _playerCards['s_'+p.playerId] = Object.assign({type:'skater', pillHtml:pillHtml}, p);
     html += '<div onclick="showPlayerCard(\'s_'+p.playerId+'\')" style="flex-shrink:0;width:62px;text-align:center;cursor:pointer">';
@@ -2823,13 +2914,36 @@ function buildScoringLeaders(leaders, oddsMap) {
     html += '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="width:16px;height:16px;position:absolute;bottom:-2px;right:-4px;background:#0d1117;border-radius:50%;padding:1px;object-fit:contain">';
     html += '</div>';
     html += '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;color:#f9fafb;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+p.skaterFullName+'">'+lastName+'</div>';
-    html += '<div style="font-size:11px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+pts+'<span style="font-size:9px;font-weight:400;color:#6b7280"> pts</span></div>';
-    html += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+g+'G '+a+'A</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+m.val(p)+'<span style="font-size:9px;font-weight:400;color:#6b7280"> '+m.unit+'</span></div>';
+    html += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+m.sub(p)+'</div>';
     html += '<div style="display:flex;justify-content:center;margin-top:3px">'+pillHtml+'</div>';
     html += '</div>';
   });
-  html += '</div></div>';
   return html;
+}
+
+async function switchLeadersTab(cat) {
+  _leadersTabActive = cat;
+  document.querySelectorAll('.leaders-tab').forEach(function(t) {
+    var active = t.dataset.cat === cat;
+    t.style.background = active ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.04)';
+    t.style.borderColor = active ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.06)';
+    t.style.color = active ? '#f9fafb' : '#6b7280';
+  });
+  var scroll = document.getElementById('leaders-scroll');
+  if (!scroll) return;
+  if (_leadersCache[cat]) { scroll.innerHTML = buildLeadersRow(_leadersCache[cat], cat); return; }
+  scroll.innerHTML = '<div style="color:#6b7280;font-size:11px;padding:10px 0;font-family:\'Barlow Condensed\',sans-serif">Loading…</div>';
+  try {
+    var res = await fetch(ODDS_API + '?action=scoringLeaders&category=' + cat + '&t=' + Date.now(), {cache:'no-store'});
+    var j = await res.json();
+    _leadersCache[cat] = j.data || [];
+    var el = document.getElementById('leaders-scroll');
+    if (el) el.innerHTML = buildLeadersRow(_leadersCache[cat], cat);
+  } catch(e) {
+    var el = document.getElementById('leaders-scroll');
+    if (el) el.innerHTML = '<div style="color:#f87171;font-size:11px;padding:10px 0;font-family:\'Barlow Condensed\',sans-serif">Failed to load</div>';
+  }
 }
 
 function buildGoalieLeaders(goalies, oddsMap) {
@@ -2958,7 +3072,7 @@ function _statGrid(stats) {
   return html;
 }
 
-function showPlayerCard(key) {
+async function showPlayerCard(key) {
   var d = _playerCards[key]; if (!d) return;
   var existing = document.getElementById('player-card-overlay');
   if (existing) existing.remove();
@@ -2966,10 +3080,10 @@ function showPlayerCard(key) {
   var isSkater = d.type === 'skater';
   var fullName = isSkater ? (d.skaterFullName||'') : (d.goalieFullName||'');
   var shot = d.headshot || '';
-  var statsHtml;
+  var basicStats;
   if (isSkater) {
     var pm = d.plusMinus||0;
-    statsHtml = _statGrid([
+    basicStats = _statGrid([
       {label:'GP',  val:d.gamesPlayed||0},
       {label:'G',   val:d.goals||0},
       {label:'A',   val:d.assists||0},
@@ -2978,7 +3092,7 @@ function showPlayerCard(key) {
       {label:'SOG', val:d.shots||0}
     ]);
   } else {
-    statsHtml = _statGrid([
+    basicStats = _statGrid([
       {label:'GS',  val:d.gamesStarted||0},
       {label:'W',   val:d.wins||0},
       {label:'L',   val:d.losses||0},
@@ -2992,7 +3106,7 @@ function showPlayerCard(key) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;display:flex;flex-direction:column;justify-content:flex-end;';
   overlay.innerHTML =
     '<div onclick="document.getElementById(\'player-card-overlay\').remove()" style="flex:1;background:rgba(0,0,0,0.6)"></div>' +
-    '<div style="background:#161b27;border-radius:20px 20px 0 0;padding:20px 20px 40px;position:relative">' +
+    '<div style="background:#161b27;border-radius:20px 20px 0 0;padding:20px 20px 40px;position:relative;max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch">' +
     '<div style="width:36px;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 18px"></div>' +
     '<button onclick="document.getElementById(\'player-card-overlay\').remove()" style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,0.08);border:none;color:#9ca3af;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:13px;line-height:28px;text-align:center">✕</button>' +
     '<div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">' +
@@ -3010,9 +3124,85 @@ function showPlayerCard(key) {
       '</div>' +
     '</div>' +
     '<div style="height:1px;background:rgba(255,255,255,0.07);margin-bottom:14px"></div>' +
-    statsHtml +
+    basicStats +
+    (isSkater ? '<div id="player-card-extended" style="margin-top:12px"><div style="color:#4b5563;font-size:10px;font-family:\'Barlow Condensed\',sans-serif;text-align:center;padding:8px">Loading…</div></div>' : '') +
     '</div>';
   document.body.appendChild(overlay);
+
+  if (!isSkater || !d.playerId) return;
+  try {
+    var res = await fetch(ODDS_API + '?action=playerStats&id=' + d.playerId + '&t=' + Date.now(), {cache:'no-store'});
+    var j = await res.json();
+    var ext = j.data || {};
+    var extEl = document.getElementById('player-card-extended');
+    if (!extEl) return;
+    var extHtml = '';
+
+    extHtml += '<div style="height:1px;background:rgba(255,255,255,0.07);margin:14px 0 10px"></div>';
+    extHtml += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Situational</div>';
+    extHtml += _statGrid([
+      {label:'EVG', val:ext.evGoals||0},
+      {label:'EVP', val:ext.evPoints||0},
+      {label:'PPG', val:ext.ppGoals||0},
+      {label:'PPP', val:ext.ppPoints||0},
+      {label:'SHG', val:ext.shGoals||0},
+      {label:'GWG', val:ext.gameWinningGoals||0}
+    ]);
+
+    var hits=ext.hits||0, blk=ext.blockedShots||0, tk=ext.takeaways||0, gv=ext.giveaways||0;
+    if (hits||blk||tk||gv) {
+      extHtml += '<div style="height:1px;background:rgba(255,255,255,0.07);margin:14px 0 10px"></div>';
+      extHtml += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Physical</div>';
+      extHtml += _statGrid([
+        {label:'HITS', val:hits},
+        {label:'BLK',  val:blk},
+        {label:'TK',   val:tk},
+        {label:'GV',   val:gv}
+      ]);
+    }
+
+    function fmtSec(s){if(!s)return'—';var m=Math.floor(s/60),sc=Math.round(s%60);return m+':'+(sc<10?'0':'')+sc;}
+    var evT=ext.evTimeOnIcePerGame||0, ppT=ext.ppTimeOnIcePerGame||0, shT=ext.shTimeOnIcePerGame||0, sh=ext.shiftsPerGame||0;
+    if (evT||ppT||shT) {
+      extHtml += '<div style="height:1px;background:rgba(255,255,255,0.07);margin:14px 0 10px"></div>';
+      extHtml += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Ice Time / Game</div>';
+      extHtml += _statGrid([
+        {label:'EV TOI', val:fmtSec(evT)},
+        {label:'PP TOI', val:fmtSec(ppT)},
+        {label:'SH TOI', val:fmtSec(shT)},
+        {label:'SHIFTS', val:sh?Math.round(sh):'—'}
+      ]);
+    }
+
+    var stypes = [
+      {key:'Wrist',    sog:ext.shotsOnNetWrist||0,    g:ext.goalsWrist||0},
+      {key:'Snap',     sog:ext.shotsOnNetSnap||0,     g:ext.goalsSnap||0},
+      {key:'Slap',     sog:ext.shotsOnNetSlap||0,     g:ext.goalsSlap||0},
+      {key:'Backhand', sog:ext.shotsOnNetBackhand||0, g:ext.goalsBackhand||0},
+      {key:'Deflected',sog:ext.shotsOnNetDeflected||0,g:ext.goalsDeflected||0},
+      {key:'Tip-In',   sog:ext.shotsOnNetTipIn||0,    g:ext.goalsTipIn||0}
+    ].filter(function(s){return s.sog>0;}).sort(function(a,b){return b.sog-a.sog;});
+    var totalSog = stypes.reduce(function(s,t){return s+t.sog;},0);
+    if (stypes.length) {
+      extHtml += '<div style="height:1px;background:rgba(255,255,255,0.07);margin:14px 0 10px"></div>';
+      extHtml += '<div style="font-size:9px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px">Shot Types</div>';
+      stypes.forEach(function(st) {
+        var pct = totalSog ? Math.round(st.sog/totalSog*100) : 0;
+        extHtml += '<div style="margin-bottom:7px">';
+        extHtml += '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px">';
+        extHtml += '<span style="font-size:10px;color:#9ca3af;font-family:\'Barlow Condensed\',sans-serif">'+st.key+'</span>';
+        extHtml += '<span style="font-size:10px;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif;font-weight:700">'+st.sog+' SOG <span style="color:#6b7280;font-weight:400">('+st.g+'G)</span></span>';
+        extHtml += '</div>';
+        extHtml += '<div style="height:4px;background:rgba(255,255,255,0.07);border-radius:2px"><div style="height:4px;background:#3b82f6;border-radius:2px;width:'+pct+'%"></div></div>';
+        extHtml += '</div>';
+      });
+    }
+
+    extEl.innerHTML = extHtml;
+  } catch(e) {
+    var extEl = document.getElementById('player-card-extended');
+    if (extEl) extEl.innerHTML = '';
+  }
 }
 
 function lgoReplayScrubM(val) {
