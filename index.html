@@ -2814,10 +2814,16 @@ function buildOnTheClock(gamesData, oddsMap) {
   var pool = getActivePool(); if (!pool) return '';
   var etNow = new Date(Date.now() - 4*60*60*1000);
   var todayET = etNow.toISOString().slice(0,10);
+  var etHour = etNow.getUTCHours();
+  var yesterdayET = new Date(etNow.getTime() - 86400000).toISOString().slice(0,10);
   var tonight = gamesData.filter(function(g) {
     if (!g.startUTC) return false;
+    if (g.state==='LIVE' || g.state==='CRIT') return true;
     var d = new Date(new Date(g.startUTC).getTime() - 4*60*60*1000);
-    return d.toISOString().slice(0,10) === todayET && (g.state==='FUT'||g.state==='PRE'||g.state==='LIVE'||g.state==='CRIT'||g.state==='OFF'||g.state==='FINAL');
+    var gDate = d.toISOString().slice(0,10);
+    if (gDate === todayET) return etHour >= 10 ? (g.state==='FUT'||g.state==='PRE'||g.state==='OFF'||g.state==='FINAL') : (g.state==='OFF'||g.state==='FINAL');
+    if (etHour < 10 && gDate === yesterdayET) return g.state==='OFF'||g.state==='FINAL';
+    return false;
   });
   if (!tonight.length) return '';
   var html = '<div style="margin-bottom:16px;background:rgba(255,255,255,0.03);border-radius:12px;border-left:3px solid #3b82f6;padding:12px 14px">';
