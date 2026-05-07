@@ -2670,6 +2670,29 @@ function copyWidgetConfig() {
   });
 }
 
+function copyShareLink() {
+  var pool = getActivePool();
+  if (!pool) return;
+  var data = {
+    title: pool.title || "Playoff Pool",
+    players: pool.players.map(function(p) {
+      return { name: p.name, abbrev: (p.abbrev || p.name.substring(0,3)).toUpperCase(), teams: p.teams };
+    })
+  };
+  var encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  var url = window.location.origin + window.location.pathname + '#pool=' + encoded;
+  var btn = document.getElementById('share-link-btn');
+  navigator.clipboard.writeText(url).then(function() {
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '🔗 Link'; }, 2000); }
+  }).catch(function() {
+    var ta = document.createElement('textarea');
+    ta.value = url; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (btn) { btn.textContent = '✓ Copied!'; setTimeout(function(){ btn.textContent = '🔗 Link'; }, 2000); }
+  });
+}
+
 function showShareOverlay() {
   var st = _makerState;
   if (!st.pieTotals) return;
@@ -3258,7 +3281,7 @@ function buildStandings(odds,histData){
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
   return '<div class="standings"><div class="stitle"><div>Pool standings — combined cup odds'+hint+'</div>'+
-    '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;overflow:hidden"><button id="standings-share-btn" class="share-btn" onclick="toggleShareMenu()">📤 Share</button><div id="standings-share-menu" style="display:flex;gap:6px;max-width:0;opacity:0;overflow:hidden;transition:max-width 0.25s ease,opacity 0.2s ease;white-space:nowrap"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button><button class="share-btn" onclick="showShareOverlay()">📸 Share</button><button class="share-btn" id="widget-copy-btn" onclick="copyWidgetConfig()">📲 Widget</button><button class="share-btn" id="all-pools-copy-btn" onclick="copyAllPoolsConfig()">📲 All</button></div></div></div><div class="sgrid">'+
+    '<div style="display:flex;align-items:center;gap:6px;margin-top:4px;overflow:hidden"><button id="standings-share-btn" class="share-btn" onclick="toggleShareMenu()">📤 Share</button><div id="standings-share-menu" style="display:flex;gap:6px;max-width:0;opacity:0;overflow:hidden;transition:max-width 0.25s ease,opacity 0.2s ease;white-space:nowrap"><button class="share-btn" onclick="showRoundupOverlayMaker()">📋 Roundup</button><button class="share-btn" onclick="showShareOverlay()">📸 Share</button><button class="share-btn" id="widget-copy-btn" onclick="copyWidgetConfig()">📲 Widget</button><button class="share-btn" id="all-pools-copy-btn" onclick="copyAllPoolsConfig()">📲 All</button><button class="share-btn" id="share-link-btn" onclick="copyShareLink()">🔗 Link</button></div></div></div><div class="sgrid">'+
     totals.map(function(p,i){var pc=p.color?{color:p.color,bg:hexToRgba(p.color,0.15)}:getPC(pool,p.ci);
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
@@ -3421,6 +3444,21 @@ async function doRender(){
 }
 
 document.addEventListener("DOMContentLoaded",function(){
+  var hash=window.location.hash;
+  if(hash&&hash.startsWith('#pool=')){
+    try{
+      var encoded=hash.slice(6);
+      var data=JSON.parse(decodeURIComponent(escape(atob(encoded))));
+      if(data&&data.players&&data.players.length){
+        var id=generateId();
+        var pools=getAllPools();
+        pools[id]={id:id,title:data.title||"Playoff Pool",players:data.players,created:Date.now()};
+        savePools(pools);
+        setActiveId(id);
+        history.replaceState(null,'',window.location.pathname);
+      }
+    }catch(e){}
+  }
   var pool=getActivePool();
   if(!pool){showPoolList();}else{showSection("main");doRender();}
 });
