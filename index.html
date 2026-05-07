@@ -307,7 +307,7 @@ function _rebuildMakerUI(){
   if(!st.pieTotals)return;
   document.getElementById('legwrap').innerHTML=_buildMakerLegendPie(st.pieTotals,st.pieSvg);
   document.getElementById('tonight-wrap').innerHTML=buildOnTheClock(st.gamesData||[],st.odds);
-  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds)+buildEdgeButton();
+  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds)+buildEdgeButton()+'</div>';
 }
 function _buildMakerLegendPie(pieTotals,pieSvg){
   var me=getMyPlayer();
@@ -482,6 +482,20 @@ function drawPoolList() {
   }
 
   wrap.appendChild(newWrap);
+
+  var tourWrap = document.createElement("div");
+  tourWrap.style.cssText = "text-align:center;margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.07)";
+  var tourBtn = document.createElement("button");
+  tourBtn.className = "btn";
+  tourBtn.textContent = "? Take the tour";
+  tourBtn.style.cssText = "opacity:0.5;font-size:11px";
+  tourBtn.onclick = function() {
+    if (getActiveId()) { showSection("main"); doRender(); setTimeout(startTour, 1200); }
+    else startTour();
+  };
+  tourWrap.appendChild(tourBtn);
+  wrap.appendChild(tourWrap);
+
   el.appendChild(wrap);
 }
 
@@ -2899,7 +2913,7 @@ function buildScoringLeaders(leaders, oddsMap) {
     {cat:'giveaways',    label:'GV'},
     {cat:'penaltiesDrawn',label:'PD'}
   ];
-  var html = '<div style="margin-top:20px;padding:0 2px;max-width:1120px;margin-left:auto;margin-right:auto">';
+  var html = '<div id="leaders-section" style="margin-top:20px;padding:0 2px;max-width:1120px;margin-left:auto;margin-right:auto">';
   html += '<div style="font-size:10px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;margin-bottom:8px;text-transform:uppercase">Scoring Leaders</div>';
   html += '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">';
   tabs.forEach(function(t) {
@@ -3440,13 +3454,239 @@ async function doRender(){
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
-    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton();
+    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
+    initTour();
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
     document.getElementById("sub").textContent="Failed to load";
   }
+}
+
+// ─── GUIDED TOUR ─────────────────────────────────────────────────────────────
+// 4-panel backdrop with CSS transitions for smooth step-to-step animation.
+// Panels and ring animate their position via CSS; tip cross-fades between steps.
+// Target elements are NEVER modified — sidesteps all CSS stacking-context issues.
+var _tourActive=false,_tourStep=0,_tourPanels=[],_tourRing=null,_tourTip=null,_tourSeriesId=null;
+var _TOUR_TRANSITION='top 0.35s cubic-bezier(0.4,0,0.2,1),left 0.35s cubic-bezier(0.4,0,0.2,1),width 0.35s cubic-bezier(0.4,0,0.2,1),height 0.35s cubic-bezier(0.4,0,0.2,1),right 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.28s ease';
+
+var _tourSteps=[
+  // 1 — Standings: force user to tap their card (personalizes + auto-advances)
+  {sel:'.sgrid', pos:'bottom', waitForTap:true, fixedBottom:true,
+   title:'Standings',
+   body:'Who\'s leading the pool at a glance. <b style="color:#f9fafb">Tap your card</b> to personalize your view — your colour highlights throughout the app.'},
+
+  // 2 — The card they just selected
+  {selFn:function(){return document.querySelector('.scard.me-card')||document.querySelector('.scard');},
+   pos:'bottom',
+   title:'Your Picks',
+   body:'Your card shows your teams\' combined cup odds. Tap the mini chart to open the full odds history and overlay other players for comparison.'},
+
+  // 3a — Series card collapsed: live scores, deltas, cup odds
+  {selFn:function(){
+     var s=document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
+     if(s){var m=(s.getAttribute('onclick')||'').match(/toggleSeriesGames\('([^']+)'/);if(m)_tourSeriesId=m[1];}
+     return s;
+   }, pos:'bottom',
+   title:'Series Cards',
+   body:'Each matchup shows live series scores, current cup odds, and Δ changes. Live games get a pulsing dot with real-time score updates.'},
+
+  // 3b — Same series expanded: sparklines + game rows
+  {selFn:function(){
+     if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg)return sg.parentElement;}
+     return document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
+   }, pos:'bottom',
+   before:function(){
+     if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg&&sg.offsetHeight===0)toggleSeriesGames(_tourSeriesId);}
+   },
+   title:'Expanded Card',
+   body:'Tap any matchup to expand — odds sparklines for both teams, game-by-game results, and tap any game row for past or live analysis.'},
+
+  // 4 — Tonight's games
+  {sel:'#tonight-wrap', pos:'bottom', noFlip:true,
+   title:'Tonight\'s Games',
+   body:'Live scores and upcoming matchups at a glance. Tap any game card to open full live analysis or pregame preview.'},
+
+  // 5 — Bracket button in header; bracket opens behind for context
+  {selFn:function(){return document.querySelector('button[onclick="toggleBracket()"]');},
+   pos:'bottom',
+   before:function(){
+     window.scrollTo({top:0,behavior:'instant'});
+     var bs=document.getElementById('bracket-section');
+     if(bs&&bs.style.display==='none'){bs.style.display='block';bs.innerHTML=buildBracket();}
+   },
+   after:function(){var bs=document.getElementById('bracket-section');if(bs)bs.style.display='none';},
+   title:'Playoff Bracket',
+   body:'Tap here anytime to open the full playoff bracket — win probabilities, pool colours, and series results at a glance.'},
+
+  // 6 — All leaders sections together; scroll to bottom so tooltip floats above
+  {sel:'#all-leaders-wrap', pos:'top', scrollBlock:'end',
+   title:'Leaders & Fun Stats',
+   body:'Top scorers, goalie leaders, and fun edge stats from your pool teams. Switch categories with the tabs above.'}
+];
+
+function _tourKey(){var p=getActivePool();return'tourDone_'+(p?(p.id||p.title||'x'):'x');}
+
+function initTour(){
+  if(localStorage.getItem(_tourKey()))return;
+  setTimeout(startTour,900);
+}
+
+function _tourMakePanel(){
+  var d=document.createElement('div');
+  d.style.position='fixed';
+  d.style.background='rgba(0,0,0,0.62)';
+  d.style.zIndex='10010';
+  d.style.opacity='0'; // start invisible; fade in on first step
+  document.body.appendChild(d);
+  return d;
+}
+
+function startTour(){
+  if(_tourActive)return;
+  _tourActive=true; _tourStep=0; _tourSeriesId=null;
+  _tourPanels=[_tourMakePanel(),_tourMakePanel(),_tourMakePanel(),_tourMakePanel()];
+  _tourRing=document.createElement('div');
+  _tourRing.style.cssText='position:fixed;pointer-events:none;z-index:10011;border:3px solid rgba(59,130,246,0.9);border-radius:12px;box-shadow:0 0 0 1px rgba(59,130,246,0.2);opacity:0';
+  document.body.appendChild(_tourRing);
+  _tourTip=document.createElement('div');
+  _tourTip.style.cssText='position:fixed;z-index:10012;width:272px;background:#1c2333;border:1px solid rgba(255,255,255,0.13);border-radius:14px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,0.65);font-family:Inter,sans-serif;opacity:0;transition:opacity 0.2s ease,transform 0.2s ease';
+  document.body.appendChild(_tourTip);
+  _tourShowStep(0);
+}
+
+function _tourUpdateSpotlight(el,step){
+  var pad=6;
+  var r=el.getBoundingClientRect();
+  var vw=window.innerWidth,vh=window.innerHeight;
+  var x1=Math.max(0,r.left-pad),y1=Math.max(0,r.top-pad);
+  var x2=Math.min(vw,r.right+pad),y2=Math.min(vh,r.bottom+pad);
+  var pe=step.waitForTap?'none':'all';
+  // top
+  var p=_tourPanels[0];
+  p.style.top='0';p.style.left='0';p.style.right='0';p.style.bottom='';p.style.height=y1+'px';p.style.width='';p.style.pointerEvents=pe;
+  // bottom
+  p=_tourPanels[1];
+  p.style.top=y2+'px';p.style.left='0';p.style.right='0';p.style.bottom='0';p.style.height='';p.style.width='';p.style.pointerEvents=pe;
+  // left
+  p=_tourPanels[2];
+  p.style.top=y1+'px';p.style.left='0';p.style.right='';p.style.bottom='';p.style.width=x1+'px';p.style.height=(y2-y1)+'px';p.style.pointerEvents=pe;
+  // right
+  p=_tourPanels[3];
+  p.style.top=y1+'px';p.style.left=x2+'px';p.style.right='0';p.style.bottom='';p.style.width='';p.style.height=(y2-y1)+'px';p.style.pointerEvents=pe;
+  // ring
+  _tourRing.style.left=x1+'px';_tourRing.style.top=y1+'px';
+  _tourRing.style.width=(x2-x1)+'px';_tourRing.style.height=(y2-y1)+'px';
+  if(!step.waitForTap){_tourPanels.forEach(function(q){q.onclick=function(){_tourNext();};});}
+  else{_tourPanels.forEach(function(q){q.onclick=null;});}
+}
+
+function _tourShowStep(idx){
+  _tourStep=idx;
+  var step=_tourSteps[idx];
+  if(!step){endTour();return;}
+  if(step.before)step.before();
+
+  var el=step.selFn?step.selFn():document.querySelector(step.sel);
+  if(!el){_tourShowStep(idx+1);return;}
+
+  el.scrollIntoView({behavior:'instant',block:step.scrollBlock||'center'});
+
+  // Fade tip out on step transitions
+  if(idx>0){_tourTip.style.opacity='0';_tourTip.style.transform='translateY(6px)';}
+
+  // Update panel positions — CSS transition animates the movement
+  _tourUpdateSpotlight(el,step);
+
+  if(idx===0){
+    // First step: positions are set, now enable transitions and fade everything in
+    requestAnimationFrame(function(){
+      _tourPanels.forEach(function(p){p.style.transition=_TOUR_TRANSITION;p.style.opacity='1';});
+      _tourRing.style.transition=_TOUR_TRANSITION;
+      _tourRing.style.opacity='1';
+    });
+  }
+
+  if(step.waitForTap){
+    var _origSMP=window.setMyPlayer;
+    window.setMyPlayer=function(abbrev){
+      _origSMP.call(this,abbrev);
+      window.setMyPlayer=_origSMP;
+      setTimeout(function(){_tourShowStep(_tourStep+1);},500);
+    };
+  }
+
+  // Show tip after panels begin animating (200ms for transitions, 120ms on first appear)
+  setTimeout(function(){_tourRenderTip(idx,el,step);},idx===0?120:200);
+}
+
+function _tourRenderTip(idx,el,step){
+  var isLast=idx===_tourSteps.length-1;
+  var backBtn=idx>0?'<button onclick="_tourPrev()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:#d1d5db;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent">← Back</button>':'';
+  var nextBtn=step.waitForTap
+    ?'<span style="font-size:11px;color:#6b7280;font-style:italic;align-self:center">↑ tap your card to continue</span>'
+    :'<button onclick="'+(isLast?'endTour()':'_tourNext()')+'" style="background:#3b82f6;border:none;color:#fff;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent">'+(isLast?'Done ✓':'Next →')+'</button>';
+  _tourTip.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+      '<span style="font-size:10px;letter-spacing:.5px;color:#6b7280;font-family:\'Barlow Condensed\',sans-serif">'+(idx+1)+' / '+_tourSteps.length+'</span>'+
+      '<button onclick="endTour()" style="background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;padding:0 4px;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent">Skip</button>'+
+    '</div>'+
+    '<div style="font-size:16px;font-weight:700;color:#f9fafb;margin-bottom:6px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">'+step.title+'</div>'+
+    '<div style="font-size:13px;color:#d1d5db;line-height:1.55;margin-bottom:14px">'+step.body+'</div>'+
+    '<div style="display:flex;justify-content:'+(step.waitForTap?'flex-end':'space-between')+'">'+
+      (step.waitForTap?'':backBtn)+
+      nextBtn+
+    '</div>';
+  var rect=el.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight;
+  var tw=Math.min(272,vw-16),tipPad=12,th=200;
+  var left,top;
+  if(step.fixedBottom){
+    left=Math.max(8,(vw-tw)/2);
+    top=vh-th-24;
+  }else{
+    left=Math.max(8,Math.min(rect.left+(rect.width-tw)/2,vw-tw-8));
+    if(step.pos==='bottom'){
+      top=rect.bottom+tipPad;
+      if(!step.noFlip&&top+th>vh)top=rect.top-th-tipPad;
+      top=Math.min(top,vh-th-8);
+    }else{
+      top=rect.top-th-tipPad;
+      if(top<8)top=rect.bottom+tipPad;
+    }
+  }
+  top=Math.max(8,top);
+  _tourTip.style.left=left+'px';_tourTip.style.width=tw+'px';
+  _tourTip.style.top=top+'px';_tourTip.style.transform='translateY(6px)';
+  requestAnimationFrame(function(){_tourTip.style.opacity='1';_tourTip.style.transform='translateY(0)';});
+}
+
+function _tourNext(){
+  var step=_tourSteps[_tourStep];
+  if(step&&step.after)step.after();
+  _tourShowStep(_tourStep+1);
+}
+function _tourPrev(){_tourShowStep(_tourStep-1);}
+
+function endTour(){
+  var step=_tourSteps[_tourStep];
+  if(step&&step.after)step.after();
+  // Fade out panels and ring, then remove
+  var dying=_tourPanels.slice(); _tourPanels=[];
+  dying.forEach(function(p){p.style.opacity='0';setTimeout(function(){if(p.parentNode)p.remove();},350);});
+  if(_tourRing){var ring=_tourRing;_tourRing=null;ring.style.opacity='0';setTimeout(function(){if(ring.parentNode)ring.remove();},350);}
+  if(_tourTip){var tip=_tourTip;_tourTip=null;tip.style.opacity='0';setTimeout(function(){if(tip.parentNode)tip.remove();},220);}
+  localStorage.setItem(_tourKey(),'1');
+  _tourActive=false;
+  setTimeout(function(){
+    window.scrollTo({top:0,behavior:'smooth'});
+    var toast=document.createElement('div');
+    toast.style.cssText='position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;color:#f9fafb;font-family:Inter,sans-serif;z-index:10000;opacity:0;transition:opacity .35s;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,0.5)';
+    toast.textContent='🏒  Enjoy the pool — happy playoffs!';
+    document.body.appendChild(toast);
+    requestAnimationFrame(function(){toast.style.opacity='1';});
+    setTimeout(function(){toast.style.opacity='0';setTimeout(function(){toast.remove();},400);},2200);
+  },380);
 }
 
 document.addEventListener("DOMContentLoaded",function(){
