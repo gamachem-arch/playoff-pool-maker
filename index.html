@@ -3803,8 +3803,8 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
     if(type==='ios'){
       inner+=
         '<div style="width:100%;max-width:300px;display:flex;flex-direction:column;gap:10px;margin-bottom:30px">'+
-          _step('1','Tap the '+shareIconSvg+' <b style="color:#e5e7eb">Share</b> button at the bottom of Safari')+
-          _step('2','Scroll down and tap <b style="color:#e5e7eb">Add to Home Screen</b>')+
+          _step('1','Tap <b style="color:#e5e7eb">···</b> at the bottom of Safari, then tap <b style="color:#e5e7eb">Share</b>')+
+          _step('2','Tap <b style="color:#e5e7eb">Add to Home Screen</b>')+
           _step('3','Tap <b style="color:#e5e7eb">Add</b> in the top right')+
         '</div>'+
         '<button id="_pwa-later" style="background:none;border:none;color:#6b7280;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;padding:8px 20px;-webkit-tap-highlight-color:transparent">I\'ll do it later</button>';
@@ -3822,9 +3822,9 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
     // Pulsing arrow pointing toward Safari's share button at bottom of screen
     if(type==='ios'){
       var arr=document.createElement('div');
-      arr.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;animation:_pwaB 1.6s ease-in-out infinite;pointer-events:none';
+      arr.style.cssText='position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;align-items:center;gap:3px;animation:_pwaB 1.6s ease-in-out infinite;pointer-events:none';
       arr.innerHTML=
-        '<span style="font-size:10px;color:#60a5fa;font-family:Inter,sans-serif;font-weight:600;letter-spacing:.8px;text-transform:uppercase">Share button</span>'+
+        '<span style="font-size:10px;color:#60a5fa;font-family:Inter,sans-serif;font-weight:600;letter-spacing:.8px;text-transform:uppercase">··· here</span>'+
         '<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v12M3 9l6 7 6-7" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       ov.appendChild(arr);
     }
