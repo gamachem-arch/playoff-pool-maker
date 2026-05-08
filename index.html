@@ -3712,19 +3712,33 @@ function endTour(){
   },380);
 }
 
+// Deterministic pool ID from shared link data — prevents duplicates on repeated opens
+function _sharedPoolId(data){
+  var str=(data.title||'')+JSON.stringify(data.players);
+  var h=5381;
+  for(var i=0;i<str.length;i++){h=((h<<5)+h+str.charCodeAt(i))|0;}
+  return 'sp'+(h>>>0).toString(36);
+}
+
 document.addEventListener("DOMContentLoaded",function(){
   var hash=window.location.hash;
+  var isStandalone=window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
   if(hash&&hash.startsWith('#pool=')){
     try{
       var encoded=hash.slice(6);
       var data=JSON.parse(decodeURIComponent(escape(atob(encoded))));
       if(data&&data.players&&data.players.length){
-        var id=generateId();
+        var id=_sharedPoolId(data);
         var pools=getAllPools();
-        pools[id]={id:id,title:data.title||"Playoff Pool",players:data.players,created:Date.now()};
-        savePools(pools);
+        if(!pools[id]){
+          pools[id]={id:id,title:data.title||"Playoff Pool",players:data.players,created:Date.now()};
+          savePools(pools);
+        }
         setActiveId(id);
-        history.replaceState(null,'',window.location.pathname);
+        // In standalone mode the user already has the icon — safe to clean up the URL.
+        // In browser mode, keep the hash so "Add to Home Screen" captures the pool URL.
+        // The PWA overlay's dismiss() will strip it once the user skips installation.
+        if(isStandalone){history.replaceState(null,'',window.location.pathname);}
       }
     }catch(e){}
   }
@@ -3754,6 +3768,8 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
     var ov=document.getElementById('_pwa-ov');
     if(ov){ov.style.opacity='0';setTimeout(function(){if(ov.parentNode)ov.remove();},350);}
     window._pwaOverlayActive=false;
+    // User skipped installation — safe to clean up the hash from the address bar
+    if(window.location.hash){history.replaceState(null,'',window.location.pathname);}
     // Hand off to tour once overlay is gone
     if(typeof _tourShowIntro==='function'&&typeof _tourKey==='function'&&!localStorage.getItem(_tourKey())){
       setTimeout(_tourShowIntro,500);
