@@ -3500,6 +3500,9 @@ var _tourSteps=[
    before:function(){
      if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg&&sg.offsetHeight===0)toggleSeriesGames(_tourSeriesId);}
    },
+   after:function(){
+     if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg&&sg.offsetHeight>0)toggleSeriesGames(_tourSeriesId);}
+   },
    title:'Expanded Card',
    body:'Tap any matchup to expand — odds sparklines for both teams, game-by-game results, and tap any game row for past or live analysis.'},
 
