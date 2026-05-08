@@ -3485,7 +3485,7 @@ var _tourSteps=[
 
   // 3a — Series card collapsed: live scores, deltas, cup odds
   {selFn:function(){
-     var s=document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
+     var s=document.querySelector('#rs-r2:not(.is-collapsed) .live-series')||document.querySelector('.round-section:not(.is-collapsed) .live-series')||document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
      if(s){var m=(s.getAttribute('onclick')||'').match(/toggleSeriesGames\('([^']+)'/);if(m)_tourSeriesId=m[1];}
      return s;
    }, pos:'bottom',
