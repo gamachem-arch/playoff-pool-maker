@@ -3530,7 +3530,29 @@ function _tourKey(){var p=getActivePool();return'tourDone_'+(p?(p.id||p.title||'
 
 function initTour(){
   if(localStorage.getItem(_tourKey()))return;
-  setTimeout(startTour,900);
+  setTimeout(_tourShowIntro,1000);
+}
+
+function _tourShowIntro(){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;z-index:10009;background:rgba(0,0,0,0.62);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s ease';
+  var card=document.createElement('div');
+  card.style.cssText='background:#1c2333;border:1px solid rgba(255,255,255,0.13);border-radius:18px;padding:28px 24px;width:272px;box-shadow:0 12px 48px rgba(0,0,0,0.7);font-family:Inter,sans-serif;text-align:center;transform:translateY(10px);transition:transform 0.3s ease';
+  card.innerHTML=
+    '<div style="font-size:34px;margin-bottom:14px">🏒</div>'+
+    '<div style="font-size:20px;font-weight:700;color:#f9fafb;margin-bottom:8px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">Welcome to the pool!</div>'+
+    '<div style="font-size:13px;color:#9ca3af;line-height:1.6;margin-bottom:22px">Want a quick tour of all the features?</div>'+
+    '<button id="_tour-intro-go" style="width:100%;background:#3b82f6;border:none;color:#fff;border-radius:10px;padding:11px 0;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:10px">Let\'s go →</button>'+
+    '<button id="_tour-intro-skip" style="width:100%;background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;padding:4px 0">Skip for now</button>';
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){
+    overlay.style.opacity='1';
+    card.style.transform='translateY(0)';
+  });
+  function dismiss(){overlay.style.opacity='0';setTimeout(function(){if(overlay.parentNode)overlay.remove();},300);}
+  document.getElementById('_tour-intro-go').onclick=function(){dismiss();setTimeout(startTour,300);};
+  document.getElementById('_tour-intro-skip').onclick=function(){dismiss();localStorage.setItem(_tourKey(),'1');};
 }
 
 function _tourMakePanel(){
