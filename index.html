@@ -438,7 +438,7 @@ function drawPoolList() {
       var ord = ords[me.rank-1] || 'TH';
       var rankColor = ['#fbbf24','#9ca3af','#cd7f32'][me.rank-1] || '#f87171';
       rankEl.innerHTML = '<div><span class="rank-num" style="color:' + rankColor + '">' + me.rank + '</span><span class="rank-ord" style="color:' + rankColor + ';opacity:0.8">' + ord + '</span></div>'
-        + '<div class="rank-odds"><span>' + me.total.toFixed(1) + '%</span> cup</div>';
+        + '<div class="rank-odds">' + (me.delta > 0.05 ? '<span style="color:#4ade80">↑</span> ' : me.delta < -0.05 ? '<span style="color:#f87171">↓</span> ' : '') + '<span>' + me.total.toFixed(1) + '%</span> cup</div>';
       item.appendChild(rankEl);
     }
 
@@ -3506,7 +3506,7 @@ async function doRender(){
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
     // cache standings snapshot for My Pools display
-    (function(){var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;ps[aid]._standings=pieTotals2.map(function(p,i){return{abbrev:p.abbrev,name:p.name,total:p.total,rank:i+1};});savePools(ps);})();
+    (function(){var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;ps[aid]._standings=pieTotals2.map(function(p,i){var d=0;(p.teams||[]).forEach(function(t){d+=deltaMap[t]||0;});return{abbrev:p.abbrev,name:p.name,total:p.total,rank:i+1,delta:d};});savePools(ps);})();
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
