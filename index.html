@@ -42,11 +42,16 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 /* Pool list screen */
 .pool-list-screen{max-width:640px;margin:0 auto;}
 .pool-list-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;text-align:center;}
-.pool-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.2s;}
+.pool-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.2s;}
 .pool-item:hover{border-color:rgba(255,255,255,0.2);}
 .pool-item.active{border-color:#3b82f6;}
+.pool-item-rank{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;flex-shrink:0;line-height:1;text-align:center;}
+.pool-item-rank .rank-num{font-size:26px;color:var(--text);}
+.pool-item-rank .rank-ord{font-size:12px;color:var(--muted);vertical-align:super;}
+.pool-item-rank .rank-odds{font-size:10px;color:var(--muted);font-weight:400;margin-top:4px;white-space:nowrap;}
+.pool-item-rank .rank-odds span{color:var(--text);font-weight:700;}
 .pool-item-info{flex:1;min-width:0;}
-.pool-item-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;line-height:1.1;}
+.pool-item-name{font-family:'Barlow Condensed',sans-serif;font-size:17px;font-weight:700;text-transform:uppercase;line-height:1.15;word-break:break-word;}
 .pool-item-standing{font-size:11px;color:var(--muted);margin-top:3px;}
 .pool-item-standing span{color:var(--text);font-weight:600;}
 .pool-item-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;}
@@ -409,31 +414,33 @@ function drawPoolList() {
     var item = document.createElement("div");
     item.className = "pool-item" + (isActive ? " active" : "");
 
-    // Info block (name + standing)
-    var info = document.createElement("div");
-    info.className = "pool-item-info";
-
-    var nameEl = document.createElement("div");
-    nameEl.className = "pool-item-name";
-    nameEl.textContent = pool.title || "Untitled Pool";
-    info.appendChild(nameEl);
-
-    // Standing line — use cached _standings if available
+    // Standing data — use cached _standings if available
     var myKey = 'myPlayer_' + (pool.id || pool.title);
     var myAbbrev = null;
     try { myAbbrev = localStorage.getItem(myKey); } catch(e) {}
     var standings = pool._standings || [];
-    if (myAbbrev && standings.length) {
-      var me = standings.find(function(s){ return (s.abbrev||'').toUpperCase() === myAbbrev.toUpperCase(); });
-      if (me) {
-        var rankEmoji = ['🥇','🥈','🥉'][me.rank-1] || (me.rank+'th');
-        var standEl = document.createElement("div");
-        standEl.className = "pool-item-standing";
-        standEl.innerHTML = rankEmoji + ' <span>' + me.total.toFixed(1) + '%</span> cup odds';
-        info.appendChild(standEl);
-      }
-    }
+    var me = (myAbbrev && standings.length) ? standings.find(function(s){ return (s.abbrev||'').toUpperCase() === myAbbrev.toUpperCase(); }) : null;
+
+    // Info block (name — wraps naturally)
+    var info = document.createElement("div");
+    info.className = "pool-item-info";
+    var nameEl = document.createElement("div");
+    nameEl.className = "pool-item-name";
+    nameEl.textContent = pool.title || "Untitled Pool";
+    info.appendChild(nameEl);
     item.appendChild(info);
+
+    // Rank block (right of title) — ordinal + cup% stacked
+    if (me) {
+      var rankEl = document.createElement("div");
+      rankEl.className = "pool-item-rank";
+      var ords = ['ST','ND','RD'];
+      var ord = ords[me.rank-1] || 'TH';
+      var rankColor = ['#fbbf24','#9ca3af','#cd7f32'][me.rank-1] || '#f87171';
+      rankEl.innerHTML = '<div><span class="rank-num" style="color:' + rankColor + '">' + me.rank + '</span><span class="rank-ord" style="color:' + rankColor + ';opacity:0.8">' + ord + '</span></div>'
+        + '<div class="rank-odds"><span>' + me.total.toFixed(1) + '%</span> cup</div>';
+      item.appendChild(rankEl);
+    }
 
     var actions = document.createElement("div");
     actions.className = "pool-item-actions";
