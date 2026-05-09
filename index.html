@@ -521,14 +521,24 @@ function switchPool(id) {
 }
 
 // ---- Setup / Edit ----
+function autoAbbrev(name) {
+  var words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "";
+  var initials = words.map(function(w){ return w[0].toUpperCase(); }).join("");
+  if (initials.length >= 3) return initials.substring(0,3);
+  // pad with next chars from first word
+  var extra = words[0].toUpperCase().substring(1);
+  return (initials + extra).substring(0,3);
+}
+
 function startNewPool() {
   editingPoolId = null;
   setupTitle = "Playoff Pool";
   setupPlayers = [
-    {name:"Player 1",abbrev:"P1",teams:[]},
-    {name:"Player 2",abbrev:"P2",teams:[]},
-    {name:"Player 3",abbrev:"P3",teams:[]},
-    {name:"Player 4",abbrev:"P4",teams:[]}
+    {name:"Player 1",abbrev:"P1",teams:[],abbrevDirty:false},
+    {name:"Player 2",abbrev:"P2",teams:[],abbrevDirty:false},
+    {name:"Player 3",abbrev:"P3",teams:[],abbrevDirty:false},
+    {name:"Player 4",abbrev:"P4",teams:[],abbrevDirty:false}
   ];
   showSection("setup");
   drawSetup();
@@ -541,7 +551,7 @@ function startEditPool(id) {
   editingPoolId = id;
   setupTitle = pool.title || "Playoff Pool";
   setupPlayers = pool.players.map(function(p) {
-    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3).toUpperCase(), teams:p.teams.slice(), color:p.color||null};
+    return {name:p.name, abbrev:p.abbrev||p.name.substring(0,3).toUpperCase(), teams:p.teams.slice(), color:p.color||null, abbrevDirty:true};
   });
   showSection("setup");
   drawSetup();
@@ -562,8 +572,16 @@ function readCurrentNames() {
   setupPlayers.forEach(function(p, i) {
     var aEl = document.getElementById("pa"+i);
     var nEl = document.getElementById("pn"+i);
-    if (aEl) p.abbrev = aEl.value.toUpperCase().substring(0,3) || p.name.substring(0,3).toUpperCase();
     if (nEl) p.name = nEl.value || ("Player "+(i+1));
+    if (aEl) {
+      if (p.abbrevDirty) {
+        p.abbrev = aEl.value.toUpperCase().substring(0,3) || autoAbbrev(p.name) || p.name.substring(0,3).toUpperCase();
+      } else {
+        var gen = autoAbbrev(p.name);
+        p.abbrev = gen || p.name.substring(0,3).toUpperCase();
+        aEl.value = p.abbrev;
+      }
+    }
   });
 }
 
@@ -638,7 +656,7 @@ function drawSetup() {
     ai.value = p.abbrev||"";
     ai.placeholder = "ABC";
     ai.maxLength = 3;
-    ai.addEventListener("input", readCurrentNames);
+    (function(pi){ ai.addEventListener("input", function(){ setupPlayers[pi].abbrevDirty = true; readCurrentNames(); }); })(i);
     head.appendChild(ai);
     var ni = document.createElement("input");
     ni.className = "pname";
