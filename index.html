@@ -42,12 +42,19 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 /* Pool list screen */
 .pool-list-screen{max-width:640px;margin:0 auto;}
 .pool-list-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:16px;text-align:center;}
-.pool-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color 0.2s;}
+.pool-item{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color 0.2s;}
 .pool-item:hover{border-color:rgba(255,255,255,0.2);}
 .pool-item.active{border-color:#3b82f6;}
-.pool-item-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;flex:1;}
-.pool-item-meta{font-size:11px;color:var(--muted);}
-.pool-item-actions{display:flex;gap:6px;}
+.pool-item-info{flex:1;min-width:0;}
+.pool-item-name{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;line-height:1.1;}
+.pool-item-standing{font-size:11px;color:var(--muted);margin-top:3px;}
+.pool-item-standing span{color:var(--text);font-weight:600;}
+.pool-item-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+.btn-pool-action{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'Barlow',sans-serif;font-size:10px;padding:4px 10px;border-radius:16px;cursor:pointer;transition:all 0.2s;white-space:nowrap;}
+.btn-pool-action.active{background:rgba(59,130,246,0.15);border-color:#3b82f6;color:#60a5fa;}
+.btn-pool-action:hover{border-color:rgba(255,255,255,0.2);color:var(--text);}
+.btn-pool-del{background:none;border:1px solid transparent;color:rgba(255,255,255,0.2);font-size:13px;padding:3px 6px;border-radius:8px;cursor:pointer;transition:all 0.2s;line-height:1;flex-shrink:0;}
+.btn-pool-del:hover{border-color:rgba(239,68,68,0.3);color:#f87171;background:rgba(239,68,68,0.08);}
 
 /* Setup */
 .setup-screen{max-width:640px;margin:0 auto;}
@@ -398,25 +405,42 @@ function drawPoolList() {
 
   ids.forEach(function(id) {
     var pool = pools[id];
+    var isActive = id === activeId;
     var item = document.createElement("div");
-    item.className = "pool-item" + (id === activeId ? " active" : "");
+    item.className = "pool-item" + (isActive ? " active" : "");
+
+    // Info block (name + standing)
+    var info = document.createElement("div");
+    info.className = "pool-item-info";
 
     var nameEl = document.createElement("div");
     nameEl.className = "pool-item-name";
     nameEl.textContent = pool.title || "Untitled Pool";
-    item.appendChild(nameEl);
+    info.appendChild(nameEl);
 
-    var meta = document.createElement("div");
-    meta.className = "pool-item-meta";
-    meta.textContent = pool.players.length + " players";
-    item.appendChild(meta);
+    // Standing line — use cached _standings if available
+    var myKey = 'myPlayer_' + (pool.id || pool.title);
+    var myAbbrev = null;
+    try { myAbbrev = localStorage.getItem(myKey); } catch(e) {}
+    var standings = pool._standings || [];
+    if (myAbbrev && standings.length) {
+      var me = standings.find(function(s){ return (s.abbrev||'').toUpperCase() === myAbbrev.toUpperCase(); });
+      if (me) {
+        var rankEmoji = ['🥇','🥈','🥉'][me.rank-1] || (me.rank+'th');
+        var standEl = document.createElement("div");
+        standEl.className = "pool-item-standing";
+        standEl.innerHTML = rankEmoji + ' <span>' + me.total.toFixed(1) + '%</span> cup odds';
+        info.appendChild(standEl);
+      }
+    }
+    item.appendChild(info);
 
     var actions = document.createElement("div");
     actions.className = "pool-item-actions";
 
     var selectBtn = document.createElement("button");
-    selectBtn.className = "btn" + (id === activeId ? " btn-primary" : "");
-    selectBtn.textContent = id === activeId ? "Active" : "Switch";
+    selectBtn.className = "btn-pool-action" + (isActive ? " active" : "");
+    selectBtn.textContent = isActive ? "Active" : "Switch";
     (function(pid) {
       selectBtn.onclick = function(e) {
         e.stopPropagation();
@@ -429,7 +453,7 @@ function drawPoolList() {
     actions.appendChild(selectBtn);
 
     var editBtn = document.createElement("button");
-    editBtn.className = "btn";
+    editBtn.className = "btn-pool-action";
     editBtn.textContent = "Edit";
     (function(pid) {
       editBtn.onclick = function(e) {
@@ -440,8 +464,9 @@ function drawPoolList() {
     actions.appendChild(editBtn);
 
     var delBtn = document.createElement("button");
-    delBtn.className = "btn btn-danger";
-    delBtn.textContent = "✕";
+    delBtn.className = "btn-pool-del";
+    delBtn.innerHTML = "&#x2715;";
+    delBtn.title = "Delete pool";
     (function(pid) {
       delBtn.onclick = function(e) {
         e.stopPropagation();
@@ -3473,6 +3498,8 @@ async function doRender(){
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
+    // cache standings snapshot for My Pools display
+    (function(){var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;ps[aid]._standings=pieTotals2.map(function(p,i){return{abbrev:p.abbrev,name:p.name,total:p.total,rank:i+1};});savePools(ps);})();
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
