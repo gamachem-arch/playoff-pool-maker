@@ -1148,9 +1148,12 @@ function parseSeries(arr){
         if(eastLower.has(teams[i])){r2[3]=e;break;}
       }
     }else if(round===3){
+      // Normalize: put the known (non-TBD) team in topTeam so display code works consistently
+      var norm=Object.assign({},e);
+      if(norm.topTeam==='TBD'&&norm.bottomTeam!=='TBD'){norm.topTeam=norm.bottomTeam;norm.bottomTeam='TBD';var tw=norm.topWins;norm.topWins=norm.bottomWins;norm.bottomWins=tw;}
       for(var j=0;j<teams.length;j++){
-        if(allWest.has(teams[j])){r3[0]=e;break;}
-        if(allEast.has(teams[j])){r3[1]=e;break;}
+        if(allWest.has(teams[j])){r3[0]=norm;break;}
+        if(allEast.has(teams[j])){r3[1]=norm;break;}
       }
     }else if(round===4){r4=e;}
   });
@@ -1673,10 +1676,19 @@ function buildBracketGames(t1, t2, gamesData) {
 // Detect which round is currently active (highest round with real teams)
 function getActiveRound(parsed) {
   if (!parsed) return 1;
-  if (parsed.r4 && parsed.r4.topTeam && parsed.r4.topTeam !== 'TBD') return 4;
-  if ((parsed.r3||[]).some(function(s){return s&&((s.topTeam&&s.topTeam!=='TBD')||(s.bottomTeam&&s.bottomTeam!=='TBD'));})) return 3;
-  if ((parsed.r2||[]).every(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 2;
-  return 1;
+  var r2 = parsed.r2 || [], r3 = parsed.r3 || [], r4 = parsed.r4;
+  // R2 becomes active only when all 4 slots have real teams
+  var r2AllTeams = r2.every(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';});
+  if (!r2AllTeams) return 1;
+  // Stay at R2 until every R2 series is finished
+  var r2AllDone = r2.every(function(s){return s&&(s.topWins===4||s.bottomWins===4);});
+  if (!r2AllDone) return 2;
+  // Advance to R3 when any CF team is known
+  var r3HasTeams = r3.some(function(s){return s&&((s.topTeam&&s.topTeam!=='TBD')||(s.bottomTeam&&s.bottomTeam!=='TBD'));});
+  if (!r3HasTeams) return 2;
+  var r3AllDone = r3.filter(Boolean).every(function(s){return s.topWins===4||s.bottomWins===4;});
+  if (!r3AllDone) return 3;
+  return (r4&&r4.topTeam&&r4.topTeam!=='TBD') ? 4 : 3;
 }
 
 // ── Live Game Overlay (Maker) ─────────────────────────────────────────────
