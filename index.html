@@ -1155,7 +1155,12 @@ function parseSeries(arr){
         if(allWest.has(teams[j])){r3[0]=norm;break;}
         if(allEast.has(teams[j])){r3[1]=norm;break;}
       }
-    }else if(round===4){r4=e;}
+    }else if(round===4){
+      // Normalize: put the known (non-TBD) team in topTeam so display code works consistently
+      var norm4=Object.assign({},e);
+      if(norm4.topTeam==='TBD'&&norm4.bottomTeam!=='TBD'){norm4.topTeam=norm4.bottomTeam;norm4.bottomTeam='TBD';var tw4=norm4.topWins;norm4.topWins=norm4.bottomWins;norm4.bottomWins=tw4;}
+      r4=norm4;
+    }
   });
   return{r1w:r1w,r1e:r1e,r2:r2,r3:r3,r4:r4};
 }
@@ -1688,7 +1693,8 @@ function getActiveRound(parsed) {
   if (!r3HasTeams) return 2;
   var r3AllDone = r3.filter(Boolean).every(function(s){return s.topWins===4||s.bottomWins===4;});
   if (!r3AllDone) return 3;
-  return (r4&&r4.topTeam&&r4.topTeam!=='TBD') ? 4 : 3;
+  var r4HasAnyTeam = r4&&((r4.topTeam&&r4.topTeam!=='TBD')||(r4.bottomTeam&&r4.bottomTeam!=='TBD'));
+  return r4HasAnyTeam ? 4 : 3;
 }
 
 // ── Live Game Overlay (Maker) ─────────────────────────────────────────────
@@ -2809,7 +2815,7 @@ function showShareOverlay() {
     if (r1all.length) seriesHtml += `<div class="share-section-label">Round 1</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">${r1all.map(buildShareSeriesRowMaker).join('')}</div>`;
     if (r2all.length) seriesHtml += `<div class="share-section-label">Round 2</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0 14px">${r2all.map(buildShareSeriesRowMaker).join('')}</div>`;
     if (r3all.length) seriesHtml += `<div class="share-section-label">Conference Finals</div>${r3all.map(buildShareSeriesRowMaker).join('')}`;
-    if (st.parsed.r4 && st.parsed.r4.topTeam !== 'TBD') seriesHtml += `<div class="share-section-label">Stanley Cup Final</div>${buildShareSeriesRowMaker(st.parsed.r4)}`;
+    if (st.parsed.r4 && ((st.parsed.r4.topTeam&&st.parsed.r4.topTeam!=='TBD')||(st.parsed.r4.bottomTeam&&st.parsed.r4.bottomTeam!=='TBD'))) seriesHtml += `<div class="share-section-label">Stanley Cup Final</div>${buildShareSeriesRowMaker(st.parsed.r4)}`;
   }
 
   var date = new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
@@ -3505,7 +3511,7 @@ async function doRender(){
     var r2HasTeams=r2f.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD"&&s.bottomTeam&&s.bottomTeam!=="TBD";});
     var r3HasTeams=r3.some(function(s){return s&&((s.topTeam&&s.topTeam!=="TBD")||(s.bottomTeam&&s.bottomTeam!=="TBD"));});
-    var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
+    var r4HasTeams=Boolean(r4&&((r4.topTeam&&r4.topTeam!=="TBD")||(r4.bottomTeam&&r4.bottomTeam!=="TBD")));
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
       +'<div class="four-col">'+rw.map(function(s,i){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData)+seriesCard(re[i],"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
     var html=makeRoundSection('r1','Round 1',r1body,r2AllTeams);
