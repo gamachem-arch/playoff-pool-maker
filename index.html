@@ -1110,11 +1110,19 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
+  // NHL API sometimes mislabels future-round series as round=2; use the series letter to infer
+  // the correct round (standard format: A-H=R1, I-L=R2, M-N=R3, O=R4)
+  function letterRound(letter){
+    if(!letter)return null;
+    var c=letter.toUpperCase().charCodeAt(0)-65;
+    if(c<8)return 1; if(c<12)return 2; if(c<14)return 3; return 4;
+  }
   var byTeams={};
   arr.forEach(function(s){
     var t1=(s.topTeam||"").toUpperCase(),t2=(s.bottomTeam||"").toUpperCase();
-    var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0,round:s.round||1};
-    if(t1&&t2)byTeams[[t1,t2].sort().join("-")]=e;
+    var round=letterRound(s.letter)||s.round||1;
+    var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0,round:round};
+    if(t1&&t2&&t1!=="TBD"&&t2!=="TBD")byTeams[[t1,t2].sort().join("-")]=e;
   });
   function find(t1,t2){return byTeams[[t1,t2].sort().join("-")]||{topTeam:t1,bottomTeam:t2,topWins:0,bottomWins:0};}
   var r1w=R1W.map(function(m){return find(m.t,m.b);});
@@ -1127,7 +1135,7 @@ function parseSeries(arr){
   var allEast=new Set(Array.from(eastUpper).concat(Array.from(eastLower)));
   var r2=[null,null,null,null],r3=[null,null],r4=null;
   arr.forEach(function(s){
-    var round=s.round||1;
+    var round=letterRound(s.letter)||s.round||1;
     if(round<2)return;
     var t1=(s.topTeam||"").toUpperCase(),t2=(s.bottomTeam||"").toUpperCase();
     var e={topTeam:t1||"TBD",bottomTeam:t2||"TBD",topWins:s.topWins||0,bottomWins:s.bottomWins||0,round:round};
@@ -1666,7 +1674,7 @@ function buildBracketGames(t1, t2, gamesData) {
 function getActiveRound(parsed) {
   if (!parsed) return 1;
   if (parsed.r4 && parsed.r4.topTeam && parsed.r4.topTeam !== 'TBD') return 4;
-  if ((parsed.r3||[]).some(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 3;
+  if ((parsed.r3||[]).some(function(s){return s&&((s.topTeam&&s.topTeam!=='TBD')||(s.bottomTeam&&s.bottomTeam!=='TBD'));})) return 3;
   if ((parsed.r2||[]).every(function(s){return s&&s.topTeam&&s.topTeam!=='TBD';})) return 2;
   return 1;
 }
@@ -3484,7 +3492,7 @@ async function doRender(){
     ];
     var r2HasTeams=r2f.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
     var r2AllTeams=r2f.every(function(s){return s&&s.topTeam&&s.topTeam!=="TBD"&&s.bottomTeam&&s.bottomTeam!=="TBD";});
-    var r3HasTeams=r3.some(function(s){return s&&s.topTeam&&s.topTeam!=="TBD";});
+    var r3HasTeams=r3.some(function(s){return s&&((s.topTeam&&s.topTeam!=="TBD")||(s.bottomTeam&&s.bottomTeam!=="TBD"));});
     var r4HasTeams=Boolean(r4&&r4.topTeam&&r4.topTeam!=="TBD");
     var r1body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
       +'<div class="four-col">'+rw.map(function(s,i){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData)+seriesCard(re[i],"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
