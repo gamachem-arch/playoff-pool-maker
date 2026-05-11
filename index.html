@@ -3532,7 +3532,31 @@ async function doRender(){
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
     // cache standings snapshot for My Pools display
-    (function(){var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;ps[aid]._standings=pieTotals2.map(function(p,i){var d=0;(p.teams||[]).forEach(function(t){d+=deltaMap[t]||0;});return{abbrev:p.abbrev,name:p.name,total:p.total,rank:i+1,delta:d};});savePools(ps);})();
+    (function(){
+      var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;
+      // compute prev-day totals per player (same logic as roundup standings delta)
+      var prevTotalsC={};
+      if(historyData&&historyData.length>0){
+        var todayC=new Date().toISOString().slice(0,10);
+        var prevDatesC=[...new Set(historyData.map(function(r){return r.date;}).filter(Boolean))].sort().filter(function(d){return d<todayC;});
+        var prevDateC=prevDatesC[prevDatesC.length-1];
+        if(prevDateC){
+          var prevSnapsC=historyData.filter(function(r){return r.date===prevDateC;});
+          pieTotals2.forEach(function(p){
+            prevTotalsC[p.abbrev]=p.teams.reduce(function(sum,t){
+              var snap=prevSnapsC.find(function(r){return r.team===t;});
+              return sum+(snap?parseFloat(snap.cup)||0:0);
+            },0);
+          });
+        }
+      }
+      ps[aid]._standings=pieTotals2.map(function(p,i){
+        var prev=prevTotalsC[p.abbrev];
+        var d=(prev!=null)?parseFloat((p.total-prev).toFixed(2)):0;
+        return{abbrev:p.abbrev,name:p.name,total:p.total,rank:i+1,delta:d};
+      });
+      savePools(ps);
+    })();
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
     document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
