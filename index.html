@@ -3405,7 +3405,7 @@ function buildStandings(odds,histData){
       return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+elimStyle+'">'+
         (allElim?'<div style="position:absolute;top:6px;left:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(239,68,68,0.15);color:#f87171">OUT</div>':'')+
         (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
-        buildStreakBadge(histData,p.teams,p.total)+
+        (allElim?'':buildStreakBadge(histData,p.teams,p.total))+
         '<div class="srank">'+ranks[i]+'</div>'+
         '<div style="display:flex;align-items:center;justify-content:center"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span></div>'+
         '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+(allElim?'#6b7280':pc.color)+'">'+p.total.toFixed(1)+'%</div>'+
