@@ -319,7 +319,7 @@ function _rebuildMakerUI(){
   if(!st.pieTotals)return;
   document.getElementById('legwrap').innerHTML=_buildMakerLegendPie(st.pieTotals,st.pieSvg);
   document.getElementById('tonight-wrap').innerHTML=buildOnTheClock(st.gamesData||[],st.odds);
-  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds)+buildEdgeButton()+'</div>';
+  document.getElementById('swrap').innerHTML=buildStandings(st.odds,st.historyData)+buildTeamOdds(st.odds,st.roundOdds,st.historyData,st.elimRound)+'<div id="all-leaders-wrap">'+buildScoringLeaders(st.leaders,st.odds)+buildGoalieLeaders(st.goalies,st.odds)+buildEdgeButton()+'</div>';
 }
 function _buildMakerLegendPie(pieTotals,pieSvg){
   var me=getMyPlayer();
@@ -938,14 +938,20 @@ function buildSparkline(histData,team,liveVal){
     +'<polyline points="'+poly+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
     +dots+valLabels+dateLabels+'</svg>';
 }
-function buildTeamOdds(oddsMap,roundOdds,histData){
+function buildTeamOdds(oddsMap,roundOdds,histData,elimRound){
   if(!Object.keys(oddsMap).length)return'';
   var me=getMyPlayer();
   var pool=getActivePool();
   var myTeams=me&&pool?pool.players.filter(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();}).reduce(function(acc,p){return acc.concat(p.teams||[]);},[]):[];
   var myColor=me&&pool?(function(){var idx=pool.players.findIndex(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();});return idx>=0?getPC(pool,idx).color:'';})():'';
+  var elimR=elimRound||{};
   var ranked=(ALL_TEAMS||[]).map(function(t){return{t:t,v:parseFloat((oddsMap[t]||'0%').replace('%',''))};})
-    .sort(function(a,b){return b.v-a.v;});
+    .sort(function(a,b){
+      var aElim=a.v<0.1,bElim=b.v<0.1;
+      if(aElim!==bElim) return aElim?1:-1; // active teams first
+      if(aElim) return (elimR[b.t]||0)-(elimR[a.t]||0); // eliminated: later round = higher rank
+      return b.v-a.v; // active: by cup%
+    });
   var col1=ranked.slice(0,8),col2=ranked.slice(8);
   var interleaved=col1.map(function(a,i){return col2[i]?[a,col2[i]]:[a];}).reduce(function(acc,v){return acc.concat(v);},[]);
   var rows=interleaved.map(function(x){
@@ -3503,14 +3509,23 @@ async function doRender(){
       r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
     var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
     // Zero out odds for eliminated teams (series decided = 4 wins) so we don't wait on MoneyPuck
-    var allSeries=[].concat(rw,re,r2f,r3,r4?[r4]:[]).filter(Boolean);
-    allSeries.forEach(function(s){
-      var loser=null;
+    // Also track which round each team was eliminated in for sorted display
+    var elimRound={};
+    var seriesByRound=[
+      rw.map(function(s){return{s:s,r:1};}),
+      re.map(function(s){return{s:s,r:1};}),
+      r2f.map(function(s){return{s:s,r:2};}),
+      r3.map(function(s){return{s:s,r:3};}),
+      r4?[{s:r4,r:4}]:[]
+    ].reduce(function(a,b){return a.concat(b);}).filter(function(x){return x.s;});
+    seriesByRound.forEach(function(x){
+      var s=x.s,loser=null;
       if(s.topWins===4&&s.bottomWins<4) loser=s.bottomTeam;
       else if(s.bottomWins===4&&s.topWins<4) loser=s.topTeam;
       if(loser&&loser!=='TBD'){
         odds[loser]='0%';
         roundOdds[loser]={r2:'0%',r3:'0%',r4:'0%',cup:'0%'};
+        elimRound[loser]=x.r;
       }
     });
     var r2disp=[
@@ -3541,7 +3556,7 @@ async function doRender(){
       return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
     }).sort(function(a,b){return b.total-a.total;});
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
-    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies};
+    _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies, elimRound:elimRound};
     // cache standings snapshot for My Pools display
     (function(){
       var aid=getActiveId();if(!aid)return;var ps=getAllPools();if(!ps[aid])return;
@@ -3570,7 +3585,7 @@ async function doRender(){
     })();
     document.getElementById("legwrap").innerHTML = buildLegend(pieSvg);
     document.getElementById("tonight-wrap").innerHTML = buildOnTheClock(gamesRaw, odds);
-    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
+    document.getElementById("swrap").innerHTML=buildStandings(odds,historyData)+buildTeamOdds(odds,roundOdds,historyData,elimRound)+'<div id="all-leaders-wrap">'+buildScoringLeaders(leaders,odds)+buildGoalieLeaders(goalies,odds)+buildEdgeButton()+'</div>';
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
     initTour();
