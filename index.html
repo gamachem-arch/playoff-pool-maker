@@ -530,9 +530,8 @@ function drawPoolList() {
   tourBtn.textContent = "? Take the tour";
   tourBtn.style.cssText = "opacity:0.5;font-size:11px";
   tourBtn.onclick = function() {
-    _tourType='C'; _tourSteps=_tourStepsPool;
     if (getActiveId()) { showSection("main"); doRender(); setTimeout(startTour, 1200); }
-    else { _tourShowWelcome(); }
+    else startTour();
   };
   tourWrap.appendChild(tourBtn);
   wrap.appendChild(tourWrap);
@@ -3617,28 +3616,9 @@ async function doRender(){
 // Panels and ring animate their position via CSS; tip cross-fades between steps.
 // Target elements are NEVER modified — sidesteps all CSS stacking-context issues.
 var _tourActive=false,_tourStep=0,_tourPanels=[],_tourRing=null,_tourTip=null,_tourSeriesId=null;
-var _tourType=null; // 'A'=tracker-only, 'B'=pool-setup, 'C'=shared-link
-var _DEMO_POOL_ID='_demo_tour_';
-var _WELCOME_KEY='nhlpt_welcome_v1';
 var _TOUR_TRANSITION='top 0.35s cubic-bezier(0.4,0,0.2,1),left 0.35s cubic-bezier(0.4,0,0.2,1),width 0.35s cubic-bezier(0.4,0,0.2,1),height 0.35s cubic-bezier(0.4,0,0.2,1),right 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.28s ease';
 
-function _createDemoPool(){
-  var p={id:_DEMO_POOL_ID,title:'Demo Pool',_isDemo:true,
-    players:[
-      {name:'You',abbrev:'YOU',teams:['EDM','FLA'],ci:0},
-      {name:'Player 2',abbrev:'P2',teams:['COL','CAR'],ci:1},
-      {name:'Player 3',abbrev:'P3',teams:['BOS','DAL'],ci:2},
-      {name:'Player 4',abbrev:'P4',teams:['VAN','OTT'],ci:3}
-    ]};
-  var pools=getAllPools();pools[_DEMO_POOL_ID]=p;savePools(pools);
-  setActiveId(_DEMO_POOL_ID);return p;
-}
-function _deleteDemoPool(){
-  var pools=getAllPools();delete pools[_DEMO_POOL_ID];savePools(pools);
-  if(getActiveId()===_DEMO_POOL_ID)setActiveId(null);
-}
-
-var _tourStepsPool=[
+var _tourSteps=[
   // 1 — Standings: force user to tap their card (personalizes + auto-advances)
   {sel:'.sgrid', pos:'bottom', waitForTap:true, fixedBottom:true,
    title:'Standings',
@@ -3696,55 +3676,12 @@ var _tourStepsPool=[
    body:'Top scorers, goalie leaders, and fun edge stats from your pool teams. Switch categories with the tabs above.'}
 ];
 
-// Tour A — tracker only (no standings/pool steps)
-var _tourStepsTracker=[
-  {selFn:function(){
-     var s=document.querySelector('#rs-r2:not(.is-collapsed) .live-series')||document.querySelector('.round-section:not(.is-collapsed) .live-series')||document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
-     if(s){var m=(s.getAttribute('onclick')||'').match(/toggleSeriesGames\('([^']+)'/);if(m)_tourSeriesId=m[1];}
-     return s;
-   }, pos:'bottom',
-   title:'Series Cards',
-   body:'Each matchup shows live series scores, current cup odds, and Δ changes. Live games get a pulsing dot with real-time score updates.'},
-  {selFn:function(){
-     if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg)return sg.parentElement;}
-     return document.querySelector('#rs-r2:not(.is-collapsed) .series')||document.querySelector('.round-section:not(.is-collapsed) .series');
-   }, pos:'bottom',
-   before:function(){if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg&&sg.offsetHeight===0)toggleSeriesGames(_tourSeriesId);}},
-   after:function(){if(_tourSeriesId){var sg=document.getElementById('sg-'+_tourSeriesId);if(sg&&sg.offsetHeight>0)toggleSeriesGames(_tourSeriesId);}},
-   title:'Expanded Card',
-   body:'Tap any matchup to expand — odds sparklines for both teams, game-by-game results, and tap any game row for past or live analysis.'},
-  {sel:'#tonight-wrap', pos:'bottom', noFlip:true,
-   title:'Tonight\'s Games',
-   body:'Live scores and upcoming matchups at a glance. Tap any game card to open full live analysis or pregame preview.'},
-  {selFn:function(){return document.querySelector('button[onclick="toggleBracket()"]');},
-   pos:'bottom',
-   before:function(){window.scrollTo({top:0,behavior:'instant'});var bs=document.getElementById('bracket-section');if(bs&&bs.style.display==='none'){bs.style.display='block';bs.innerHTML=buildBracket();}},
-   after:function(){var bs=document.getElementById('bracket-section');if(bs)bs.style.display='none';},
-   title:'Playoff Bracket',
-   body:'Tap here anytime to open the full playoff bracket — win probabilities and series results at a glance.'},
-  {sel:'#all-leaders-wrap', pos:'top', scrollBlock:'end',
-   title:'Scoring Leaders',
-   body:'Top scorers and goalie leaders from every playoff team. Switch categories with the tabs above.'}
-];
-
-var _tourSteps=_tourStepsPool; // gets reassigned to correct set before startTour()
-
 function _tourKey(){var p=getActivePool();return'tourDone_'+(p?(p.id||p.title||'x'):'x');}
 
 function initTour(){
-  if(window._pwaOverlayActive)return;
-  var isShared=window._wasSharedPoolLink;
-  var pool=getActivePool();
-  if(isShared||pool){
-    // Tour C — shared link or existing pool
-    if(localStorage.getItem(_tourKey()))return;
-    _tourType='C'; _tourSteps=_tourStepsPool;
-    setTimeout(_tourShowIntro,1000);
-  } else {
-    // New user — show "what brings you here?" welcome
-    if(localStorage.getItem(_WELCOME_KEY))return;
-    setTimeout(_tourShowWelcome,1000);
-  }
+  if(localStorage.getItem(_tourKey()))return;
+  if(window._pwaOverlayActive)return; // PWA overlay is showing — it triggers tour on dismiss
+  setTimeout(_tourShowIntro,1000);
 }
 
 function _tourShowIntro(){
@@ -3767,57 +3704,6 @@ function _tourShowIntro(){
   function dismiss(){overlay.style.opacity='0';setTimeout(function(){if(overlay.parentNode)overlay.remove();},300);}
   document.getElementById('_tour-intro-go').onclick=function(){dismiss();setTimeout(startTour,300);};
   document.getElementById('_tour-intro-skip').onclick=function(){dismiss();localStorage.setItem(_tourKey(),'1');};
-}
-
-function _tourShowWelcome(){
-  localStorage.setItem(_WELCOME_KEY,'1'); // mark seen immediately so PWA dismiss doesn't re-trigger
-  var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;z-index:10009;background:rgba(0,0,0,0.72);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s ease';
-  var card=document.createElement('div');
-  card.style.cssText='background:#1c2333;border:1px solid rgba(255,255,255,0.13);border-radius:18px;padding:28px 22px;width:288px;box-shadow:0 12px 48px rgba(0,0,0,0.7);font-family:Inter,sans-serif;text-align:center;transform:translateY(10px);transition:transform 0.3s ease';
-  card.innerHTML=
-    '<div style="font-size:34px;margin-bottom:12px">🏒</div>'+
-    '<div style="font-size:21px;font-weight:700;color:#f9fafb;margin-bottom:6px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">Welcome to NHL Playoff Tracker</div>'+
-    '<div style="font-size:13px;color:#9ca3af;line-height:1.6;margin-bottom:18px">What brings you here?</div>'+
-    '<button id="_tour-opt-tracker" style="width:100%;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.28);color:#f9fafb;border-radius:12px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:10px;text-align:left;display:flex;align-items:center;gap:12px">'+
-      '<span style="font-size:22px;flex-shrink:0">📊</span>'+
-      '<span><div style="font-weight:700;margin-bottom:2px">Just following the playoffs</div><div style="font-size:11px;color:#9ca3af;font-weight:400">Live odds, stats &amp; game analysis</div></span>'+
-    '</button>'+
-    '<button id="_tour-opt-pool" style="width:100%;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.22);color:#f9fafb;border-radius:12px;padding:12px 14px;font-size:13px;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;text-align:left;display:flex;align-items:center;gap:12px">'+
-      '<span style="font-size:22px;flex-shrink:0">🏆</span>'+
-      '<span><div style="font-weight:700;margin-bottom:2px">I\'m running a pool</div><div style="font-size:11px;color:#9ca3af;font-weight:400">Set up your group &amp; track standings</div></span>'+
-    '</button>';
-  overlay.appendChild(card);document.body.appendChild(overlay);
-  requestAnimationFrame(function(){overlay.style.opacity='1';card.style.transform='translateY(0)';});
-  function dismiss(){overlay.style.opacity='0';setTimeout(function(){if(overlay.parentNode)overlay.remove();},300);}
-  document.getElementById('_tour-opt-tracker').onclick=function(){
-    dismiss();_tourType='A';_tourSteps=_tourStepsTracker;
-    _createDemoPool();showSection('main');doRender();
-    setTimeout(startTour,900);
-  };
-  document.getElementById('_tour-opt-pool').onclick=function(){
-    dismiss();_tourType='B';_tourSteps=_tourStepsPool;
-    _createDemoPool();showSection('main');doRender();
-    setTimeout(startTour,900);
-  };
-}
-
-function _tourShowCreatePool(){
-  var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;z-index:10009;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.3s ease';
-  var card=document.createElement('div');
-  card.style.cssText='background:#1c2333;border:1px solid rgba(255,255,255,0.13);border-radius:18px;padding:28px 22px;width:272px;box-shadow:0 12px 48px rgba(0,0,0,0.7);font-family:Inter,sans-serif;text-align:center;transform:translateY(10px);transition:transform 0.3s ease';
-  card.innerHTML=
-    '<div style="font-size:34px;margin-bottom:12px">🏆</div>'+
-    '<div style="font-size:20px;font-weight:700;color:#f9fafb;margin-bottom:8px;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.3px">Ready to build your pool?</div>'+
-    '<div style="font-size:13px;color:#9ca3af;line-height:1.6;margin-bottom:22px">Add your players and their teams — it only takes a minute.</div>'+
-    '<button id="_tour-create-go" style="width:100%;background:#10b981;border:none;color:#fff;border-radius:10px;padding:11px 0;font-size:14px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;margin-bottom:10px">Create my pool →</button>'+
-    '<button id="_tour-create-skip" style="width:100%;background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;-webkit-tap-highlight-color:transparent;padding:4px 0">I\'ll do it later</button>';
-  overlay.appendChild(card);document.body.appendChild(overlay);
-  requestAnimationFrame(function(){overlay.style.opacity='1';card.style.transform='translateY(0)';});
-  function dismiss(){overlay.style.opacity='0';setTimeout(function(){if(overlay.parentNode)overlay.remove();},300);}
-  document.getElementById('_tour-create-go').onclick=function(){dismiss();showPoolList();};
-  document.getElementById('_tour-create-skip').onclick=function(){dismiss();showPoolList();};
 }
 
 function _tourMakePanel(){
@@ -3958,41 +3844,22 @@ function _tourPrev(){_tourShowStep(_tourStep-1);}
 function endTour(){
   var step=_tourSteps[_tourStep];
   if(step&&step.after)step.after();
-  var dying=_tourPanels.slice();_tourPanels=[];
+  // Fade out panels and ring, then remove
+  var dying=_tourPanels.slice(); _tourPanels=[];
   dying.forEach(function(p){p.style.opacity='0';setTimeout(function(){if(p.parentNode)p.remove();},350);});
   if(_tourRing){var ring=_tourRing;_tourRing=null;ring.style.opacity='0';setTimeout(function(){if(ring.parentNode)ring.remove();},350);}
   if(_tourTip){var tip=_tourTip;_tourTip=null;tip.style.opacity='0';setTimeout(function(){if(tip.parentNode)tip.remove();},220);}
   localStorage.setItem(_tourKey(),'1');
   _tourActive=false;
-  if(_tourType==='B'){
-    // Pool tour — delete demo pool, prompt to create real one
-    setTimeout(function(){
-      _deleteDemoPool();
-      _tourShowCreatePool();
-    },420);
-  } else if(_tourType==='A'){
-    // Tracker tour — keep demo pool, nudge toward My Pools
-    setTimeout(function(){
-      window.scrollTo({top:0,behavior:'smooth'});
-      var toast=document.createElement('div');
-      toast.style.cssText='position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;color:#f9fafb;font-family:Inter,sans-serif;z-index:10000;opacity:0;transition:opacity .35s;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,0.5)';
-      toast.innerHTML='🏒 Enjoy the tracker! Tap <b style="color:#3b82f6">My Pools</b> to set up a pool.';
-      document.body.appendChild(toast);
-      requestAnimationFrame(function(){toast.style.opacity='1';});
-      setTimeout(function(){toast.style.opacity='0';setTimeout(function(){toast.remove();},400);},3500);
-    },380);
-  } else {
-    // Tour C — shared pool, existing user
-    setTimeout(function(){
-      window.scrollTo({top:0,behavior:'smooth'});
-      var toast=document.createElement('div');
-      toast.style.cssText='position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;color:#f9fafb;font-family:Inter,sans-serif;z-index:10000;opacity:0;transition:opacity .35s;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,0.5)';
-      toast.textContent='🏒  Enjoy the pool — happy playoffs!';
-      document.body.appendChild(toast);
-      requestAnimationFrame(function(){toast.style.opacity='1';});
-      setTimeout(function(){toast.style.opacity='0';setTimeout(function(){toast.remove();},400);},2200);
-    },380);
-  }
+  setTimeout(function(){
+    window.scrollTo({top:0,behavior:'smooth'});
+    var toast=document.createElement('div');
+    toast.style.cssText='position:fixed;bottom:36px;left:50%;transform:translateX(-50%);background:#1f2937;border:1px solid rgba(255,255,255,0.12);border-radius:999px;padding:10px 22px;font-size:13px;font-weight:600;color:#f9fafb;font-family:Inter,sans-serif;z-index:10000;opacity:0;transition:opacity .35s;white-space:nowrap;box-shadow:0 4px 24px rgba(0,0,0,0.5)';
+    toast.textContent='🏒  Enjoy the pool — happy playoffs!';
+    document.body.appendChild(toast);
+    requestAnimationFrame(function(){toast.style.opacity='1';});
+    setTimeout(function(){toast.style.opacity='0';setTimeout(function(){toast.remove();},400);},2200);
+  },380);
 }
 
 // Deterministic pool ID from shared link data — prevents duplicates on repeated opens
@@ -4018,7 +3885,6 @@ document.addEventListener("DOMContentLoaded",function(){
           savePools(pools);
         }
         setActiveId(id);
-        window._wasSharedPoolLink=true; // tells initTour to use Tour C
         // In standalone mode the user already has the icon — safe to clean up the URL.
         // In browser mode, keep the hash so "Add to Home Screen" captures the pool URL.
         // The PWA overlay's dismiss() will strip it once the user skips installation.
@@ -4055,8 +3921,8 @@ setInterval(function(){var p=getActivePool();if(p&&document.getElementById("main
     // User skipped installation — safe to clean up the hash from the address bar
     if(window.location.hash){history.replaceState(null,'',window.location.pathname);}
     // Hand off to tour once overlay is gone
-    if(typeof initTour==='function'){
-      setTimeout(initTour,500);
+    if(typeof _tourShowIntro==='function'&&typeof _tourKey==='function'&&!localStorage.getItem(_tourKey())){
+      setTimeout(_tourShowIntro,500);
     }
   }
 
