@@ -349,6 +349,8 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
 }
 var R1W = [{t:"COL",b:"LAK"},{t:"DAL",b:"MIN"},{t:"VGK",b:"UTA"},{t:"EDM",b:"ANA"}];
 var R1E = [{t:"BUF",b:"BOS"},{t:"TBL",b:"MTL"},{t:"CAR",b:"OTT"},{t:"PIT",b:"PHI"}];
+// Hard-coded elimination order for R1/R2 (higher = more recently eliminated = sorts first among eliminated)
+var ELIM_ORDER = {OTT:1,LAK:2,PIT:3,DAL:4,EDM:5,BOS:6,UTA:7,TBL:8,PHI:9,MIN:10};
 
 var setupPlayers = [];
 var setupTitle = "Playoff Pool";
@@ -948,9 +950,14 @@ function buildTeamOdds(oddsMap,roundOdds,histData,elimRound){
   var ranked=(ALL_TEAMS||[]).map(function(t){return{t:t,v:parseFloat((oddsMap[t]||'0%').replace('%',''))};})
     .sort(function(a,b){
       var aElim=a.v<0.1,bElim=b.v<0.1;
-      if(aElim!==bElim) return aElim?1:-1; // active teams first
-      if(aElim) return (elimR[b.t]||0)-(elimR[a.t]||0); // eliminated: later round = higher rank
-      return b.v-a.v; // active: by cup%
+      if(aElim!==bElim) return aElim?1:-1;
+      if(aElim){
+        // ELIM_ORDER covers known R1/R2; fall back to elimRound*100 for future rounds
+        var aScore=ELIM_ORDER[a.t]||((elimR[a.t]||0)*100);
+        var bScore=ELIM_ORDER[b.t]||((elimR[b.t]||0)*100);
+        return bScore-aScore;
+      }
+      return b.v-a.v;
     });
   var col1=ranked.slice(0,8),col2=ranked.slice(8);
   var interleaved=col1.map(function(a,i){return col2[i]?[a,col2[i]]:[a];}).reduce(function(acc,v){return acc.concat(v);},[]);
