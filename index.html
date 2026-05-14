@@ -3502,6 +3502,17 @@ async function doRender(){
     var parsed=parseSeries(nhlRaw)||{r1w:R1W.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),
       r1e:R1E.map(function(m){return{topTeam:m.t,bottomTeam:m.b,topWins:0,bottomWins:0};}),r2:[null,null,null,null],r3:[null,null],r4:null};
     var rw=parsed.r1w,re=parsed.r1e,r2f=parsed.r2,r3=parsed.r3,r4=parsed.r4;
+    // Zero out odds for eliminated teams (series decided = 4 wins) so we don't wait on MoneyPuck
+    var allSeries=[].concat(rw,re,r2f,r3,r4?[r4]:[]).filter(Boolean);
+    allSeries.forEach(function(s){
+      var loser=null;
+      if(s.topWins===4&&s.bottomWins<4) loser=s.bottomTeam;
+      else if(s.bottomWins===4&&s.topWins<4) loser=s.topTeam;
+      if(loser&&loser!=='TBD'){
+        odds[loser]='0%';
+        roundOdds[loser]={r2:'0%',r3:'0%',r4:'0%',cup:'0%'};
+      }
+    });
     var r2disp=[
       augmentPartialR2(r2f[0]||predictedMatchup(rw[0],rw[1]),rw[0],rw[1]),
       augmentPartialR2(r2f[1]||predictedMatchup(rw[2],rw[3]),rw[2],rw[3]),
