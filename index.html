@@ -338,7 +338,13 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
   var pool=getActivePool();
   var items=(pool?pool.players:[]).map(function(p,i){var pc=getPC(pool,i);
     var abbrev=(p.abbrev||p.name.substring(0,3)).toUpperCase();
-    return '<div class="legend-item"><div class="ldot" style="background:'+pc.color+'"></div><span style="font-weight:700;color:var(--text)">'+abbrev+'</span><span style="color:var(--muted);font-size:11px"> — '+esc(p.name)+'</span></div>';
+    var pt=pieTotals?pieTotals.find(function(x){return(x.abbrev||'').toUpperCase()===abbrev;}):null;
+    var isElim=pt&&pt.total<0.1;
+    return '<div class="legend-item"'+(isElim?' style="opacity:0.4"':'')+'>'+
+      '<div class="ldot" style="background:'+pc.color+'"></div>'+
+      '<span style="font-weight:700;color:var(--text);'+(isElim?'text-decoration:line-through':'')+'">'+abbrev+'</span>'+
+      '<span style="color:var(--muted);font-size:11px;'+(isElim?'text-decoration:line-through':'')+'"> — '+esc(p.name)+'</span>'+
+      '</div>';
   }).join('');
   if(!pieSvg)return'<div class="legend">'+items+'</div>';
   return'<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:24px;">'
