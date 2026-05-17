@@ -859,9 +859,8 @@ function buildSeriesGames(t1,t2,gamesData){
   if(!games.length)return'';
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return games.map(function(g,i){
-    var d=new Date(g.startUTC);
-    var dET=new Date(d.getTime()-4*3600000);
-    var dateStr=months[dET.getUTCMonth()]+' '+dET.getUTCDate();
+    var dateStr='';
+    if(g.startUTC){var d=new Date(g.startUTC),dET=new Date(d.getTime()-4*3600000);dateStr=months[dET.getUTCMonth()]+' '+dET.getUTCDate();}else{dateStr='TBD';}
     var num='<span class="game-num">G'+(i+1)+'</span>';
     var dc='<span class="game-date-col">'+dateStr+'</span>';
     var as=g.awayScore||0,hs=g.homeScore||0;
@@ -3444,6 +3443,7 @@ function getGameBadge(gamesData, t1, t2) {
   for (var i = 0; i < gamesData.length; i++) {
     var g = gamesData[i];
     if ([g.away,g.home].indexOf(t1)<0 || [g.away,g.home].indexOf(t2)<0) continue;
+    if (!g.startUTC) continue;
     function toEasternDate2(utcStr) {
       var ET_OFFSET=-4*3600000,d=new Date(new Date(utcStr).getTime()+ET_OFFSET);
       if(d.getUTCHours()<5)d.setUTCDate(d.getUTCDate()-1);
