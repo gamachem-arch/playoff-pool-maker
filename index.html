@@ -1072,7 +1072,7 @@ function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2,startDate,
     +dots1+dots2+dateLabels
     +'</svg></div>';
 }
-function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
+function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
   if(s.isPredicted){
     var pt1=s.topTeam==='TBD'?'?':s.topTeam,pt2=s.bottomTeam==='TBD'?'?':s.bottomTeam;
@@ -1124,7 +1124,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData){
     '</div><span class="twins'+(w1>w2?" lead":"")+'">'+w1+'</span></div>';
   return '<div class="series'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')"><div class="sh">'+liveDot+label+badge+'</div>'+
     row1+row2
-    +'<div class="series-games" id="sg-'+sid+'">'+(dualSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\','+roundNum+')" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+dualSpark+'</div>':'')+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
+    +'<div class="series-games'+(autoOpen?' open':'')+'" id="sg-'+sid+'">'+(dualSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\','+roundNum+')" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+dualSpark+'</div>':'')+seriesHeader+buildSeriesGames(t1,t2,gd)+'</div></div>';
 }
 function parseSeries(arr){
   if(!Array.isArray(arr))return null;
@@ -3565,7 +3565,7 @@ async function doRender(){
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
       +'<div class="four-col">'+seriesCard(r2disp[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams||r3AllTeams);
-    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+'</div>';
+    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams);
     var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4,historyData)+'</div>';
     html+=makeRoundSection('r4','Stanley Cup Final',r4body,!r4HasTeams);
