@@ -1326,7 +1326,9 @@ function buildDetailChart(histData, series, gradId) {
     if(d===today)return'Now';
     var p=d.split('-');return months[parseInt(p[1])-1]+' '+parseInt(p[2]);
   }
+  var _dlStep=Math.max(1,Math.ceil((n-1)/6));
   var dateEls=dates.map(function(d,i){
+    if(i!==0&&i!==n-1&&i%_dlStep!==0)return'';
     var x=gx(i),baseY=padT+cH+5;
     return '<text transform="rotate(-40,'+x.toFixed(1)+','+baseY+')" x="'+x.toFixed(1)+'" y="'+baseY+'" text-anchor="end" font-size="11" font-family="Barlow Condensed,sans-serif" fill="#6b7280">'+fmtD(d)+'</text>';
   }).join('');
@@ -1550,7 +1552,9 @@ function buildSeriesDetailChart(histData, t1, t2, roundKey, lv1, lv2) {
     :'';
   var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   function fmtD(d){ if(d===today)return'Now'; var p=d.split('-');return months[parseInt(p[1])-1]+' '+parseInt(p[2]); }
+  var _dsStep=Math.max(1,Math.ceil((n-1)/6));
   var dateEls=allDates.map(function(d,i){
+    if(i!==0&&i!==n-1&&i%_dsStep!==0)return'';
     var x=gx(i), baseY=padT+cH+8;
     return '<text transform="rotate(-40,'+x.toFixed(1)+','+baseY+')" x="'+x.toFixed(1)+'" y="'+baseY+'" text-anchor="end" font-size="9" font-family="Barlow Condensed,sans-serif" fill="#6b7280">'+fmtD(d)+'</text>';
   }).join('');
