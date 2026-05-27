@@ -1125,22 +1125,26 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
         +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o1+'</span></div>':'')
       +'</div></div>';
     var scfRight=t2isTBD
-      ?(s.pendingBottom
-        ?'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end">'
-            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;opacity:0.75">'
-              +'<div style="display:flex;align-items:center;gap:5px">'
-                +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700">'+s.pendingBottom[0]+'</span>'
-                +'<img style="width:28px;height:28px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+s.pendingBottom[0]+'_'+logoSfx(s.pendingBottom[0])+'.svg" onerror="this.style.display=\'none\'">'
-                +makePill(s.pendingBottom[0])
-              +'</div>'
-              +'<div style="font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;opacity:0.5">or</div>'
-              +'<div style="display:flex;align-items:center;gap:5px">'
-                +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700">'+s.pendingBottom[1]+'</span>'
-                +'<img style="width:28px;height:28px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+s.pendingBottom[1]+'_'+logoSfx(s.pendingBottom[1])+'.svg" onerror="this.style.display=\'none\'">'
-                +makePill(s.pendingBottom[1])
-              +'</div>'
+      ?(s.pendingBottom?(function(){
+          var pa=s.pendingBottom[0],pb=s.pendingBottom[1];
+          var pctA=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r4)||'';
+          var pctB=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r4)||'';
+          var lgA='<img style="width:24px;height:24px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pa+'_'+logoSfx(pa)+'.svg" onerror="this.style.display=\'none\'">';
+          var lgB='<img style="width:24px;height:24px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pb+'_'+logoSfx(pb)+'.svg" onerror="this.style.display=\'none\'">';
+          return '<div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:4px;opacity:0.85">'
+            +makePill(pa)
+            +'<div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px">'
+              +'<div style="display:flex;align-items:center;gap:3px">'+lgA+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700">'+pa+'</span></div>'
+              +(pctA?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af;padding-left:2px">'+pctA+'</span>':'')
             +'</div>'
-          +'</div>'
+            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;color:var(--muted);opacity:0.35;flex-shrink:0">/</span>'
+            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'
+              +'<div style="display:flex;align-items:center;gap:3px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700">'+pb+'</span>'+lgB+'</div>'
+              +(pctB?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af;padding-right:2px">'+pctB+'</span>':'')
+            +'</div>'
+            +makePill(pb)
+            +'</div>';
+        })()
         :'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--muted);opacity:0.35;letter-spacing:1px">TBD</span></div>'
       )
       :'<div style="flex:1;display:flex;align-items:center;gap:8px;flex-direction:row-reverse;min-width:0">'
