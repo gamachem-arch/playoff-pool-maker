@@ -1053,17 +1053,19 @@ function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2,startDate,
   var col1='#60a5fa',col2='#fb923c';
   var last1=c1.length?c1[c1.length-1]:null,last2=c2.length?c2[c2.length-1]:null;
   var dateLabels=useDates.map(function(d,i){
+    if(i!==0&&i!==useDates.length-1)return'';
     var md=d.substring(5).replace('-','/');
     var x=padX+(i/(useDates.length-1))*(W-padX*2);
-    var anchor=i===0?'start':i===useDates.length-1?'end':'middle';
+    var anchor=i===0?'start':'end';
     return'<text x="'+x.toFixed(1)+'" y="'+(H+9)+'" font-size="6.5" fill="#6b7280" text-anchor="'+anchor+'" font-family="monospace">'+md+'</text>';
   }).join('');
   var dots1=c1.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c1.length-1?2.5:1.8)+'" fill="'+col1+'"/>';}).join('');
   var dots2=c2.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c2.length-1?2.5:1.8)+'" fill="'+col2+'"/>';}).join('');
+  var seriesLabel=roundKey==='cup'?'win cup':'win series';
   return'<div style="padding:6px 8px 4px;border-bottom:1px solid var(--border)">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
     +'<span style="font-size:9px;font-weight:700;color:'+col1+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+t1+(last1?' <span style="opacity:0.7">'+last1.val.toFixed(1)+'%</span>':'')+'</span>'
-    +'<span style="font-size:7px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;opacity:0.5">win series</span>'
+    +'<span style="font-size:7px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;opacity:0.5">'+seriesLabel+'</span>'
     +'<span style="font-size:9px;font-weight:700;color:'+col2+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+(last2?'<span style="opacity:0.7">'+last2.val.toFixed(1)+'%</span> ':'')+t2+'</span>'
     +'</div>'
     +'<svg width="100%" viewBox="0 0 '+W+' '+(H+14)+'" preserveAspectRatio="none" style="display:block;height:44px">'
@@ -1655,7 +1657,7 @@ function showSeriesSparklineDetailMaker(t1, t2, roundNum) {
             +'</div>'
           +'</div>'
         +'</div>'
-        +'<div style="font-size:10px;color:#4b5563;letter-spacing:1px;text-transform:uppercase;margin-top:8px;font-family:\'Barlow Condensed\',sans-serif">'+esc(roundLabel)+' — Win Series %</div>'
+        +'<div style="font-size:10px;color:#4b5563;letter-spacing:1px;text-transform:uppercase;margin-top:8px;font-family:\'Barlow Condensed\',sans-serif">'+esc(roundLabel)+' — '+(roundNum===4?'Win Cup':'Win Series')+' %</div>'
       +'</div>'
       +'<button onclick="document.getElementById(\'series-sparkline-overlay\').remove()" style="background:rgba(255,255,255,0.08);border:none;color:#9ca3af;padding:6px 12px;border-radius:8px;cursor:pointer;font-family:Inter,sans-serif;font-size:14px;flex-shrink:0;margin-left:10px">✕</button>'
     +'</div>'
@@ -1713,10 +1715,10 @@ function getActiveRound(parsed) {
   // Advance to R3 when any CF team is known
   var r3HasTeams = r3.some(function(s){return s&&((s.topTeam&&s.topTeam!=='TBD')||(s.bottomTeam&&s.bottomTeam!=='TBD'));});
   if (!r3HasTeams) return 2;
-  var r3AllDone = r3.filter(Boolean).every(function(s){return s.topWins===4||s.bottomWins===4;});
-  if (!r3AllDone) return 3;
+  // Advance to SCF as soon as one finalist is known (don't wait for both CFs to finish)
   var r4HasAnyTeam = r4&&((r4.topTeam&&r4.topTeam!=='TBD')||(r4.bottomTeam&&r4.bottomTeam!=='TBD'));
-  return r4HasAnyTeam ? 4 : 3;
+  if (r4HasAnyTeam) return 4;
+  return 3;
 }
 
 // ── Live Game Overlay (Maker) ─────────────────────────────────────────────
@@ -2490,9 +2492,9 @@ function buildBracket(shareMode) {
 
     // Middle: CF-W | SCF | CF-E
     + '<div class="bracket-middle">'
-    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[0]) + '</div>'
+    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[0], 3) + '</div>'
     + '<div class="bc-scf-col" style="' + cw4 + '"><div class="bc-trophy"><img src="https://assets.nhle.com/logos/playoffs/png/scp-20252026-cup.png" alt="Stanley Cup Final"></div><div class="bc-scf-label">Stanley Cup<br>Final</div>' + c(r4, 4) + '</div>'
-    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[1]) + '</div>'
+    + '<div class="bc-cf-col"><div class="bc-round-label">Conf Finals</div>' + c(r3[1], 3) + '</div>'
     + '</div>'
 
     // Bottom half: [R1-W + R2-W] | center gap | [R2-E + R1-E]
