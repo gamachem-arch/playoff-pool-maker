@@ -1125,7 +1125,24 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
         +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o1+'</span></div>':'')
       +'</div></div>';
     var scfRight=t2isTBD
-      ?'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--muted);opacity:0.35;letter-spacing:1px">TBD</span></div>'
+      ?(s.pendingBottom
+        ?'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end">'
+            +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;opacity:0.75">'
+              +'<div style="display:flex;align-items:center;gap:5px">'
+                +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700">'+s.pendingBottom[0]+'</span>'
+                +'<img style="width:28px;height:28px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+s.pendingBottom[0]+'_'+logoSfx(s.pendingBottom[0])+'.svg" onerror="this.style.display=\'none\'">'
+                +makePill(s.pendingBottom[0])
+              +'</div>'
+              +'<div style="font-size:8px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;opacity:0.5">or</div>'
+              +'<div style="display:flex;align-items:center;gap:5px">'
+                +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:700">'+s.pendingBottom[1]+'</span>'
+                +'<img style="width:28px;height:28px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+s.pendingBottom[1]+'_'+logoSfx(s.pendingBottom[1])+'.svg" onerror="this.style.display=\'none\'">'
+                +makePill(s.pendingBottom[1])
+              +'</div>'
+            +'</div>'
+          +'</div>'
+        :'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--muted);opacity:0.35;letter-spacing:1px">TBD</span></div>'
+      )
       :'<div style="flex:1;display:flex;align-items:center;gap:8px;flex-direction:row-reverse;min-width:0">'
         +makePill(t2)+bLogo2
         +'<div style="min-width:0;text-align:right">'
@@ -3605,7 +3622,13 @@ async function doRender(){
     html+=makeRoundSection('r2','Round 2',r2body,!r2HasTeams||r3AllTeams);
     var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+'</div>';
     html+=makeRoundSection('r3','Conference Finals',r3body,!r3HasTeams||r4AllTeams);
-    var r4body='<div class="one-col">'+seriesCard(r4,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4,historyData,true)+'</div>';
+    // Attach ECF contenders to r4 so the hero card can show them when opponent is TBD
+    var r4render=r4?Object.assign({},r4):null;
+    if(r4render&&(!r4render.bottomTeam||r4render.bottomTeam==='TBD')){
+      var pendingCF=(r3||[]).find(function(s){return s&&s.topWins<4&&s.bottomWins<4&&s.topTeam&&s.topTeam!=='TBD'&&s.bottomTeam&&s.bottomTeam!=='TBD';});
+      if(pendingCF)r4render.pendingBottom=[pendingCF.topTeam,pendingCF.bottomTeam];
+    }
+    var r4body='<div class="one-col">'+seriesCard(r4render,"Stanley Cup Final",odds,gamesRaw,deltaMap,roundOdds,4,historyData,true)+'</div>';
     html+=makeRoundSection('r4','Stanley Cup Final',r4body,!r4HasTeams);
     document.getElementById("main").innerHTML=html;
     var activePool=getActivePool();
