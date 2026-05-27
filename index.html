@@ -2468,8 +2468,8 @@ function buildBracket(shareMode) {
   // col widths: compact past cols (50px), active col (80px), default r2 (56px)
   var cw1 = ar === 1 ? '' : 'width:50px;flex:none';
   var cw2 = ar === 2 ? 'flex:1;width:auto' : (ar > 2 ? 'width:50px' : '');
-  var cw3 = ar > 3 ? 'width:50px;flex:none' : '';
-  var cw4 = ar === 4 ? 'flex:1;min-width:0;align-items:stretch' : '';
+  var cw3 = '';
+  var cw4 = ar === 4 ? 'width:160px;flex:none;align-items:stretch' : '';
   function c(s, round) { return buildBracketCard(s, gd, ar===round, shareMode, round < ar); }
   function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1 && window.innerWidth <= 640); }
 
