@@ -1113,6 +1113,40 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   var live=isSeriesLive(gd,t1,t2);
   var liveDot=live?'<span class="live-dot"></span>':'';
 
+  // ── Stanley Cup Final: side-by-side hero layout ─────────────────────────
+  if (roundNum === 4) {
+    var scfAutoOpen = autoOpen && !t2isTBD;
+    var bLogo1='<img style="width:40px;height:40px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
+    var bLogo2=t2isTBD?'':'<img style="width:40px;height:40px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
+    var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:8px;min-width:0">'
+      +makePill(t1)+bLogo1
+      +'<div style="min-width:0">'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+t1+(t1won?' 🏆':'')+'</div>'
+        +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o1+'</span></div>':'')
+      +'</div></div>';
+    var scfRight=t2isTBD
+      ?'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--muted);opacity:0.35;letter-spacing:1px">TBD</span></div>'
+      :'<div style="flex:1;display:flex;align-items:center;gap:8px;flex-direction:row-reverse;min-width:0">'
+        +makePill(t2)+bLogo2
+        +'<div style="min-width:0;text-align:right">'
+          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?' 🏆':'')+t2+'</div>'
+          +(o2?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">'+deltaBadge(d2)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o2+'</span></div>':'')
+        +'</div></div>';
+    var scfCenter=(w1>0||w2>0)
+      ?'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;flex-shrink:0;padding:0 6px">'
+          +'<span style="color:'+(w1>w2?'#4ade80':'var(--muted)')+'">'+w1+'</span>'
+          +'<span style="opacity:0.25;margin:0 3px">–</span>'
+          +'<span style="color:'+(w2>w1?'#4ade80':'var(--muted)')+'">'+w2+'</span>'
+        +'</div>'
+      :'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);opacity:0.4;flex-shrink:0">vs</div>';
+    return '<div class="series'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')">'
+      +'<div class="sh">'+liveDot+'Stanley Cup Final'+badge+'</div>'
+      +'<div style="display:flex;align-items:center;padding:10px 12px 12px;gap:8px">'+scfLeft+scfCenter+scfRight+'</div>'
+      +'<div class="series-games'+(scfAutoOpen?' open':'')+'" id="sg-'+sid+'">'
+        +(dualSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\',4)" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+dualSpark+'</div>':'')
+        +buildSeriesGames(t1,t2,gd)
+      +'</div></div>';
+  }
   var t2isPred=t2&&t2.includes('/');
   function predSlotHtmlM(team,borderTop){var ab=team.split('/'),pa=ab[0],pb=ab[1],oa=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r2)||'',ob=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r2)||'',bt=borderTop?'border-top:1px solid var(--border);':'';return '<div class="tbd-r" style="'+bt+'display:flex;align-items:center;justify-content:center;gap:2px"><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pa+'</span>'+(oa?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+oa+'</span>':'')+'<span style="opacity:0.2;margin:0 6px">/</span><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pb+'</span>'+(ob?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+ob+'</span>':'')+'</div>';}
   var row2=t2isTBD
