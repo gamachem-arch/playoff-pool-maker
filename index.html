@@ -1106,12 +1106,13 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   var _seriesOver=w1===4||w2===4;
   var _played=_sg.filter(function(g){return g.state==='OFF'||g.state==='FINAL';});
   var _sparkEnd=(_seriesOver&&_played.length)?_toEtDate(_played[_played.length-1].startUTC):null;
+  var t1isPred=t1&&t1.includes('/');
+  var t2isTBD=!t2||t2==='TBD';
   var dualSpark=t2isTBD?'':buildDualSparkline(histData,t1,t2,roundKey,lv1,lv2,_sparkStart,_sparkEnd);
   var seriesHeader=(!dualSpark&&(sr1||sr2))?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
   var live=isSeriesLive(gd,t1,t2);
   var liveDot=live?'<span class="live-dot"></span>':'';
-  var t1isPred=t1&&t1.includes('/');
-  var t2isTBD=!t2||t2==='TBD';
+
   var t2isPred=t2&&t2.includes('/');
   function predSlotHtmlM(team,borderTop){var ab=team.split('/'),pa=ab[0],pb=ab[1],oa=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r2)||'',ob=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r2)||'',bt=borderTop?'border-top:1px solid var(--border);':'';return '<div class="tbd-r" style="'+bt+'display:flex;align-items:center;justify-content:center;gap:2px"><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pa+'</span>'+(oa?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+oa+'</span>':'')+'<span style="opacity:0.2;margin:0 6px">/</span><span style="opacity:0.6;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;font-size:14px">'+pb+'</span>'+(ob?'<span style="opacity:0.4;font-size:10px;margin-left:2px">'+ob+'</span>':'')+'</div>';}
   var row2=t2isTBD
