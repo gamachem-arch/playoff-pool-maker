@@ -1106,7 +1106,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   var _seriesOver=w1===4||w2===4;
   var _played=_sg.filter(function(g){return g.state==='OFF'||g.state==='FINAL';});
   var _sparkEnd=(_seriesOver&&_played.length)?_toEtDate(_played[_played.length-1].startUTC):null;
-  var dualSpark=buildDualSparkline(histData,t1,t2,roundKey,lv1,lv2,_sparkStart,_sparkEnd);
+  var dualSpark=t2isTBD?'':buildDualSparkline(histData,t1,t2,roundKey,lv1,lv2,_sparkStart,_sparkEnd);
   var seriesHeader=(!dualSpark&&(sr1||sr2))?'<div class="series-odds-header"><span class="soh-team">'+t1+'</span>&nbsp;<span class="soh-pct">'+sr1+'</span><span style="margin:0 4px;opacity:0.3">·</span><span class="soh-team">'+t2+'</span>&nbsp;<span class="soh-pct">'+sr2+'</span><span style="flex:1"></span>win</div>':'';
   var live=isSeriesLive(gd,t1,t2);
   var liveDot=live?'<span class="live-dot"></span>':'';
