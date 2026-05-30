@@ -3827,9 +3827,11 @@ async function doRender(){
         // Team blocks
         var _mkT=function(team){
           return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">'
-            +makePill(team)
             +'<img style="width:60px;height:60px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px">'+team+'</span>'
+            +'<div style="display:flex;align-items:center;gap:5px">'
+              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px">'+team+'</span>'
+              +makePill(team)
+            +'</div>'
             +'<span id="scf-sog-'+team+'" style="font-size:10px;color:#4b5563;letter-spacing:.3px"></span>'
             +'</div>';
         };
