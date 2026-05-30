@@ -3674,7 +3674,7 @@ async function doRender(){
       +'<div class="four-col">'+rw.map(function(s,i){return seriesCard(s,"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData)+seriesCard(re[i],"Round 1",odds,gamesRaw,deltaMap,roundOdds,1,historyData);}).join("")+'</div>';
     var r2body='<div class="clabels"><div class="clabel">Western Conference</div><div class="clabel">Eastern Conference</div></div>'
       +'<div class="four-col">'+seriesCard(r2disp[0],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[2],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[1],"West R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+seriesCard(r2disp[3],"East R2",odds,gamesRaw,deltaMap,roundOdds,2,historyData)+'</div>';
-    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData,true)+'</div>';
+    var r3body='<div class="two-col">'+seriesCard(r3?r3[0]:null,"West CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+seriesCard(r3?r3[1]:null,"East CF",odds,gamesRaw,deltaMap,roundOdds,3,historyData)+'</div>';
     // Attach ECF contenders to r4 so the hero card can show them when opponent is TBD
     var r4render=r4?Object.assign({},r4):null;
     if(r4render&&(!r4render.bottomTeam||r4render.bottomTeam==='TBD')){
