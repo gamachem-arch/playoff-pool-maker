@@ -364,6 +364,8 @@ var setupTitle = "Playoff Pool";
 var editingPoolId = null;
 
 // ---- Storage ----
+function getSeriesStyle(){try{return localStorage.getItem('seriesCardStyle')||'condensed';}catch(e){return'condensed';}}
+function setSeriesStyle(s){try{localStorage.setItem('seriesCardStyle',s);}catch(e){}}
 function getAllPools() {
   try { var s = localStorage.getItem("pp2026_pools"); return s ? JSON.parse(s) : {}; } catch(e) { return {}; }
 }
@@ -746,6 +748,22 @@ function drawSetup() {
     aw.appendChild(ab);
     wrap.appendChild(aw);
   }
+
+  // Series card style toggle
+  var styleWrap = document.createElement('div');
+  styleWrap.style.cssText = 'margin:20px 4px 4px;';
+  var curStyle = getSeriesStyle();
+  styleWrap.innerHTML = '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:#6b7280;margin-bottom:8px">Series Card Style</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:6px">'
+    +['condensed','big'].map(function(s){
+      var on=curStyle===s;
+      var icon=s==='condensed'?'☰':'⬛';
+      var label=s==='condensed'?'Condensed':'Big';
+      return '<button onclick="setSeriesStyle(\''+s+'\');drawSetup()" style="flex:1;padding:9px 8px;border-radius:10px;border:1px solid '+(on?'rgba(255,255,255,0.22)':'rgba(255,255,255,0.06)')+';background:'+(on?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.02)')+';color:'+(on?'#f9fafb':'#6b7280')+';font-family:Inter,sans-serif;font-size:13px;font-weight:'+(on?'600':'400')+';cursor:pointer;transition:all .15s">'+icon+' '+label+'</button>';
+    }).join('')
+    +'</div>'
+    +'<div style="font-size:11px;color:#6b7280;line-height:1.4">'+(curStyle==='condensed'?'Compact data-first rows — quick to scan':'Large logos & team watermarks — more visual impact')+'</div>';
+  wrap.appendChild(styleWrap);
 
   var acts = document.createElement("div");
   acts.className = "setup-actions";
@@ -1173,7 +1191,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
       +'</div></div>';
   }
   // ── CF hero style (round 3): stacked rows with team logo watermark ───────
-  if(roundNum===3&&!t2isTBD&&!(t1&&t1.includes('/'))&&!(t2&&t2.includes('/'))){
+  if(roundNum===3&&getSeriesStyle()==='big'&&!t2isTBD&&!(t1&&t1.includes('/'))&&!(t2&&t2.includes('/'))){
     function cfHeroRow(team,wins,oppWins,pill,cupOdds,dlt){
       var won=wins===4,lost=oppWins===4,lead=wins>oppWins&&wins>0;
       var sm='<img style="width:32px;height:32px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">';
