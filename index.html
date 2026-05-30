@@ -3781,7 +3781,7 @@ async function doRender(){
       var _et=-4*3600000,_now=Date.now();
       var _todayStr=new Date(_now+_et).toISOString().substring(0,10);
       var _ystdStr=new Date(_now+_et-86400000).toISOString().substring(0,10);
-      var _scfGs=(gamesRaw||[]).filter(function(g){return[g.away,g.home].indexOf(r4render.topTeam)>=0&&[g.away,g.home].indexOf(r4render.bottomTeam)>=0;});
+      var _scfGs=(gamesRaw||[]); // DEV: show any game
       var _gPlayed=_scfGs.filter(function(g){return g.state==='OFF'||g.state==='FINAL';}).length;
       var _todayG=_scfGs.find(function(g){var gd=g.startUTC?new Date(new Date(g.startUTC).getTime()+_et).toISOString().substring(0,10):null;return gd===_todayStr||(gd===_ystdStr&&(g.state==='OFF'||g.state==='FINAL'));});
       var _nextG=!_todayG?(_scfGs.filter(function(g){return g.startUTC&&new Date(g.startUTC).getTime()>_now&&g.state!=='OFF'&&g.state!=='FINAL';}).sort(function(a,b){return new Date(a.startUTC)-new Date(b.startUTC);})[0]||null):null;
