@@ -1190,8 +1190,8 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
         +buildSeriesGames(t1,t2,gd)
       +'</div></div>';
   }
-  // ── CF hero style (round 3): stacked rows with team logo watermark ───────
-  if(roundNum===3&&getSeriesStyle()==='big'&&!t2isTBD&&!(t1&&t1.includes('/'))&&!(t2&&t2.includes('/'))){
+  // ── Big style (rounds 1-3): stacked rows with team logo watermark ────────
+  if((roundNum===1||roundNum===2||roundNum===3)&&getSeriesStyle()==='big'&&!t2isTBD&&!(t1&&t1.includes('/'))&&!(t2&&t2.includes('/'))){
     function cfHeroRow(team,wins,oppWins,pill,cupOdds,dlt){
       var won=wins===4,lost=oppWins===4,lead=wins>oppWins&&wins>0;
       var sm='<img style="width:32px;height:32px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">';
