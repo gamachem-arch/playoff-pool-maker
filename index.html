@@ -1195,7 +1195,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
     function cfHeroRow(team,wins,oppWins,pill,cupOdds,dlt){
       var won=wins===4,lost=oppWins===4,lead=wins>oppWins&&wins>0;
       var sm='<img style="width:32px;height:32px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">';
-      var bg='<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);height:190%;opacity:0.08;pointer-events:none;user-select:none">';
+      var bg='<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" style="position:absolute;right:-6px;top:50%;transform:translateY(-50%);height:190%;opacity:0.08;pointer-events:none;user-select:none;transform:translateY(-50%) rotate(-35deg)">';
       return '<div style="position:relative;overflow:hidden;padding:9px 12px">'
         +bg
         +'<div style="position:relative;z-index:1;display:flex;align-items:center;gap:7px">'
