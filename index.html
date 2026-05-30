@@ -1933,10 +1933,10 @@ function buildSCFLiveStats(data,away,home){
     var pName=g.t<1200?'1ST':g.t<2400?'2ND':g.t<3600?'3RD':'OT';
     var ps=g.t-pStart;
     var tStr=String(Math.floor(ps/60)).padStart(2,'0')+':'+String(Math.round(ps%60)).padStart(2,'0')+' · '+pName;
-    // Fix <br>Assists: parsing
+    // Fix <br>Assists: parsing + convert ALL CAPS last names to Title Case
     var dp=(g.desc||'').split('<br>');
     var scorer=dp[0]||'';
-    var assists=(dp[1]||'').replace(/^Assists:\s*/i,'');
+    var assists=(dp[1]||'').replace(/^Assists:\s*/i,'').replace(/\b([A-Z]{2,})\b/g,function(w){return w.charAt(0)+w.slice(1).toLowerCase();});
     // Score line — bold the scoring team name + score
     var aLabel=homeScored?'<span style="color:#6b7280">'+away+' '+g.awayGoals+'</span>':'<span style="color:#f9fafb;font-weight:700">'+away+' '+g.awayGoals+'</span>';
     var hLabel=homeScored?'<span style="color:#f9fafb;font-weight:700">'+home+' '+g.homeGoals+'</span>':'<span style="color:#6b7280">'+home+' '+g.homeGoals+'</span>';
@@ -1946,11 +1946,11 @@ function buildSCFLiveStats(data,away,home){
     var headshot='<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;background:'+_tc+'">'
       +(_hsUrl?'<img style="width:100%;height:100%;object-fit:contain;display:block" src="'+_hsUrl+'" onerror="this.style.opacity=0">':'')
       +'</div>';
-    return'<div style="flex-shrink:0;width:240px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:10px 12px;display:flex;align-items:center;gap:10px">'
+    return'<div style="flex-shrink:0;width:280px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:10px 12px;display:flex;align-items:center;gap:10px">'
       +headshot
       +'<div style="min-width:0;flex:1">'
         +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:900;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f9fafb">'+scorer+'</div>'
-        +(assists?'<div style="font-size:11px;color:#9ca3af;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">'+assists+'</div>':'<div style="height:14px"></div>')
+        +(assists?'<div style="font-size:10px;color:#6b7280;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">'+assists+'</div>':'<div style="height:13px"></div>')
         +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;line-height:1.3;margin-top:1px">'+aLabel+' – '+hLabel+' <span style="color:#4b5563">('+tStr+')</span></div>'
       +'</div>'
       +makePill(team)
