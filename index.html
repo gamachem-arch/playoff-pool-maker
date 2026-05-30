@@ -3679,7 +3679,7 @@ function buildStandings(odds,histData){
         (allElim?'':buildStreakBadge(histData,p.teams,p.total))+
         '<div class="srank">'+ranks[i]+'</div>'+
         '<div style="display:flex;align-items:center;justify-content:center"><span class="pill" style="background:'+pc.bg+';color:'+pc.color+'">'+esc(p.abbrev.toUpperCase())+'</span></div>'+
-        '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+(allElim?'#6b7280':pc.color)+'">'+p.total.toFixed(1)+'%</div>'+
+        '<div class="sname">'+esc(p.name)+'</div><div class="spct" style="color:'+(allElim?'#6b7280':pc.color)+(isWinner?';cursor:pointer':'')+'"'+(isWinner?' onclick="event.stopPropagation();showWinnerCelebration(\''+esc(p.name)+'\',\''+esc(pool.title||'Playoff Pool')+'\')" title="🎉"':'')+'>'+p.total.toFixed(1)+'%</div>'+
         '<div onclick="event.stopPropagation();showSparklineDetailMaker(\''+esc(abbrev)+'\',\''+p.teams.join(',')+'\',\''+pc.color+'\',\''+esc(p.name)+'\')" style="cursor:pointer;border-radius:6px;margin:0 -4px;padding:0 4px;transition:background .15s;'+(allElim?'opacity:0.45;filter:grayscale(0.6)':'')+'" onmouseenter="this.style.background=\'rgba(255,255,255,0.05)\'" onmouseleave="this.style.background=\'\'">'+
         buildPlayerSparkline(histData,p.teams,null,p.total)+'</div>'+buildPathToCup(p.teams,odds,pc.color)+
         '<div class="steams">'+teamsList+'</div>'+
