@@ -1140,7 +1140,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
     var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">'
       +makePill(t1)+bLogo1
       +'<div style="min-width:0">'
-        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+t1+(t1won?' 🏆':'')+'</div>'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+t1+(t1won?' <span style="font-size:11px;vertical-align:middle">🏆</span>':'')+'</div>'
         +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#9ca3af">'+o1+'</span></div>':'')
       +'</div></div>';
     var scfRight=t2isTBD
@@ -1169,7 +1169,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
       :'<div style="flex:1;display:flex;align-items:center;gap:10px;flex-direction:row-reverse;min-width:0">'
         +makePill(t2)+bLogo2
         +'<div style="min-width:0;text-align:right">'
-          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?' 🏆':'')+t2+'</div>'
+          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?'<span style="font-size:11px;vertical-align:middle">🏆</span> ':'')+t2+'</div>'
           +(o2?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">'+deltaBadge(d2)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#9ca3af">'+o2+'</span></div>':'')
         +'</div></div>';
     var scfCenter=(w1>0||w2>0)
@@ -1202,7 +1202,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
           +pill+sm
           +'<div style="min-width:0;flex:1">'
             +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:17px;font-weight:900;letter-spacing:0.3px'+(lost?';opacity:0.3;text-decoration:line-through':won?';color:#4ade80':'')+'">'
-              +esc(team)+(won?' 🏆':'')
+              +esc(team)+(won?' <span style="font-size:11px;vertical-align:middle">🏆</span>':'')
             +'</div>'
             +(cupOdds?'<div style="display:flex;align-items:center;gap:2px">'+dlt+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af">'+cupOdds+'</span></div>':'')
           +'</div>'
