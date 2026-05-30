@@ -94,6 +94,10 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .series.scf-hero{border-color:rgba(251,191,36,0.4);box-shadow:0 0 0 1px rgba(251,191,36,0.08),0 4px 24px rgba(251,191,36,0.12);}
 .scf-goals-scroll::-webkit-scrollbar{display:none;}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
+@keyframes confetti-fall{0%{transform:translateY(-12vh) rotate(0deg);opacity:1}100%{transform:translateY(112vh) rotate(720deg);opacity:1}}
+@keyframes win-pop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes win-trophy{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+.confetti-pc{position:absolute;top:-12vh;will-change:transform;border-radius:1px;}
 .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f87171;margin-right:4px;animation:pulse-dot 1.2s ease-in-out infinite;vertical-align:middle;flex-shrink:0;}
 .team-odds-row.my-team{border-left:3px solid;background:rgba(255,255,255,0.03);}
 .sh{padding:5px 12px;background:var(--surface2);border-bottom:1px solid var(--border);font-family:'Barlow Condensed',sans-serif;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;justify-content:space-between;}
@@ -329,13 +333,28 @@ function _buildMakerLegendPie(pieTotals,pieSvg){
   var myRank=me?pieTotals.findIndex(function(p){return(p.abbrev||'').toUpperCase()===me.toUpperCase();})+1:-1;
   var standingBlock='';
   if(myData&&myRank>0){
-    var rl=["1st","2nd","3rd","4th"][myRank-1]||(myRank+'th');
     var pc=getPC(getActivePool(),myData.ci);
-    standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:6px 10px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:12px;cursor:pointer;flex-shrink:0">'
-      +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:42px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
-      +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:3px;display:inline-block">'+esc(me)+'</span>'
-      +'<div style="font-size:9px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px">'+myData.total.toFixed(1)+'%</div>'
-      +'</div>';
+    var isOut=myData.total<0.1;
+    var isWin=myData.total>=99.95;
+    if(isWin){
+      standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:6px 12px;background:linear-gradient(145deg,rgba(251,191,36,0.18),rgba(251,191,36,0.04));border:1.5px solid #fbbf24;border-radius:12px;cursor:pointer;flex-shrink:0;box-shadow:0 0 14px rgba(251,191,36,0.35)">'
+        +'<div style="font-size:24px;line-height:1">🏆</div>'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;line-height:1;color:#fbbf24;letter-spacing:1px;margin-top:2px">WINNER</div>'
+        +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:4px;display:inline-block">'+esc(me)+'</span>'
+        +'</div>';
+    }else if(isOut){
+      standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:5px 9px;background:var(--surface);border:1.5px solid #f87171;border-radius:10px;cursor:pointer;flex-shrink:0">'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;line-height:1;color:#f87171;letter-spacing:1px">OUT</div>'
+        +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:3px;display:inline-block">'+esc(me)+'</span>'
+        +'</div>';
+    }else{
+      var rl=["1st","2nd","3rd","4th"][myRank-1]||(myRank+'th');
+      standingBlock='<div onclick="setMyPlayer(\''+esc(me)+'\')" style="text-align:center;padding:6px 10px;background:var(--surface);border:1.5px solid '+pc.color+';border-radius:12px;cursor:pointer;flex-shrink:0">'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:42px;font-weight:900;line-height:1;color:'+pc.color+'">'+rl+'</div>'
+        +'<span class="pill" style="background:'+pc.bg+';color:'+pc.color+';margin-top:3px;display:inline-block">'+esc(me)+'</span>'
+        +'<div style="font-size:9px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;margin-top:2px">'+myData.total.toFixed(1)+'%</div>'
+        +'</div>';
+    }
   }
   var pool=getActivePool();
   var items=(pool?pool.players:[]).map(function(p,i){var pc=getPC(pool,i);
@@ -446,11 +465,17 @@ function drawPoolList() {
     if (me) {
       var rankEl = document.createElement("div");
       rankEl.className = "pool-item-rank";
-      var ords = ['ST','ND','RD'];
-      var ord = ords[me.rank-1] || 'TH';
-      var rankColor = ['#fbbf24','#9ca3af','#cd7f32'][me.rank-1] || '#f87171';
-      rankEl.innerHTML = '<div><span class="rank-num" style="color:' + rankColor + '">' + me.rank + '</span><span class="rank-ord" style="color:' + rankColor + ';opacity:0.8">' + ord + '</span></div>'
-        + '<div class="rank-odds">' + (me.delta > 0.05 ? '<span style="color:#4ade80">↑</span> ' : me.delta < -0.05 ? '<span style="color:#f87171">↓</span> ' : '') + '<span>' + me.total.toFixed(1) + '%</span> cup</div>';
+      if (me.total >= 99.95) {
+        rankEl.innerHTML = '<div style="font-size:18px;line-height:1">🏆</div><div><span class="rank-num" style="color:#fbbf24;font-size:18px">WINNER</span></div>';
+      } else if (me.total < 0.1) {
+        rankEl.innerHTML = '<div><span class="rank-num" style="color:#f87171;font-size:20px">OUT</span></div>';
+      } else {
+        var ords = ['ST','ND','RD'];
+        var ord = ords[me.rank-1] || 'TH';
+        var rankColor = ['#fbbf24','#9ca3af','#cd7f32'][me.rank-1] || '#f87171';
+        rankEl.innerHTML = '<div><span class="rank-num" style="color:' + rankColor + '">' + me.rank + '</span><span class="rank-ord" style="color:' + rankColor + ';opacity:0.8">' + ord + '</span></div>'
+          + '<div class="rank-odds">' + (me.delta > 0.05 ? '<span style="color:#4ade80">↑</span> ' : me.delta < -0.05 ? '<span style="color:#f87171">↓</span> ' : '') + '<span>' + me.total.toFixed(1) + '%</span> cup</div>';
+      }
       item.appendChild(rankEl);
     }
 
@@ -3606,14 +3631,35 @@ function lgoReplayScrubM(val) {
   }
 }
 
+// Last date (YYYY-MM-DD) a player's combined cup% was still alive (>=0.1).
+// Used to rank eliminated players: more recently eliminated = higher standing.
+function playerLastAliveDate(histData,teams){
+  if(!histData||!histData.length)return'';
+  var dates=[...new Set(histData.map(function(d){return d.date;}).filter(Boolean))].sort();
+  var last='';
+  dates.forEach(function(date){
+    var total=teams.reduce(function(sum,team){
+      var e=histData.find(function(d){return d.date===date&&(d.team||'').toUpperCase()===team.toUpperCase();});
+      return sum+(e?parseFloat(e.cup)||0:0);
+    },0);
+    if(total>=0.1)last=date;
+  });
+  return last;
+}
+// Sort comparator: by current total desc, tiebreak (eliminated players) by
+// most-recent last-alive date so elimination order is reflected in the standings.
+function standingsCmp(a,b){
+  if(Math.abs(b.total-a.total)>0.001)return b.total-a.total;
+  return (b.lastAlive||'').localeCompare(a.lastAlive||'');
+}
 function buildStandings(odds,histData){
   var pool=getActivePool();if(!pool)return"";
   var ranks=["1st","2nd","3rd","4th","5th","6th","7th","8th"];
   var totals=pool.players.map(function(p,i){
     var total=0;p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
     var alive=p.teams.filter(function(t){return parseFloat((odds[t]||"0%").replace("%",""))>=0.1;}).length;
-    return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,alive:alive};
-  }).sort(function(a,b){return b.total-a.total;});
+    return{name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,alive:alive,lastAlive:playerLastAliveDate(histData,p.teams)};
+  }).sort(standingsCmp);
   var me=getMyPlayer();
   var hint=!me?' <span style="font-size:9px;opacity:0.4;font-weight:400;letter-spacing:0">· tap to personalize</span>':'';
   return '<div class="standings"><div class="stitle"><div>Pool standings — combined cup odds'+hint+'</div>'+
@@ -3622,12 +3668,13 @@ function buildStandings(odds,histData){
       var abbrev=(p.abbrev||'').toUpperCase();
       var isMe=me&&abbrev===me.toUpperCase();
       var allElim=p.alive===0;
+      var isWinner=p.total>=99.95;
       var teamsList=p.teams.map(function(t){
         return parseFloat((odds[t]||"0%").replace("%",""))<0.1?'<span style="text-decoration:line-through;opacity:0.4">'+t+'</span>':t;
       }).join(" · ");
       var elimStyle=allElim?';opacity:0.65;border-color:rgba(255,255,255,0.06)':'';
       return '<div class="scard'+(i===0?" first":"")+(isMe?" me-card":"")+'" onclick="setMyPlayer(\''+esc(abbrev)+'\')" style="cursor:pointer;position:relative'+(isMe?';box-shadow:0 0 0 1.5px '+pc.color:'')+elimStyle+'">'+
-        (allElim?'<div style="position:absolute;top:6px;left:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(239,68,68,0.15);color:#f87171">OUT</div>':'')+
+        (isWinner?'<div style="position:absolute;top:6px;left:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(251,191,36,0.18);color:#fbbf24">🏆 Winner</div>':allElim?'<div style="position:absolute;top:6px;left:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:rgba(239,68,68,0.15);color:#f87171">OUT</div>':'')+
         (isMe?'<div class="you-badge" style="position:absolute;top:6px;right:6px;font-size:7px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:2px 5px;border-radius:4px;background:var(--surface2);color:var(--muted)">you</div>':'')+
         (allElim?'':buildStreakBadge(histData,p.teams,p.total))+
         '<div class="srank">'+ranks[i]+'</div>'+
@@ -3637,6 +3684,59 @@ function buildStandings(odds,histData){
         buildPlayerSparkline(histData,p.teams,null,p.total)+'</div>'+buildPathToCup(p.teams,odds,pc.color)+
         '<div class="steams">'+teamsList+'</div>'+
         '<div style="font-size:9px;color:var(--muted);margin-top:2px">'+p.alive+'/'+p.teams.length+'</div></div>';}).join("")+'</div></div>';
+}
+
+// ─── WINNER CELEBRATION ──────────────────────────────────────────────────────
+// One-time full-screen confetti + congrats when a player reaches 100%.
+// Keyed per pool + winner so it only ever fires once.
+var _WIN_QUIPS=[
+  'Now hopefully everyone actually pays up. 💸',
+  'Time to collect those debts — e-transfers, please and thank you. 🤝',
+  'Screenshot this before anyone "forgets" they owe you. 📸',
+  'The bragging rights are yours. The cash, hopefully, is next. 🏒',
+  'Go ahead, gloat in the group chat. You earned it. 😎',
+  'Start your sentences with "well, as the champion..." for the next year. 🏆'
+];
+function maybeShowWinnerCelebration(totals,pool){
+  try{
+    if(!pool||!totals||!totals.length)return;
+    if(window._pwaOverlayActive||_tourActive)return;
+    var w=totals.find(function(p){return p.total>=99.95;});
+    if(!w)return;
+    var poolId=pool.id||pool.title||'pool';
+    var key='winCelebrated_'+poolId+'_'+(w.abbrev||w.name);
+    if(localStorage.getItem(key))return;
+    localStorage.setItem(key,'1');
+    showWinnerCelebration(w.name,pool.title||'Playoff Pool');
+  }catch(e){}
+}
+function showWinnerCelebration(name,poolTitle){
+  var overlay=document.createElement('div');
+  overlay.id='win-celebration';
+  overlay.style.cssText='position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 40%,rgba(251,191,36,0.12),rgba(5,8,14,0.92) 70%);opacity:0;transition:opacity .4s ease;overflow:hidden';
+  // confetti
+  var colors=['#fbbf24','#f87171','#4ade80','#60a5fa','#c084fc','#f9fafb','#fb923c'];
+  var pieces='';
+  for(var i=0;i<140;i++){
+    var c=colors[Math.floor(Math.random()*colors.length)];
+    var left=Math.random()*100;
+    var w=5+Math.random()*7, h=8+Math.random()*10;
+    var dur=2.6+Math.random()*2.4, delay=Math.random()*2.5;
+    var round=Math.random()<0.3?'border-radius:50%':'';
+    pieces+='<div class="confetti-pc" style="left:'+left+'vw;width:'+w+'px;height:'+h+'px;background:'+c+';'+round+';animation:confetti-fall '+dur.toFixed(2)+'s linear '+delay.toFixed(2)+'s infinite"></div>';
+  }
+  var quip=_WIN_QUIPS[Math.floor(Math.random()*_WIN_QUIPS.length)];
+  overlay.innerHTML=pieces+
+    '<div style="position:relative;z-index:1;max-width:340px;text-align:center;background:linear-gradient(160deg,rgba(30,36,48,0.96),rgba(15,20,30,0.96));border:1.5px solid #fbbf24;border-radius:20px;padding:30px 24px 24px;box-shadow:0 0 40px rgba(251,191,36,0.35);animation:win-pop .5s cubic-bezier(0.2,0.8,0.3,1.2) both">'+
+      '<div style="font-size:60px;line-height:1;animation:win-trophy 1.4s ease-in-out infinite;display:inline-block">🏆</div>'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#fbbf24;margin-top:14px">Champion</div>'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:34px;line-height:1.05;color:#f9fafb;margin-top:4px">Congrats '+esc(name)+'!</div>'+
+      '<div style="font-size:14px;color:#cbd5e1;margin-top:12px;line-height:1.45">You won the <b style="color:#fbbf24">'+esc(poolTitle)+'</b> 2026 NHL Playoff Pool.</div>'+
+      '<div style="font-size:13px;color:#94a3b8;margin-top:10px;line-height:1.45;font-style:italic">'+quip+'</div>'+
+      '<button onclick="(function(){var o=document.getElementById(\'win-celebration\');if(o){o.style.opacity=\'0\';setTimeout(function(){o.remove();},400);}})()" style="margin-top:22px;width:100%;padding:12px;border:none;border-radius:12px;background:#fbbf24;color:#1a1206;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:16px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">🎉 Let\'s Go</button>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){overlay.style.opacity='1';});
 }
 
 
@@ -3862,8 +3962,8 @@ async function doRender(){
     var pieTotals2=(activePool?activePool.players:[]).map(function(p,i){
       var total=0;
       p.teams.forEach(function(t){total+=parseFloat((odds[t]||"0%").replace("%",""));});
-      return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null};
-    }).sort(function(a,b){return b.total-a.total;});
+      return {name:p.name,abbrev:p.abbrev||p.name.substring(0,3),total:total,teams:p.teams,ci:i,color:p.color||null,lastAlive:playerLastAliveDate(historyData,p.teams)};
+    }).sort(standingsCmp);
     var pieSvg = buildPieChart(pieTotals2,ALL_COLORS);
     _makerState = {pieTotals:pieTotals2, pieSvg:pieSvg, odds:odds, roundOdds:roundOdds, historyData:historyData, parsed:parsed, gamesData:gamesRaw, deltaMap:deltaMap, pool:getActivePool(), leaders:leaders, goalies:goalies, elimRound:elimRound};
     // cache standings snapshot for My Pools display
@@ -3898,6 +3998,7 @@ async function doRender(){
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
     initTour();
+    maybeShowWinnerCelebration(pieTotals2,getActivePool());
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
     document.getElementById("sub").textContent="Failed to load";
