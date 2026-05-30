@@ -1164,7 +1164,9 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
     var scfSpark=(_sg.length>0)?dualSpark:''; // only show sparkline once SCF schedule is set
     return '<div class="series scf-hero'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')">'
       +'<div class="sh">'+liveDot+'Stanley Cup Final'+badge+'</div>'
-      +'<div style="display:flex;align-items:center;padding:14px 14px 16px;gap:10px">'+scfLeft+scfCenter+scfRight+'</div>'
+      +'<div style="display:flex;align-items:center;padding:14px 14px 16px;gap:10px;position:relative;overflow:hidden">'
+        +'<img src="https://assets.nhle.com/logos/playoffs/png/scp-20252026-cup.png" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);height:140%;opacity:0.12;pointer-events:none;user-select:none">'
+        +scfLeft+scfCenter+scfRight+'</div>'
       +'<div class="series-games'+(scfAutoOpen?' open':'')+'" id="sg-'+sid+'">'
         +(scfSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\',4)" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+scfSpark+'</div>':'')
         +buildSeriesGames(t1,t2,gd)
