@@ -1117,42 +1117,42 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   // ── Stanley Cup Final: side-by-side hero layout ─────────────────────────
   if (roundNum === 4) {
     var scfAutoOpen = w1>0||w2>0; // only auto-open once series has started
-    var bLogo1='<img style="width:40px;height:40px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
-    var bLogo2=t2isTBD?'':'<img style="width:40px;height:40px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
-    var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:8px;min-width:0">'
+    var bLogo1='<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
+    var bLogo2=t2isTBD?'':'<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
+    var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">'
       +makePill(t1)+bLogo1
       +'<div style="min-width:0">'
-        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+t1+(t1won?' 🏆':'')+'</div>'
-        +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o1+'</span></div>':'')
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+t1+(t1won?' 🏆':'')+'</div>'
+        +(o1?'<div style="display:flex;align-items:center;gap:2px">'+deltaBadge(d1)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#9ca3af">'+o1+'</span></div>':'')
       +'</div></div>';
     var scfRight=t2isTBD
       ?(s.pendingBottom?(function(){
           var pa=s.pendingBottom[0],pb=s.pendingBottom[1];
           var pctA=(roundOdds&&roundOdds[pa]&&roundOdds[pa].r4)||'';
           var pctB=(roundOdds&&roundOdds[pb]&&roundOdds[pb].r4)||'';
-          var lgA='<img style="width:24px;height:24px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pa+'_'+logoSfx(pa)+'.svg" onerror="this.style.display=\'none\'">';
-          var lgB='<img style="width:24px;height:24px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pb+'_'+logoSfx(pb)+'.svg" onerror="this.style.display=\'none\'">';
-          return '<div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:4px;opacity:0.85">'
+          var lgA='<img style="width:30px;height:30px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pa+'_'+logoSfx(pa)+'.svg" onerror="this.style.display=\'none\'">';
+          var lgB='<img style="width:30px;height:30px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+pb+'_'+logoSfx(pb)+'.svg" onerror="this.style.display=\'none\'">';
+          return '<div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:5px;opacity:0.85">'
             +makePill(pa)
             +'<div style="display:flex;flex-direction:column;align-items:flex-start;gap:1px">'
-              +'<div style="display:flex;align-items:center;gap:3px">'+lgA+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700">'+pa+'</span></div>'
-              +(pctA?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af;padding-left:2px">'+pctA+'</span>':'')
+              +'<div style="display:flex;align-items:center;gap:4px">'+lgA+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:700">'+pa+'</span></div>'
+              +(pctA?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af;padding-left:2px">'+pctA+'</span>':'')
             +'</div>'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;color:var(--muted);opacity:0.35;flex-shrink:0">/</span>'
+            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;color:var(--muted);opacity:0.35;flex-shrink:0">/</span>'
             +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">'
-              +'<div style="display:flex;align-items:center;gap:3px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700">'+pb+'</span>'+lgB+'</div>'
-              +(pctB?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#9ca3af;padding-right:2px">'+pctB+'</span>':'')
+              +'<div style="display:flex;align-items:center;gap:4px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:700">'+pb+'</span>'+lgB+'</div>'
+              +(pctB?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af;padding-right:2px">'+pctB+'</span>':'')
             +'</div>'
             +makePill(pb)
             +'</div>';
         })()
         :'<div style="flex:1;display:flex;align-items:center;justify-content:flex-end"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:18px;color:var(--muted);opacity:0.35;letter-spacing:1px">TBD</span></div>'
       )
-      :'<div style="flex:1;display:flex;align-items:center;gap:8px;flex-direction:row-reverse;min-width:0">'
+      :'<div style="flex:1;display:flex;align-items:center;gap:10px;flex-direction:row-reverse;min-width:0">'
         +makePill(t2)+bLogo2
         +'<div style="min-width:0;text-align:right">'
-          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:20px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?' 🏆':'')+t2+'</div>'
-          +(o2?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">'+deltaBadge(d2)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;color:#9ca3af">'+o2+'</span></div>':'')
+          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?' 🏆':'')+t2+'</div>'
+          +(o2?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">'+deltaBadge(d2)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#9ca3af">'+o2+'</span></div>':'')
         +'</div></div>';
     var scfCenter=(w1>0||w2>0)
       ?'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;flex-shrink:0;padding:0 6px">'
@@ -1164,7 +1164,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
     var scfSpark=(_sg.length>0)?dualSpark:''; // only show sparkline once SCF schedule is set
     return '<div class="series scf-hero'+(live?' live-series':'')+'" onclick="toggleSeriesGames(\''+sid+'\')">'
       +'<div class="sh">'+liveDot+'Stanley Cup Final'+badge+'</div>'
-      +'<div style="display:flex;align-items:center;padding:10px 12px 12px;gap:8px">'+scfLeft+scfCenter+scfRight+'</div>'
+      +'<div style="display:flex;align-items:center;padding:14px 14px 16px;gap:10px">'+scfLeft+scfCenter+scfRight+'</div>'
       +'<div class="series-games'+(scfAutoOpen?' open':'')+'" id="sg-'+sid+'">'
         +(scfSpark?'<div onclick="event.stopPropagation();showSeriesSparklineDetailMaker(\''+t1+'\',\''+t2+'\',4)" style="cursor:pointer;border-radius:8px 8px 0 0;transition:background .15s" onmouseenter="this.style.background=\'rgba(255,255,255,0.04)\'" onmouseleave="this.style.background=\'\'">'+scfSpark+'</div>':'')
         +buildSeriesGames(t1,t2,gd)
