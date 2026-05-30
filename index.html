@@ -92,6 +92,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 .series{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
 .series.live-series{border-color:#f87171;box-shadow:0 0 0 1px #f8717133;}
 .series.scf-hero{border-color:rgba(251,191,36,0.4);box-shadow:0 0 0 1px rgba(251,191,36,0.08),0 4px 24px rgba(251,191,36,0.12);}
+.scf-goals-scroll::-webkit-scrollbar{display:none;}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.7)}}
 .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f87171;margin-right:4px;animation:pulse-dot 1.2s ease-in-out infinite;vertical-align:middle;flex-shrink:0;}
 .team-odds-row.my-team{border-left:3px solid;background:rgba(255,255,255,0.03);}
@@ -1906,14 +1907,13 @@ function buildMiniWinChartM(timeline,goals){
     +'<circle cx="'+tx(last.t).toFixed(1)+'" cy="'+ty(last.wp).toFixed(1)+'" r="2.5" fill="#3b82f6" stroke="#0d1117" stroke-width="1.5"/>'
     +'</svg>';
 }
+var _SCF_TC={CAR:'#CC0000',VGK:'#B4975A',MTL:'#AF1E2D',BUF:'#003087',COL:'#6F263D',MIN:'#154734',DAL:'#006847',EDM:'#FF4C00',TBL:'#002868',BOS:'#FFB81C',LAK:'#111111',PHI:'#F74902',OTT:'#C52032',UTA:'#69B3E7',PIT:'#FCB514',ANA:'#F47A38'};
 function buildSCFLiveStats(data,away,home){
   if(!data)return'';
   var c=data.current||{};
   var hwp=c.homeWinProb!=null?Math.round(c.homeWinProb*100):null,awp=hwp!=null?100-hwp:null;
-  var shots=data.shots||[];
-  var awaySOG=shots.filter(function(s){return s.team==='A'&&(s.event==='S'||s.event==='G');}).length;
-  var homeSOG=shots.filter(function(s){return s.team==='H'&&(s.event==='S'||s.event==='G');}).length;
   var chart=buildMiniWinChartM(data.timeline||[],data.goals||[]);
+  // Win % + chart (untouched — perfect)
   var winSection='';
   if(chart&&hwp!=null){
     winSection='<div style="padding:10px 12px 0">'
@@ -1923,14 +1923,7 @@ function buildSCFLiveStats(data,away,home){
         +'<div style="display:flex;align-items:center;gap:4px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:#60a5fa">'+hwp+'%</span>'+makePill(home)+'</div>'
       +'</div>'+chart+'</div>';
   }
-  var sogSection='';
-  if(awaySOG||homeSOG){
-    sogSection='<div style="display:flex;align-items:center;padding:6px 12px;border-top:1px solid rgba(255,255,255,0.05)">'
-      +'<div style="display:flex;align-items:center;gap:4px">'+makePill(away)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700">'+awaySOG+'</span></div>'
-      +'<span style="flex:1;text-align:center;font-size:9px;color:#6b7280;letter-spacing:1px;text-transform:uppercase">shots on goal</span>'
-      +'<div style="display:flex;align-items:center;gap:4px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:15px;font-weight:700">'+homeSOG+'</span>'+makePill(home)+'</div>'
-    +'</div>';
-  }
+  // Scoring summary
   var goals=data.goals||[];
   var cells=goals.map(function(g,gi){
     var prev=gi>0?goals[gi-1]:null;
@@ -1939,36 +1932,50 @@ function buildSCFLiveStats(data,away,home){
     var pStart=g.t<1200?0:g.t<2400?1200:g.t<3600?2400:3600;
     var pName=g.t<1200?'1ST':g.t<2400?'2ND':g.t<3600?'3RD':'OT';
     var ps=g.t-pStart;
-    var tStr=String(Math.floor(ps/60)).padStart(2,'0')+':'+String(Math.round(ps%60)).padStart(2,'0')+' '+pName;
-    var dp=(g.desc||'').split('\n'),scorer=dp[0]||'',assists=dp[1]||'';
-    var aS=homeScored?'<span style="color:#6b7280">'+g.awayGoals+'</span>':'<span style="color:#f9fafb;font-weight:700">'+g.awayGoals+'</span>';
-    var hS=homeScored?'<span style="color:#f9fafb;font-weight:700">'+g.homeGoals+'</span>':'<span style="color:#6b7280">'+g.homeGoals+'</span>';
-    var _hsUrl=g.scorerId&&g.scorerTeam?'https://assets.nhle.com/mugs/nhl/20252026/'+g.scorerTeam+'/'+g.scorerId+'.png':'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg';
-    var lg='<img style="width:32px;height:32px;object-fit:cover;border-radius:50%;flex-shrink:0;margin-top:1px;background:rgba(255,255,255,0.06)" src="'+_hsUrl+'" onerror="this.src=\'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg\'">';
-    return'<div style="flex-shrink:0;width:158px;background:rgba(255,255,255,0.03);border-radius:9px;border:1px solid rgba(255,255,255,0.07);padding:8px;display:flex;gap:7px;align-items:flex-start">'
-      +lg+'<div style="min-width:0;flex:1">'
-        +'<div style="margin-bottom:3px">'+makePill(team)+'</div>'
-        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(scorer)+'</div>'
-        +(assists?'<div style="font-size:10px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2">'+esc(assists)+'</div>':'')
-        +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px">'
-          +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px">'+aS+'<span style="opacity:0.2;margin:0 2px">·</span>'+hS+'</div>'
-          +'<div style="font-size:9px;color:#6b7280">'+tStr+'</div>'
-        +'</div>'
-      +'</div></div>';
+    var tStr=String(Math.floor(ps/60)).padStart(2,'0')+':'+String(Math.round(ps%60)).padStart(2,'0')+' · '+pName;
+    // Fix <br>Assists: parsing
+    var dp=(g.desc||'').split('<br>');
+    var scorer=dp[0]||'';
+    var assists=(dp[1]||'').replace(/^Assists:\s*/i,'');
+    // Score line — bold the scoring team name + score
+    var aLabel=homeScored?'<span style="color:#6b7280">'+away+' '+g.awayGoals+'</span>':'<span style="color:#f9fafb;font-weight:700">'+away+' '+g.awayGoals+'</span>';
+    var hLabel=homeScored?'<span style="color:#f9fafb;font-weight:700">'+home+' '+g.homeGoals+'</span>':'<span style="color:#6b7280">'+home+' '+g.homeGoals+'</span>';
+    // Headshot with team color circle bg
+    var _tc=_SCF_TC[g.scorerTeam||team]||'rgba(255,255,255,0.08)';
+    var _hsUrl=g.scorerId&&g.scorerTeam?'https://assets.nhle.com/mugs/nhl/20252026/'+g.scorerTeam+'/'+g.scorerId+'.png':'';
+    var headshot='<div style="width:56px;height:56px;border-radius:50%;overflow:hidden;flex-shrink:0;background:'+_tc+'">'
+      +(_hsUrl?'<img style="width:100%;height:100%;object-fit:contain;display:block" src="'+_hsUrl+'" onerror="this.style.opacity=0">':'')
+      +'</div>';
+    return'<div style="flex-shrink:0;width:240px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid rgba(255,255,255,0.07);padding:10px 12px;display:flex;align-items:center;gap:10px">'
+      +headshot
+      +'<div style="min-width:0;flex:1">'
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:14px;font-weight:900;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#f9fafb">'+scorer+'</div>'
+        +(assists?'<div style="font-size:11px;color:#9ca3af;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">'+assists+'</div>':'<div style="height:14px"></div>')
+        +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;line-height:1.3;margin-top:1px">'+aLabel+' – '+hLabel+' <span style="color:#4b5563">('+tStr+')</span></div>'
+      +'</div>'
+      +makePill(team)
+      +'</div>';
   }).join('');
   var scoringSection=goals.length
     ?'<div style="border-top:1px solid rgba(255,255,255,0.05);padding:10px 12px 12px">'
-      +'<div style="font-size:9px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:\'Barlow Condensed\',sans-serif">Scoring</div>'
-      +'<div style="display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">'+cells+'</div>'
+      +'<div style="font-size:9px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-family:\'Barlow Condensed\',sans-serif">Goals</div>'
+      +'<div class="scf-goals-scroll" style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:1px">'+cells+'</div>'
     +'</div>':'';
-  return(winSection||sogSection||scoringSection)
-    ?'<div style="border-top:1px solid rgba(255,255,255,0.08)">'+winSection+sogSection+scoringSection+'</div>':'';
+  return(winSection||scoringSection)
+    ?'<div style="border-top:1px solid rgba(255,255,255,0.08)">'+winSection+scoringSection+'</div>':'';
 }
 async function injectSCFStats(gameId,away,home,season){
   var el=document.getElementById('scf-live-stats');if(!el)return;
   try{
     var data=await fetch(ODDS_API+'?action=mpGame&id='+gameId+'&season='+season,{cache:'no-store'}).then(function(r){return r.json();});
     el.innerHTML=buildSCFLiveStats(data,away,home);
+    // Inject SOG into score area placeholders
+    var shots=data.shots||[];
+    var awaySOG=shots.filter(function(s){return s.team==='A'&&(s.event==='S'||s.event==='G');}).length;
+    var homeSOG=shots.filter(function(s){return s.team==='H'&&(s.event==='S'||s.event==='G');}).length;
+    var aEl=document.getElementById('scf-sog-'+away),hEl=document.getElementById('scf-sog-'+home);
+    if(aEl)aEl.textContent=awaySOG+' SOG';
+    if(hEl)hEl.textContent=homeSOG+' SOG';
   }catch(e){console.warn('SCF stats failed',e);}
 }
 function buildDualBarM(label,leftPct,rightPct,leftTeam,rightTeam,lColor,rColor){
@@ -3815,10 +3822,11 @@ async function doRender(){
         }
         // Team blocks
         var _mkT=function(team){
-          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">'
+          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">'
             +makePill(team)
             +'<img style="width:60px;height:60px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">'
             +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px">'+team+'</span>'
+            +'<span id="scf-sog-'+team+'" style="font-size:10px;color:#4b5563;letter-spacing:.3px"></span>'
             +'</div>';
         };
         // Center: score or VS
