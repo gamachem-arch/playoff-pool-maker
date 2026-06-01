@@ -2599,7 +2599,7 @@ function augmentPartialR2(series, s1, s2) {
   return out;
 }
 
-function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
+function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact, round) {
   if (s && s.isPredicted) {
     var pt1 = s.topTeam === 'TBD' ? '?' : s.topTeam;
     var pt2 = s.bottomTeam === 'TBD' ? '?' : s.bottomTeam;
@@ -2651,6 +2651,27 @@ function buildBracketCard(s, gamesData, isLarge, shareMode, isCompact) {
   }
   var gamesHtml = (!shareMode && gamesData) ? buildBracketGames(t1, t2, gamesData) : '';
   var clickAttr = (!shareMode && gamesHtml) ? ' onclick="toggleBracketCard(this)"' : '';
+  // SCF hero card: "big" style with rotated logo watermark + Barlow 900 name
+  if (round === 4 && t2 && t2 !== 'TBD' && !(t1 && t1.includes('/')) && !(t2 && t2.includes('/'))) {
+    function bcHeroRow(team, wins, oppWins, pill, color, borderTop) {
+      var won = wins === 4, lost = oppWins === 4, lead = wins > oppWins;
+      var sm = '<img style="width:30px;height:30px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/' + team + '_' + logoSfx(team) + '.svg" onerror="this.style.display=\'none\'">';
+      var bg = '<img src="https://assets.nhle.com/logos/nhl/svg/' + team + '_' + logoSfx(team) + '.svg" style="position:absolute;left:-60px;top:50%;transform:translateY(-50%) rotate(-10deg);height:340%;opacity:0.07;pointer-events:none;user-select:none;-webkit-mask-image:linear-gradient(to right, black 30%, transparent 90%);mask-image:linear-gradient(to right, black 30%, transparent 90%)">';
+      return '<div style="position:relative;overflow:hidden;padding:9px 10px;border-left:2px solid ' + (color || 'transparent') + (borderTop ? ';border-top:1px solid var(--border)' : '') + '">'
+        + bg
+        + '<div style="position:relative;z-index:1;display:flex;align-items:center;gap:6px">'
+          + pill + sm
+          + '<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:16px;font-weight:900;letter-spacing:0.3px;flex:1;min-width:0' + (lost ? ';opacity:0.3;text-decoration:line-through' : won ? ';color:#4ade80' : '') + '">' + team + (won ? ' <span style="font-size:11px;vertical-align:middle">🏆</span>' : '') + '</div>'
+          + '<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;flex-shrink:0;color:' + (lead ? '#4ade80' : 'var(--muted)') + '">' + wins + '</span>'
+        + '</div>'
+        + '</div>';
+    }
+    return '<div class="bc-card bc-card-lg' + (live ? ' bc-live' : '') + '"' + clickAttr + '>'
+      + bcHeroRow(t1, w1, w2, p1pill, c1, false)
+      + bcHeroRow(t2, w2, w1, p2pill, c2, true)
+      + (gamesHtml ? '<div class="bc-games-wrap">' + gamesHtml + '</div>' : '')
+      + '</div>';
+  }
   var t1win = w1 === 4, t2win = w2 === 4;
   var t1isPred = t1 && t1.includes('/');
   var t2isTBD = !t2 || t2 === 'TBD';
@@ -2708,8 +2729,8 @@ function buildBracket(shareMode) {
   var cw2 = ar === 2 ? 'flex:1;width:auto' : (ar > 2 ? 'width:60px' : '');
   var cw3 = ar > 3 ? 'width:60px;flex:none' : '';
   var cw4 = ar === 4 ? 'width:160px;flex:none;align-items:stretch' : '';
-  function c(s, round) { return buildBracketCard(s, gd, ar===round, shareMode, round < ar); }
-  function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1 && window.innerWidth <= 640); }
+  function c(s, round) { return buildBracketCard(s, gd, ar===round, shareMode, round < ar, round); }
+  function cl(s) { return buildBracketCard(s, gd, ar===1, shareMode, ar > 1 && window.innerWidth <= 640, 1); }
 
   var shareBtn = shareMode ? '' : '<button onclick="showBracketShareOverlay()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:var(--muted);font-family:Inter,sans-serif;font-size:10px;padding:3px 8px;border-radius:8px;cursor:pointer">📸</button>';
   return '<div class="bracket-wrap">'
