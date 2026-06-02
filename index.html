@@ -344,16 +344,85 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-lb-ptl { font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
   .brk-empty { text-align:center; color:var(--muted); padding:30px 16px; font-size:13px; line-height:1.6; }
 
-  /* View All — same full series cells, laid out as a pannable bracket (scroll x + y) */
-  .brk-va { overflow:auto; -webkit-overflow-scrolling:touch; max-height:78vh; border:1px solid rgba(255,255,255,0.07);
-    border-radius:14px; background:rgba(0,0,0,0.18); }
-  .brk-va-flow { display:flex; gap:22px; padding:16px; width:max-content; align-items:stretch; }
-  .brk-va-col { display:flex; flex-direction:column; width:300px; flex:0 0 300px; }
-  .brk-va-h { position:sticky; top:0; z-index:2; text-align:center; font-family:'Barlow Condensed',sans-serif;
-    font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#9ca3af;
-    padding:4px 0 10px; background:linear-gradient(180deg,var(--bg) 65%,transparent); }
-  .brk-va-stack { flex:1; display:flex; flex-direction:column; justify-content:flex-start; gap:14px; }
-  .brk-va-stack > .brk-cell { margin-bottom:0; width:100%; }
+  /* View All — NCAA-style horizontal bracket: compact match cards in space-around round columns.
+     Horizontal scroll lives on the strip; vertical is the normal page scroll (seamless). */
+  .brk-bscroll { overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch; padding:4px 2px 8px; margin:0 -4px; }
+  .brk-bracket { display:flex; gap:14px; min-width:max-content; align-items:stretch; padding:2px; }
+  .brk-rcol { display:flex; flex-direction:column; min-width:226px; width:226px; }
+  .brk-rbody { flex:1; display:flex; flex-direction:column; }
+  .brk-cwrap { flex:1; display:flex; align-items:center; padding:7px 0; }   /* equal bands → bracket centering */
+  .brk-cwrap > * { width:100%; }
+  .brk-rhead { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:12px; letter-spacing:1.5px;
+    text-transform:uppercase; color:var(--muted); text-align:center; line-height:1.2; }
+  .brk-rhead span { display:block; font-size:9px; font-weight:600; letter-spacing:.5px; color:#4b5563; }
+  .brk-cuplogo { width:74px; display:block; margin:4px auto 2px; }
+  .brk-match { background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:11px; overflow:hidden; cursor:pointer; }
+  .brk-match.final { border-color:rgba(251,191,36,0.4); }
+  .brk-match.bad { border-color:rgba(239,68,68,0.5); }
+  .brk-mrow { display:flex; align-items:center; gap:6px; padding:8px 9px; }
+  .brk-mrow + .brk-mrow { border-top:1px solid rgba(255,255,255,0.07); }
+  .brk-mlogo { width:22px; height:22px; object-fit:contain; flex:none; }
+  .brk-mnm { font-family:'Barlow Condensed',sans-serif; font-weight:600; font-size:16px; flex:none;
+    white-space:nowrap; line-height:1.05; }
+  .brk-smk { font-size:12px; font-weight:900; flex:none; }
+  .brk-smk.ok { color:#22c55e; } .brk-smk.bad { color:#ef4444; } .brk-smk.aw { color:#fbbf24; }
+  .brk-pgames { display:flex; gap:2px; margin-left:auto; }
+  .brk-pcell { width:14px; height:17px; border-radius:3px; border:1px solid rgba(255,255,255,0.09);
+    background:rgba(255,255,255,0.02); display:flex; align-items:center; justify-content:center;
+    font-size:9px; font-weight:900; color:#fff; flex:none; }
+  .brk-pcell.on { background:var(--pc); border-color:var(--pc); }
+  .brk-pcell.ok { box-shadow:0 0 0 1.5px #22c55e; }
+  .brk-pcell.bad { opacity:.55; box-shadow:0 0 0 1.5px #ef4444; }
+  .brk-pcell.ph { opacity:.28; }
+  .brk-msc { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; min-width:16px;
+    text-align:right; color:var(--muted); flex:none; margin-left:6px; }
+  .brk-msc.w { color:#f9fafb; }
+  .brk-mrow.tbd .brk-mnm { color:#4b5563; font-style:italic; font-weight:500; }
+  .brk-mrow.pick { background:linear-gradient(90deg,var(--tcbg),transparent); box-shadow:inset 3px 0 0 var(--tc); }
+  .brk-mrow.pick .brk-mnm { color:#fff; font-weight:800; }
+  .brk-mrow.correct { background:linear-gradient(90deg,rgba(34,197,94,0.15),transparent); box-shadow:inset 3px 0 0 var(--tc); }
+  .brk-mrow.correct .brk-mnm { color:#fff; font-weight:800; }
+  .brk-mrow.correct .brk-mmark { color:#22c55e; }
+  .brk-mrow.correct .brk-msc { color:#f9fafb; }
+  .brk-mrow.wrong .brk-mnm { color:#fecaca; text-decoration:line-through; opacity:.65; }
+  .brk-mrow.wrong .brk-mmark { color:#ef4444; }
+  .brk-mrow.actualwin .brk-mmark { color:#fbbf24; }
+  .brk-mrow.actualwin .brk-mnm { color:#f9fafb; }
+  .brk-mrow.actualwin .brk-msc { color:#fbbf24; }
+  .brk-mstrip { display:flex; align-items:center; gap:5px; padding:6px 9px;
+    background:linear-gradient(90deg,rgba(251,191,36,0.12),transparent); border-top:1px solid rgba(255,255,255,0.07); }
+  .brk-mstrip img { width:16px; height:16px; object-fit:contain; flex:none; }
+  .brk-mstrip .nm { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:13px; }
+  .brk-mstrip .tag { font-size:8px; text-transform:uppercase; letter-spacing:.5px; color:#fbbf24; font-weight:700; }
+  .brk-mstrip .sc { margin-left:auto; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:12px; color:var(--muted); }
+  .brk-champ { display:flex; align-items:center; gap:12px; margin:12px 2px 4px; padding:12px 14px;
+    background:linear-gradient(135deg,rgba(251,191,36,0.12),transparent); border:1px solid rgba(251,191,36,0.3); border-radius:14px; }
+  .brk-champ img { width:40px; height:40px; object-fit:contain; }
+  .brk-champ-l { font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:10px; letter-spacing:1.3px;
+    text-transform:uppercase; color:#fbbf24; }
+  .brk-champ-name { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:24px; line-height:1; color:#f9fafb; }
+  .brk-champ-t { margin-left:auto; font-size:26px; }
+  .brk-vtoggle { display:flex; align-items:center; gap:5px; justify-content:flex-end; margin:0 2px 8px; }
+  .brk-vtoggle span { font-size:10px; letter-spacing:.5px; text-transform:uppercase; color:#4b5563; margin-right:2px; }
+  .brk-vtoggle button { padding:5px 11px; border-radius:8px; border:1px solid rgba(255,255,255,0.1);
+    background:rgba(255,255,255,0.03); color:var(--muted); font-family:Inter,sans-serif; font-size:11px; font-weight:600; cursor:pointer; }
+  .brk-vtoggle button.on { background:#3b82f6; border-color:#3b82f6; color:#fff; }
+  /* "Full grids" = a trimmed medium: the real per-team game grid, minus watermark/label/footer/reset chrome */
+  .brk-bscroll.full .brk-rcol { min-width:284px; width:284px; }
+  .brk-bscroll.full .brk-cell { margin-bottom:0; width:100%; padding:8px 9px; }
+  .brk-bscroll.full .brk-cell-label,
+  .brk-bscroll.full .brk-foot { display:none; }
+  /* winner watermark — Big-style: a faint edge of the logo peeks in from the left, tilted -10° */
+  .brk-bscroll.full .brk-wm { left:-38px; right:auto; height:215%; max-height:180px; opacity:0.07;
+    transform:translateY(-50%) rotate(-10deg);
+    -webkit-mask-image:linear-gradient(to right, black 12%, transparent 82%); mask-image:linear-gradient(to right, black 12%, transparent 82%); }
+  .brk-bscroll.full .brk-trow { gap:5px; }
+  .brk-bscroll.full .brk-tlogo { width:26px; height:26px; }
+  .brk-bscroll.full .brk-tname { font-size:17px; }
+  .brk-bscroll.full .brk-tname { width:52px; flex:none; }   /* fixed so both rows' grids start at the same x */
+  .brk-bscroll.full .brk-games { gap:3px; margin-left:0; }  /* left-align: grid length = series length */
+  .brk-bscroll.full .brk-gcell { width:18px; height:23px; }
+  .brk-bscroll.full .brk-wins { font-size:26px; min-width:20px; margin-left:auto; flex:none; }  /* score pinned far right */
 
   /* brk-mode: reclaim the top of the screen when a bracket pool is active */
   body.brk-mode .header .eyebrow { display:none; }
@@ -4602,7 +4671,7 @@ var BRK_TC={ANA:'#F47A38',BOS:'#FFB81C',BUF:'#003087',CGY:'#D2001C',CAR:'#CC0000
 function brkTC(team){return BRK_TC[team]||'#6b7280';}
 function brkTeamWM(team,extra){return '<img class="brk-wm" src="'+brkLogo(team)+'" style="'+(extra||'')+'" onerror="this.style.display=\'none\'">';}
 
-var BRK={view:'picker', tab:0, viewAll:false, parsed:null, games:null, odds:{}, actual:{},
+var BRK={view:'picker', tab:0, viewAll:false, treeFull:false, parsed:null, games:null, odds:{}, actual:{},
   entries:[], allEntries:null, lbScope:'group', viewFilter:null, changeId:false, pollTimer:null, loaded:false};
 
 /* ---- small helpers ---- */
@@ -4798,10 +4867,10 @@ function brkShowContainer(){
 }
 function brkPaint(){
   var wrap=document.getElementById('brk-wrap');if(!wrap)return;
-  // preserve the View All pan position across re-renders (live poll, pick taps)
-  var oldVa=wrap.querySelector('.brk-va'),sl=oldVa?oldVa.scrollLeft:0,st=oldVa?oldVa.scrollTop:0;
+  // preserve the View All horizontal scroll across re-renders (live poll, pick taps)
+  var oldVa=wrap.querySelector('.brk-bscroll'),sl=oldVa?oldVa.scrollLeft:0;
   wrap.innerHTML=brkSubnavHtml()+(BRK.view==='board'?brkBoardHtml():brkPickerHtml());
-  var newVa=wrap.querySelector('.brk-va');if(newVa){newVa.scrollLeft=sl;newVa.scrollTop=st;}
+  var newVa=wrap.querySelector('.brk-bscroll');if(newVa){newVa.scrollLeft=sl;}
 }
 function brkGo(v){BRK.view=v;BRK.viewFilter=null;brkPaint();}
 
@@ -5035,20 +5104,74 @@ function brkBracketCellHtml(key,picks,pool,sc,readonly){
 }
 function brkPickSeries(key,team){var pool=brkPool(),picks=brkLoadDraft();picks[key]=team;brkPrune(picks,pool);brkSaveDraft(picks);brkPaint();}
 
-/* ---- View All: the same full series cells laid out as a pannable bracket (NCAA-style) ---- */
-function brkBuildTree(picks,pool,sc,readonly){
-  function cell(key){return brkSeriesCellHtml(key,picks,pool,sc,readonly);}
-  function col(label,keys){
-    return '<div class="brk-va-col"><div class="brk-va-h">'+label+'</div><div class="brk-va-stack">'
-      +keys.map(cell).join('')+'</div></div>';
+/* ---- View All: NCAA-style horizontal bracket of compact match cards ---- */
+function brkSeriesTabIndex(key){for(var i=0;i<BRK_TABS.length;i++)if(BRK_TABS[i].series.indexOf(key)>=0)return i;return 0;}
+function brkJumpTo(i){BRK.viewAll=false;BRK.tab=i;brkPaint();try{document.getElementById('brk-wrap').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}}
+function brkTreeMatch(key,slots){
+  var slot=slots[key],t1=slot.teams[0],t2=slot.teams[1],pickW=slot.winner,act=BRK.actual[key];
+  var done=act&&act.done,actW=done?act.winner:null;
+  var matchup=act.known&&[t1,t2].slice().sort().join()===act.teams.slice().sort().join();
+  var raw=slot.gamesArr||[],cols=raw.length;
+  function winsIn(team){return raw.filter(function(x){return x===team;}).length;}
+  // per-team game cells: filled on the games THIS team is picked to win (position = meaning), ✓/✕ = result (shape)
+  function gcells(team){
+    if(!cols)return '<div class="brk-pgames"></div>';
+    var col=brkTC(team),s='';
+    for(var i=0;i<cols;i++){
+      if(raw[i]!==team){s+='<span class="brk-pcell"></span>';continue;}
+      var cc='brk-pcell on',mk='';
+      var aw=(matchup&&act.known&&i<act.gameWinners.length)?act.gameWinners[i]:null;
+      if(aw!=null){ if(aw===team){cc+=' ok';mk='&#10003;';} else {cc+=' bad';mk='&#10007;';} }
+      else if(matchup&&done){cc+=' ph';}
+      s+='<span class="'+cc+'" style="--pc:'+col+'">'+mk+'</span>';
+    }
+    return '<div class="brk-pgames">'+s+'</div>';
   }
-  // rounds left→right, same 8→4→2→1 shape as the NCAA bracket; vertical + horizontal scroll
-  return '<div class="brk-va"><div class="brk-va-flow">'
-    +col('Round 1',['r1w0','r1w1','r1w2','r1w3','r1e0','r1e1','r1e2','r1e3'])
-    +col('Round 2',['r2w0','r2w1','r2e0','r2e1'])
-    +col('Conf Finals',['cfw','cfe'])
-    +col('Stanley Cup',['scf'])
-    +'</div></div>';
+  function row(team){
+    if(!team||team==='TBD')return '<div class="brk-mrow tbd"><span class="brk-mlogo"></span><span class="brk-mnm">TBD</span><div class="brk-pgames"></div><span class="brk-msc"></span></div>';
+    var col=brkTC(team),isPick=pickW===team,isAW=actW===team,cls='',smark='';
+    if(!done){ if(isPick)cls='pick'; }
+    else{
+      if(isPick&&isAW){cls='correct';smark='<span class="brk-smk ok">&#10003;</span>';}
+      else if(isPick&&!isAW){cls='wrong';smark='<span class="brk-smk bad">&#10007;</span>';}
+      if(isAW&&!isPick){cls+=' actualwin';smark='<span class="brk-smk aw">&#9670;</span>';}
+    }
+    return '<div class="brk-mrow '+cls+'" style="--tc:'+col+';--tcbg:'+hexToRgba(col,0.16)+'">'
+      +'<img class="brk-mlogo" src="'+brkLogo(team)+'" onerror="this.style.visibility=\'hidden\'">'
+      +'<span class="brk-mnm">'+team+'</span>'+smark+gcells(team)
+      +'<span class="brk-msc'+(winsIn(team)>=4?' w':'')+'">'+winsIn(team)+'</span></div>';
+  }
+  var strip='';
+  if(done&&actW&&[t1,t2].indexOf(actW)<0){
+    strip='<div class="brk-mstrip">&#8627; <img src="'+brkLogo(actW)+'" onerror="this.style.visibility=\'hidden\'"><span class="nm">'+actW+'</span><span class="tag">actually won</span><span class="sc">'+act.topWins+'&#8211;'+act.bottomWins+'</span></div>';
+  }
+  var cardCls=key==='scf'?' final':'';
+  if(done&&pickW)cardCls+=(pickW===actW?' ok':' bad');
+  return '<div class="brk-match'+cardCls+'" onclick="brkJumpTo('+brkSeriesTabIndex(key)+')">'+row(t1)+row(t2)+strip+'</div>';
+}
+function brkSetTreeFull(v){BRK.treeFull=v;brkPaint();}
+function brkBuildTree(picks,pool,sc,readonly){
+  var slots=sc.slots,champ=slots.scf.winner,full=!!BRK.treeFull;
+  function card(key){return full?brkSeriesCellHtml(key,picks,pool,sc,readonly):brkTreeMatch(key,slots);}
+  function colHtml(label,sub,keys,isFinal){
+    var cup=isFinal?'<img class="brk-cuplogo" src="https://assets.nhle.com/logos/playoffs/png/scp-20252026-cup.png" onerror="this.style.display=\'none\'">':'';
+    // each card sits in an equal-height band and is vertically centered → true bracket alignment
+    var body=keys.map(function(k){return '<div class="brk-cwrap">'+card(k)+'</div>';}).join('');
+    return '<div class="brk-rcol'+(isFinal?' final':'')+'"><div class="brk-rhead">'+label+'<span>'+sub+'</span></div>'+cup
+      +'<div class="brk-rbody">'+body+'</div></div>';
+  }
+  var champBanner=champ
+    ?'<div class="brk-champ"><img src="'+brkLogo(champ)+'" onerror="this.style.display=\'none\'"><div><span class="brk-champ-l">your predicted champion</span><div class="brk-champ-name">'+champ+'</div></div><span class="brk-champ-t">🏆</span></div>'
+    :'';
+  var toggle='<div class="brk-vtoggle"><span>cards</span>'
+    +'<button class="'+(!full?'on':'')+'" onclick="brkSetTreeFull(false)">Compact</button>'
+    +'<button class="'+(full?'on':'')+'" onclick="brkSetTreeFull(true)">Full grids</button></div>';
+  return toggle+'<div class="brk-bscroll'+(full?' full':'')+'"><div class="brk-bracket">'
+    +colHtml('Round 1','8 series',['r1w0','r1w1','r1w2','r1w3','r1e0','r1e1','r1e2','r1e3'],false)
+    +colHtml('Round 2','4 series',['r2w0','r2w1','r2e0','r2e1'],false)
+    +colHtml('Conf Finals','2 series',['cfw','cfe'],false)
+    +colHtml('Stanley Cup','final',['scf'],true)
+    +'</div></div>'+champBanner;
 }
 
 /* ---- submit ---- */
