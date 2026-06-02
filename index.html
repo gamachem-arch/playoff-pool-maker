@@ -355,7 +355,8 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-rhead { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:12px; letter-spacing:1.5px;
     text-transform:uppercase; color:var(--muted); text-align:center; line-height:1.2; }
   .brk-rhead span { display:block; font-size:9px; font-weight:600; letter-spacing:.5px; color:#4b5563; }
-  .brk-cuplogo { width:74px; display:block; margin:4px auto 2px; }
+  .brk-cuplogo { width:74px; display:block; margin:0 auto 8px; }
+  .brk-rcol.final .brk-cwrap { flex-direction:column; justify-content:center; }
   .brk-match { background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:11px; overflow:hidden; cursor:pointer; }
   .brk-match.final { border-color:rgba(251,191,36,0.4); }
   .brk-match.bad { border-color:rgba(239,68,68,0.5); }
@@ -5155,9 +5156,10 @@ function brkBuildTree(picks,pool,sc,readonly){
   function card(key){return full?brkSeriesCellHtml(key,picks,pool,sc,readonly):brkTreeMatch(key,slots);}
   function colHtml(label,sub,keys,isFinal){
     var cup=isFinal?'<img class="brk-cuplogo" src="https://assets.nhle.com/logos/playoffs/png/scp-20252026-cup.png" onerror="this.style.display=\'none\'">':'';
-    // each card sits in an equal-height band and is vertically centered → true bracket alignment
-    var body=keys.map(function(k){return '<div class="brk-cwrap">'+card(k)+'</div>';}).join('');
-    return '<div class="brk-rcol'+(isFinal?' final':'')+'"><div class="brk-rhead">'+label+'<span>'+sub+'</span></div>'+cup
+    // each card sits in an equal-height band and is vertically centered → true bracket alignment.
+    // the Cup logo rides inside the SCF band, directly above its card, so they stay together + centered.
+    var body=keys.map(function(k){return '<div class="brk-cwrap">'+(isFinal?cup:'')+card(k)+'</div>';}).join('');
+    return '<div class="brk-rcol'+(isFinal?' final':'')+'"><div class="brk-rhead">'+label+'<span>'+sub+'</span></div>'
       +'<div class="brk-rbody">'+body+'</div></div>';
   }
   var champBanner=champ
