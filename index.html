@@ -308,8 +308,9 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-gcell.na { background:transparent; border-color:transparent; cursor:default; }
   .brk-gcell.ok { box-shadow:inset 0 0 0 2px #22c55e; }
   .brk-gcell.bad { box-shadow:inset 0 0 0 2px #ef4444; }
-  .brk-wins { min-width:20px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:19px;
-    font-weight:900; margin-left:6px; }
+  .brk-wins { min-width:24px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:30px;
+    font-weight:900; margin-left:8px; color:var(--muted); line-height:1; }
+  .brk-wins.lead { color:#f9fafb; text-shadow:0 0 14px rgba(255,255,255,0.25); }
   .brk-serieswin { font-size:12px; color:var(--muted); margin-top:8px; display:flex; align-items:center; gap:6px; }
   .brk-serieswin b { color:var(--text); font-family:'Barlow Condensed',sans-serif; font-size:14px; }
   .brk-pickrow { display:flex; align-items:center; gap:8px; padding:9px 8px; border-radius:10px; cursor:pointer;
@@ -342,6 +343,97 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-lb-total { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--text); line-height:1; }
   .brk-lb-ptl { font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
   .brk-empty { text-align:center; color:var(--muted); padding:30px 16px; font-size:13px; line-height:1.6; }
+
+  /* View All — same full series cells, laid out as a pannable bracket (scroll x + y) */
+  .brk-va { overflow:auto; -webkit-overflow-scrolling:touch; max-height:78vh; border:1px solid rgba(255,255,255,0.07);
+    border-radius:14px; background:rgba(0,0,0,0.18); }
+  .brk-va-flow { display:flex; gap:22px; padding:16px; width:max-content; align-items:stretch; }
+  .brk-va-col { display:flex; flex-direction:column; width:300px; flex:0 0 300px; }
+  .brk-va-h { position:sticky; top:0; z-index:2; text-align:center; font-family:'Barlow Condensed',sans-serif;
+    font-size:12px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:#9ca3af;
+    padding:4px 0 10px; background:linear-gradient(180deg,var(--bg) 65%,transparent); }
+  .brk-va-stack { flex:1; display:flex; flex-direction:column; justify-content:flex-start; gap:14px; }
+  .brk-va-stack > .brk-cell { margin-bottom:0; width:100%; }
+
+  /* brk-mode: reclaim the top of the screen when a bracket pool is active */
+  body.brk-mode .header .eyebrow { display:none; }
+  body.brk-mode #header-btns { display:none !important; }
+  body.brk-mode #pool-switcher-wrap { display:none !important; }
+  body.brk-mode .header { padding-top:10px; padding-bottom:4px; }
+  body.brk-mode #pool-title { font-size:23px; line-height:1.05; margin:0; }
+  body.brk-mode #sub { font-size:10px; letter-spacing:1px; text-transform:uppercase; opacity:0.6; margin-top:2px; }
+
+  .brk-topnav { display:flex; align-items:center; gap:6px; margin:2px 0 10px; }
+  .brk-seg { display:flex; flex:1; background:rgba(255,255,255,0.04); border-radius:10px; padding:3px; gap:2px; }
+  .brk-seg button { flex:1; padding:7px 8px; border:none; border-radius:8px; background:transparent; color:var(--muted);
+    font-family:Inter,sans-serif; font-size:13px; font-weight:600; cursor:pointer; transition:all .15s; }
+  .brk-seg button.on { background:#3b82f6; color:#fff; box-shadow:0 1px 4px rgba(59,130,246,0.4); }
+  .brk-ibtn { padding:8px 11px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03);
+    color:var(--muted); font-family:Inter,sans-serif; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .brk-ibtn-icon { padding:8px 12px; font-size:16px; line-height:1; }
+  .brk-menu-ov { align-items:flex-start; justify-content:flex-end; }
+  .brk-menu-card { margin:64px 14px 0; background:var(--surface); border:1px solid rgba(255,255,255,0.12);
+    border-radius:14px; padding:6px; box-shadow:0 16px 40px rgba(0,0,0,0.5); min-width:200px; }
+  .brk-menu-item { display:flex; align-items:center; gap:10px; width:100%; text-align:left; padding:11px 12px;
+    border:none; background:transparent; color:var(--text); font-family:Inter,sans-serif; font-size:14px; cursor:pointer; border-radius:9px; }
+  .brk-menu-item:hover { background:rgba(255,255,255,0.06); }
+  .brk-menu-ic { width:20px; text-align:center; opacity:0.8; }
+
+  /* identity + live score bar */
+  .brk-idbar { display:flex; align-items:center; gap:10px; background:var(--surface); border:1px solid rgba(255,255,255,0.08);
+    border-radius:13px; padding:9px 12px; margin-bottom:10px; }
+  .brk-idchip { display:flex; align-items:center; gap:7px; padding:6px 11px; border-radius:999px; border:1.5px solid;
+    background:rgba(255,255,255,0.03); color:var(--text); font-family:Inter,sans-serif; font-size:14px; font-weight:700; cursor:pointer; }
+  .brk-iddot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .brk-idcaret { opacity:0.5; font-size:11px; }
+  .brk-idmid { display:flex; align-items:baseline; gap:8px; margin-left:auto; }
+  .brk-idrank { font-family:'Barlow Condensed',sans-serif; font-size:20px; font-weight:900; }
+  .brk-idpts { font-family:'Barlow Condensed',sans-serif; font-size:26px; font-weight:900; color:var(--text); line-height:1; }
+  .brk-idptl { font-size:9px; color:var(--muted); letter-spacing:1px; margin-left:3px; }
+  .brk-idchamp { display:flex; flex-direction:column; align-items:center; gap:1px; padding-left:10px; margin-left:4px;
+    border-left:1px solid rgba(255,255,255,0.1); }
+  .brk-idchamp img { width:26px; height:26px; object-fit:contain; }
+  .brk-idchamp-l { font-size:7px; color:var(--muted); letter-spacing:.5px; text-transform:uppercase; }
+  .brk-idprompt { font-size:11px; color:var(--muted); margin-bottom:5px; }
+  .brk-seepicks { display:flex; align-items:center; gap:6px; overflow-x:auto; padding:0 0 10px; scrollbar-width:none; }
+  .brk-seepicks::-webkit-scrollbar { display:none; }
+  .brk-seepicks-l { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; flex:0 0 auto; }
+  .brk-seebtn { flex:0 0 auto; padding:5px 11px; border-radius:999px; border:1.5px solid; font-size:12px; font-weight:700;
+    cursor:pointer; font-family:Inter,sans-serif; white-space:nowrap; }
+
+  /* Big-style series cells: logo watermark + bigger type + team-color accents */
+  .brk-cell-hero { position:relative; overflow:hidden; }
+  .brk-cell-hero > *:not(.brk-wm) { position:relative; z-index:1; }
+  .brk-wm { position:absolute; right:-26px; top:50%; transform:translateY(-50%) rotate(-10deg); height:140%; max-height:120px;
+    z-index:0; opacity:0.07; pointer-events:none; user-select:none;
+    -webkit-mask-image:linear-gradient(to left, black 25%, transparent 92%); mask-image:linear-gradient(to left, black 25%, transparent 92%); }
+  .brk-trow { padding-left:8px; border-radius:0 6px 6px 0; }
+  .brk-trow.tw-lose { opacity:0.4; }
+  .brk-tname { font-size:19px; }
+  .brk-tname.tw-adv { color:#f9fafb; font-weight:900; }
+  .brk-gcell { position:relative; }
+  .brk-gn { font-size:10px; color:#4b5563; font-family:Inter,sans-serif; }
+  .brk-gcell.active { border-color:rgba(255,255,255,0.45); border-style:dashed; }
+  .brk-gcell.active .brk-gn { color:#cbd5e1; }
+  .brk-gcell.bad { opacity:0.5; }
+  .brk-gcell.void { opacity:0.4; }
+  .brk-gmark { position:absolute; bottom:-4px; right:-4px; width:13px; height:13px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:900;
+    border:1.5px solid var(--surface); }
+  .brk-gmark.ok { background:#22c55e; color:#06210f; }
+  .brk-gmark.bad { background:#ef4444; color:#fff; }
+  .brk-gmark.void { background:#4b5563; color:#d1d5db; }
+  .brk-gmark.act { background:#cbd5e1; color:#1c2333; }   /* neutral: "actually won here" */
+  /* ✓/✕ result strip under the two team rows, aligned to the game columns */
+  .brk-resrow { display:flex; align-items:center; gap:8px; margin-top:5px; }
+  .brk-rcell { width:24px; height:15px; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:900; line-height:1; }
+  .brk-rcell.ok { color:#22c55e; }
+  .brk-rcell.bad { color:#ef4444; }
+  .brk-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:7px; }
+  .brk-serieswin { margin-top:0; }
+  .brk-reset { flex:0 0 auto; font-size:10px; color:#6b7280; cursor:pointer;
+    border:1px solid rgba(255,255,255,0.1); border-radius:7px; padding:3px 9px; background:transparent; }
 </style>
 </head>
 <body>
@@ -1006,6 +1098,7 @@ function saveSetup() {
 function showSection(name) {
   var bw = document.getElementById("brk-wrap");
   if (bw && name !== "brk") bw.style.display = "none";
+  if (name !== "brk") document.body.classList.remove("brk-mode");
   var sections = ["setup","pool-list","main","swrap","legwrap","pool-switcher-wrap"];
   sections.forEach(function(s){
     var el = document.getElementById(s);
@@ -4504,9 +4597,13 @@ var BRK_TABS=[
 ];
 var BRK_ROUNDKEY={1:'r1',2:'r2',3:'cf',4:'scf'};
 var BRK_WEIGHT={1:1,2:2,3:4,4:8};   // simple Bracket Challenge round weighting
+// real NHL team primary colors (all 32 — works next season too)
+var BRK_TC={ANA:'#F47A38',BOS:'#FFB81C',BUF:'#003087',CGY:'#D2001C',CAR:'#CC0000',CHI:'#CF0A2C',COL:'#6F263D',CBJ:'#002654',DAL:'#006847',DET:'#CE1126',EDM:'#FF4C00',FLA:'#C8102E',LAK:'#A2AAAD',MIN:'#154734',MTL:'#AF1E2D',NSH:'#FFB81C',NJD:'#CE1126',NYI:'#00539B',NYR:'#0038A8',OTT:'#C52032',PHI:'#F74902',PIT:'#FCB514',SJS:'#006D75',SEA:'#99D9D9',STL:'#002F87',TBL:'#002868',TOR:'#00205B',UTA:'#69B3E7',VAN:'#00205B',VGK:'#B4975A',WSH:'#C8102E',WPG:'#041E42'};
+function brkTC(team){return BRK_TC[team]||'#6b7280';}
+function brkTeamWM(team,extra){return '<img class="brk-wm" src="'+brkLogo(team)+'" style="'+(extra||'')+'" onerror="this.style.display=\'none\'">';}
 
 var BRK={view:'picker', tab:0, viewAll:false, parsed:null, games:null, odds:{}, actual:{},
-  entries:[], allEntries:null, lbScope:'group', viewFilter:null, pollTimer:null, loaded:false};
+  entries:[], allEntries:null, lbScope:'group', viewFilter:null, changeId:false, pollTimer:null, loaded:false};
 
 /* ---- small helpers ---- */
 function brkPool(){return getActivePool();}
@@ -4519,7 +4616,7 @@ function brkHashColor(s){var h=0;s=String(s||'');for(var i=0;i<s.length;i++)h=s.
 function brkMakeCode(title){var base=String(title||'POOL').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,4)||'POOL';var cs='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r='';for(var i=0;i<4;i++)r+=cs[Math.floor(Math.random()*cs.length)];return base+r;}
 function brkDevUnlocked(){try{return localStorage.getItem('nrcDevUnlock')==='1';}catch(e){return false;}}
 function brkToggleDev(){try{localStorage.setItem('nrcDevUnlock',brkDevUnlocked()?'0':'1');}catch(e){}brkPaint();}
-function brkTeamColor(team,isTop){return isTop?'#3b82f6':'#f59e0b';}
+function brkTeamColor(team,isTop){return brkTC(team);}
 function brkLogo(team){return 'https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg';}
 function brkDraftKey(){var p=brkPool();return 'brkPicks_'+((p&&(p.id||p.title))||'x');}
 function brkLoadDraft(){try{return JSON.parse(localStorage.getItem(brkDraftKey()))||{};}catch(e){return {};}}
@@ -4673,7 +4770,7 @@ async function brkRender(){
   var pool=brkPool();if(!pool)return showPoolList();
   // reset transient view state when switching into a different pool
   var pid=pool.id||getActiveId();
-  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.tab=0;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
+  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.changeId=false;BRK.tab=0;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
   document.getElementById('pool-title').textContent=pool.title||'Pool';
   document.getElementById('sub').textContent=(pool.type==='nrc'?'NRC Style · game-by-game bracket':'Bracket Challenge · pick the winners');
   brkShowContainer();drawPoolSwitcher();
@@ -4695,28 +4792,37 @@ async function brkRender(){
   }catch(e){wrap.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>';}
 }
 function brkShowContainer(){
+  document.body.classList.add('brk-mode');
   ['setup','pool-list','main','swrap','legwrap','tonight-wrap','bracket-section','pie-wrap'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
-  var ps=document.getElementById('pool-switcher-wrap');if(ps)ps.style.display='';
   var w=document.getElementById('brk-wrap');if(w)w.style.display='';
 }
 function brkPaint(){
   var wrap=document.getElementById('brk-wrap');if(!wrap)return;
+  // preserve the View All pan position across re-renders (live poll, pick taps)
+  var oldVa=wrap.querySelector('.brk-va'),sl=oldVa?oldVa.scrollLeft:0,st=oldVa?oldVa.scrollTop:0;
   wrap.innerHTML=brkSubnavHtml()+(BRK.view==='board'?brkBoardHtml():brkPickerHtml());
+  var newVa=wrap.querySelector('.brk-va');if(newVa){newVa.scrollLeft=sl;newVa.scrollTop=st;}
 }
 function brkGo(v){BRK.view=v;BRK.viewFilter=null;brkPaint();}
 
 /* ---- sub-nav + share ---- */
 function brkSubnavHtml(){
-  var p=brkPool()||{};
-  return '<div class="brk-subnav">'
-    +'<button class="'+(BRK.view==='picker'?'on':'')+'" onclick="brkGo(\'picker\')">📋 Bracket</button>'
-    +'<button class="'+(BRK.view==='board'?'on':'')+'" onclick="brkGo(\'board\')">🏆 Leaderboard</button>'
+  return '<div class="brk-topnav">'
+    +'<div class="brk-seg">'
+      +'<button class="'+(BRK.view==='picker'?'on':'')+'" onclick="brkGo(\'picker\')">Bracket</button>'
+      +'<button class="'+(BRK.view==='board'?'on':'')+'" onclick="brkGo(\'board\')">Leaderboard</button>'
     +'</div>'
-    +'<div style="display:flex;gap:6px;justify-content:center;margin-bottom:12px;flex-wrap:wrap">'
-    +'<button class="btn" style="margin:0;padding:5px 10px;font-size:11px" id="share-link-btn" onclick="copyShareLink()">🔗 Link</button>'
-    +'<button class="btn" style="margin:0;padding:5px 10px;font-size:11px" onclick="brkShowCode()"># '+esc(p.code||'CODE')+'</button>'
-    +'<button class="btn" style="margin:0;padding:5px 10px;font-size:11px" onclick="brkJoinByCode()">＋ Join</button>'
+    +'<button class="brk-ibtn" id="share-link-btn" onclick="brkShowCode()">⬆ Invite</button>'
+    +'<button class="brk-ibtn brk-ibtn-icon" onclick="brkMenu(this)">⋯</button>'
     +'</div>';
+}
+function brkMenu(anchor){
+  var ov=document.createElement('div');ov.className='brk-ov brk-menu-ov';ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  var items=[['⚙','Edit pool','showSetup()'],['☰','My pools','showPoolList()'],['＋','Join by code','brkJoinByCode()'],['↻','Refresh','brkRender()'],['🔗','Copy share link','copyShareLink()']];
+  ov.innerHTML='<div class="brk-menu-card">'+items.map(function(it){
+    return '<button class="brk-menu-item" onclick="this.closest(\'.brk-ov\').remove();'+it[2]+'"><span class="brk-menu-ic">'+it[0]+'</span>'+it[1]+'</button>';
+  }).join('')+'</div>';
+  document.body.appendChild(ov);
 }
 function brkShowCode(){
   var p=brkPool();if(!p)return;
@@ -4752,14 +4858,21 @@ function brkPickerHtml(){
   if(viewing){var ent=(BRK.entries||[]).find(function(e){return e.name===viewing;});picks=ent?ent.picks:{};readonly=true;}
   else{picks=brkLoadDraft();readonly=locked;}
   var sc=brkScore(picks,pool);
-  var html=brkPillsStripHtml();
-  if(!viewing&&!me){html+='<div class="brk-empty">👆 Tap your name above to start filling out your bracket.</div>';return html;}
+  var html='';
+  if(viewing){html+=brkViewingBarHtml(viewing,sc);}
+  else{
+    html+=brkIdentityBarHtml(picks,sc);
+    if(locked)html+=brkSeePicksHtml();
+    if(!me){return html+'<div class="brk-empty" style="padding:16px">Tap your name above to start your bracket.</div>';}
+  }
   html+=brkTabsHtml(picks,pool);
-  var tabsToShow=BRK.viewAll?BRK_TABS:[BRK_TABS[BRK.tab]];
-  tabsToShow.forEach(function(tab){
+  if(BRK.viewAll){
+    html+=brkBuildTree(picks,pool,sc,readonly);
+  }else{
+    var tab=BRK_TABS[BRK.tab];
     html+='<div class="brk-clabel">'+tab.label+'</div>';
     tab.series.forEach(function(key){html+=brkSeriesCellHtml(key,picks,pool,sc,readonly);});
-  });
+  }
   // submit / status bar
   if(viewing){
     html+='<div class="brk-submitbar"><div class="brk-chip">Viewing <b style="color:var(--text)">'+esc(viewing)+'</b> · '+sc.total+' pts</div>'
@@ -4776,26 +4889,45 @@ function brkPickerHtml(){
   html+='<div style="text-align:center;margin-top:18px;padding-bottom:20px"><button onclick="brkToggleDev()" style="background:none;border:none;color:rgba(255,255,255,'+(brkDevUnlocked()?'0.4':'0.12')+');font-size:10px;cursor:pointer;letter-spacing:1px">'+(brkDevUnlocked()?'🔓 dev unlock ON — tap to re-lock':'· · ·')+'</button></div>';
   return html;
 }
-function brkPillsStripHtml(){
-  var pool=brkPool(),me=brkMeName(),locked=brkLocked(),ps=brkPlayers(),html='';
-  html+='<div style="font-size:11px;color:var(--muted);margin-bottom:5px">'+(me?'You are':'Who are you? Tap your name')+'</div><div class="brk-pills">';
-  ps.forEach(function(p,i){var pc=getPC(pool,i),on=me&&p.name===me,sub=(BRK.entries||[]).some(function(e){return e.name===p.name;});
-    html+='<button class="brk-pplayer" onclick="brkSetIdentity(\''+esc(p.abbrev)+'\')" style="background:'+(on?pc.color:pc.bg)+';color:'+(on?'#fff':pc.color)+';border-color:'+pc.color+'">'+esc(p.name)+(sub?' ✓':'')+'</button>';
-  });
-  html+='</div>';
-  if(locked){
-    var anySub=(BRK.entries||[]).length>0;
-    if(anySub){
-      html+='<div style="font-size:11px;color:var(--muted);margin:10px 0 5px">See everyone\'s picks</div><div class="brk-pills">';
-      ps.forEach(function(p,i){var pc=getPC(pool,i),on=BRK.viewFilter===p.name,sub=(BRK.entries||[]).some(function(e){return e.name===p.name;});if(!sub)return;
-        html+='<button class="brk-pplayer" onclick="brkViewPlayer(\''+esc(p.name)+'\')" style="background:'+(on?pc.color:pc.bg)+';color:'+(on?'#fff':pc.color)+';border-color:'+pc.color+'">'+esc(p.name)+'</button>';
-      });
-      html+='<button class="brk-pplayer" onclick="BRK.viewFilter=null;brkPaint()" style="background:rgba(255,255,255,0.05);color:var(--muted);border-color:rgba(255,255,255,0.12)">My picks</button></div>';
-    }
+// compact identity + live rank/score/champ; expands to a player chooser on tap
+function brkIdentityBarHtml(picks,sc){
+  var pool=brkPool(),me=brkMeName(),ps=brkPlayers();
+  if(!me||BRK.changeId){
+    var h='<div class="brk-idprompt">'+(me?'Switch player':'Who are you?')+'</div><div class="brk-pills">';
+    ps.forEach(function(p,i){var pc=getPC(pool,i),on=me&&p.name===me,sub=(BRK.entries||[]).some(function(e){return e.name===p.name;});
+      h+='<button class="brk-pplayer" onclick="brkSetIdentity(\''+esc(p.abbrev)+'\')" style="background:'+(on?pc.color:pc.bg)+';color:'+(on?'#fff':pc.color)+';border-color:'+pc.color+'">'+esc(p.name)+(sub?' ✓':'')+'</button>';});
+    if(me)h+='<button class="brk-pplayer" onclick="BRK.changeId=false;brkPaint()" style="background:rgba(255,255,255,0.05);color:var(--muted);border-color:rgba(255,255,255,0.12)">done</button>';
+    h+='</div>';
+    return h;
   }
-  return html;
+  var idx=ps.findIndex(function(p){return p.name===me;}),pc=getPC(pool,idx);
+  var scored=(BRK.entries||[]).map(function(e){return {name:e.name,total:brkScore(e.picks,pool).total};}).sort(function(a,b){return b.total-a.total;});
+  var rankIdx=scored.findIndex(function(e){return e.name===me;});
+  var rankLabel=(scored.length>1&&rankIdx>=0)?(['1st','2nd','3rd','4th','5th','6th','7th','8th'][rankIdx]||(rankIdx+1)+'th'):'';
+  var champ=sc.slots.scf.winner;
+  return '<div class="brk-idbar">'
+    +'<button class="brk-idchip" onclick="BRK.changeId=true;brkPaint()" style="border-color:'+pc.color+'"><span class="brk-iddot" style="background:'+pc.color+'"></span>'+esc(me)+' <span class="brk-idcaret">▾</span></button>'
+    +'<div class="brk-idmid">'+(rankLabel?'<span class="brk-idrank" style="color:'+pc.color+'">'+rankLabel+'</span>':'')+'<span class="brk-idpts">'+sc.total+'<span class="brk-idptl">PTS</span></span></div>'
+    +(champ?'<div class="brk-idchamp"><img src="'+brkLogo(champ)+'" onerror="this.style.display=\'none\'"><span class="brk-idchamp-l">your cup</span></div>':'')
+    +'</div>';
 }
-function brkSetIdentity(ab){var k=_myPlayerKey();if(k){try{localStorage.setItem(k,ab);}catch(e){}}BRK.viewFilter=null;brkPaint();}
+function brkViewingBarHtml(name,sc){
+  var col=brkPlayerColorByName(name),champ=sc.slots.scf.winner;
+  return '<div class="brk-idbar" style="border-color:'+col+'66">'
+    +'<button class="brk-idchip" onclick="BRK.viewFilter=null;brkPaint()" style="border-color:'+col+'"><span class="brk-iddot" style="background:'+col+'"></span>'+esc(name)+' <span class="brk-idcaret">✕</span></button>'
+    +'<div class="brk-idmid"><span class="brk-idpts">'+sc.total+'<span class="brk-idptl">PTS</span></span></div>'
+    +(champ?'<div class="brk-idchamp"><img src="'+brkLogo(champ)+'" onerror="this.style.display=\'none\'"><span class="brk-idchamp-l">their cup</span></div>':'')
+    +'</div>';
+}
+function brkSeePicksHtml(){
+  var pool=brkPool(),ps=brkPlayers(),subbed=ps.filter(function(p){return (BRK.entries||[]).some(function(e){return e.name===p.name;});});
+  if(!subbed.length)return '';
+  var h='<div class="brk-seepicks"><span class="brk-seepicks-l">see picks</span>';
+  ps.forEach(function(p,i){if(!(BRK.entries||[]).some(function(e){return e.name===p.name;}))return;var pc=getPC(pool,i),on=BRK.viewFilter===p.name;
+    h+='<button class="brk-seebtn" onclick="brkViewPlayer(\''+esc(p.name)+'\')" style="background:'+(on?pc.color:pc.bg)+';color:'+(on?'#fff':pc.color)+';border-color:'+pc.color+'">'+esc(p.name)+'</button>';});
+  h+='</div>';return h;
+}
+function brkSetIdentity(ab){var k=_myPlayerKey();if(k){try{localStorage.setItem(k,ab);}catch(e){}}BRK.viewFilter=null;BRK.changeId=false;brkPaint();}
 function brkViewPlayer(name){BRK.viewFilter=(BRK.viewFilter===name?null:name);brkPaint();}
 function brkTabsHtml(picks,pool){
   var slots=brkPredict(picks,pool),html='<div class="brk-tabs">';
@@ -4816,7 +4948,7 @@ function brkCellResultHtml(key,sc){
   var mk=sc.marks[key],act=BRK.actual[key];if(!mk||!act||!act.known)return '';
   if(!act.done&&!(act.gameWinners&&act.gameWinners.length))return '';
   if(mk.seriesMark===true)return '<span class="brk-cell-result" style="color:#22c55e">+'+mk.pts+' ✓</span>';
-  if(mk.seriesMark===false)return '<span class="brk-cell-result" style="color:#ef4444">✗ +'+mk.pts+'</span>';
+  if(mk.seriesMark===false)return '<span class="brk-cell-result" style="color:#ef4444">'+(mk.pts>0?'+'+mk.pts+' ':'')+'✕</span>';
   if(mk.pts>0)return '<span class="brk-cell-result" style="color:#22c55e">+'+mk.pts+'</span>';
   return '';
 }
@@ -4828,31 +4960,53 @@ function brkSeriesCellHtml(key,picks,pool,sc,readonly){
     return '<div class="brk-cell"><div class="brk-cell-label">'+label+'</div><div class="brk-empty" style="padding:14px">Pick the previous round to set this matchup.</div></div>';
   var raw=Array.isArray(picks[key])?picks[key]:[];
   function winsIn(team){return raw.filter(function(x){return x===team;}).length;}
+  var matchup=act.known&&[t1,t2].slice().sort().join()===act.teams.slice().sort().join();
+  var cols=brkSeriesCols(raw,slot.winner);
   function teamRow(team,isTop){
-    var w=winsIn(team),s='<div class="brk-trow"><img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'"><span class="brk-tname">'+team+'</span><div class="brk-games">';
-    for(var i=0;i<7;i++)s+=brkGameCellHtml(key,team,i,raw,readonly,slot.winner,mk,isTop);
-    s+='</div><span class="brk-wins" style="color:'+(w>=4?'#22c55e':'var(--muted)')+'">'+w+'</span></div>';
+    var w=winsIn(team),col=brkTC(team),isWin=slot.winner===team,isLose=slot.winner&&slot.winner!==team;
+    var s='<div class="brk-trow'+(isWin?' tw-win':'')+(isLose?' tw-lose':'')+'" style="border-left:3px solid '+(isWin?col:'transparent')+'">'
+      +'<img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'">'
+      +'<span class="brk-tname'+(isWin?' tw-adv':'')+'">'+team+(isWin?' <span style="font-size:11px;color:'+col+'">'+(BRK_SERIES[key].round===4?'🏆':'▶')+'</span>':'')+'</span>'
+      +'<div class="brk-games">';
+    for(var i=0;i<cols;i++)s+=brkGameCellHtml(key,team,i,raw,readonly,slot.winner,act,matchup,isTop);
+    var oppW=winsIn(isTop?t2:t1);
+    s+='</div><span class="brk-wins'+(w>oppW?' lead':'')+'">'+w+'</span></div>';
     return s;
   }
-  var out='<div class="brk-cell'+(slot.winner?' done':'')+'"><div class="brk-cell-label">'+label+brkCellResultHtml(key,sc)+'</div>';
+  // watermark: the leading/winning team's logo, faint
+  var wmTeam=slot.winner||(winsIn(t1)>=winsIn(t2)?t1:t2);
+  var out='<div class="brk-cell brk-cell-hero'+(slot.winner?' done':'')+'">'+brkTeamWM(wmTeam)
+    +'<div class="brk-cell-label">'+label+brkCellResultHtml(key,sc)+'</div>';
   out+=teamRow(t1,true)+teamRow(t2,false);
-  if(slot.winner){
-    out+='<div class="brk-serieswin">Your pick: <b>'+slot.winner+'</b> in '+raw.length+(act.done?(' &nbsp;·&nbsp; Actual: <b>'+act.winner+'</b> in '+act.games):'')+'</div>';
-  }
-  if(!readonly)out+='<div style="margin-top:8px;text-align:right"><button class="brk-reset" onclick="brkResetSeries(\''+key+'\')">reset</button></div>';
+  var pickText=slot.winner?('your pick <b>'+slot.winner+' in '+raw.length+'</b>'+(act.done?('<span style="opacity:.5"> · actual '+act.winner+' in '+act.games+'</span>'):'')):'';
+  var resetBtn=(!readonly&&raw.length)?'<button class="brk-reset" onclick="brkResetSeries(\''+key+'\')">↺ reset</button>':'';
+  if(pickText||resetBtn)out+='<div class="brk-foot"><span class="brk-serieswin">'+pickText+'</span>'+resetBtn+'</div>';
   out+='</div>';return out;
 }
-function brkGameCellHtml(key,team,i,raw,readonly,decidedWinner,mk,isTop){
-  var pc=brkTeamColor(team,isTop),picked=raw[i]===team,otherPicked=raw[i]!=null&&raw[i]!==team;
-  var cls='brk-gcell',style='',onclick='';
+// how many game columns to render: full 7 while picking; once a series is locked in, just your games
+function brkSeriesCols(raw,decidedWinner){ return decidedWinner?Math.min(7,Math.max(raw.length,1)):7; }
+// in-cell ✓/✕: a correct game pick gets a green ✓ badge, a wrong one a red ✕ (+ dimmed cell)
+function brkGameCellHtml(key,team,i,raw,readonly,decidedWinner,act,matchup,isTop){
+  var pc=brkTC(team),pick=raw[i],picked=pick===team,otherPicked=pick!=null&&pick!==team;
+  var actualW=(matchup&&act&&act.known&&i<act.gameWinners.length)?act.gameWinners[i]:null;
+  var cls='brk-gcell',style='',onclick='',inner='';
   if(picked){
-    cls+=' win';style='background:'+pc+';border-color:'+pc;
-    if(mk&&mk.gameMarks&&mk.gameMarks[i]===true)cls+=' ok';else if(mk&&mk.gameMarks&&mk.gameMarks[i]===false)cls+=' bad';
+    cls+=' win';
+    if(actualW!=null){
+      style='background:'+pc+';border-color:'+pc;
+      if(actualW===team)inner='<span class="brk-gmark ok">✓</span>';
+      else{cls+=' bad';inner='<span class="brk-gmark bad">✕</span>';}
+    }else if(matchup&&act&&act.done){
+      // a game you predicted that the series never reached — ghost it, don't shout
+      cls+=' phantom';style='background:'+hexToRgba(pc,0.16)+';border-color:'+hexToRgba(pc,0.32);
+    }else{
+      style='background:'+pc+';border-color:'+pc;
+    }
   }else if(otherPicked){cls+=' disabled';}
-  else if(!decidedWinner&&i===raw.length){if(!readonly)onclick=' onclick="brkPickGame(\''+key+'\',\''+team+'\','+i+')"';else cls+=' future';}
-  else if(decidedWinner&&i>=raw.length){cls+=' na';}
-  else{cls+=' future';}
-  return '<div class="'+cls+'"'+(style?' style="'+style+'"':'')+onclick+'></div>';
+  else if(!decidedWinner&&i===raw.length){cls+=' active';inner='<span class="brk-gn">'+(i+1)+'</span>';if(!readonly)onclick=' onclick="brkPickGame(\''+key+'\',\''+team+'\','+i+')"';else cls+=' future';}
+  else if(!decidedWinner&&i>raw.length){cls+=' future';inner='<span class="brk-gn">'+(i+1)+'</span>';}
+  else{cls+=' na';}
+  return '<div class="'+cls+'"'+(style?' style="'+style+'"':'')+onclick+'>'+inner+'</div>';
 }
 function brkPickGame(key,team,i){
   var pool=brkPool(),picks=brkLoadDraft(),raw=Array.isArray(picks[key])?picks[key].slice():[];
@@ -4868,17 +5022,34 @@ function brkBracketCellHtml(key,picks,pool,sc,readonly){
   if(!t1||!t2||t1==='TBD'||t2==='TBD')
     return '<div class="brk-cell"><div class="brk-cell-label">'+label+'</div><div class="brk-empty" style="padding:14px">Pick the previous round to set this matchup.</div></div>';
   function row(team){
-    var sel=picks[key]===team,cls='brk-pickrow'+(sel?' sel':'');
+    var sel=picks[key]===team,col=brkTC(team),cls='brk-pickrow'+(sel?' sel':'');
     if(sel&&act.done)cls='brk-pickrow '+(team===act.winner?'ok':'bad');
     var oc=readonly?'':' onclick="brkPickSeries(\''+key+'\',\''+team+'\')"';
-    var rt=sel?('<span style="margin-left:auto;font-weight:800;color:'+(act.done?(team===act.winner?'#22c55e':'#ef4444'):'#3b82f6')+'">'+(act.done?(team===act.winner?'✓':'✗'):'✓ pick')+'</span>'):'';
-    return '<div class="'+cls+'"'+oc+'><img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'"><span class="brk-tname">'+team+'</span>'+rt+'</div>';
+    var rt=sel?('<span style="margin-left:auto;font-weight:800;font-size:15px;color:'+(act.done?(team===act.winner?'#22c55e':'#ef4444'):col)+'">'+(act.done?(team===act.winner?'✓':'✕'):'✓ pick')+'</span>'):'';
+    return '<div class="'+cls+'" style="border-left:3px solid '+(sel?col:'transparent')+'"'+oc+'><img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'"><span class="brk-tname'+(sel?' tw-adv':'')+'">'+team+'</span>'+rt+'</div>';
   }
-  var out='<div class="brk-cell"><div class="brk-cell-label">'+label+brkCellResultHtml(key,sc)+'</div>'+row(t1)+row(t2);
-  if(act.done)out+='<div class="brk-serieswin">Winner: <b>'+act.winner+'</b> in '+act.games+'</div>';
+  var wmTeam=picks[key]||t1;
+  var out='<div class="brk-cell brk-cell-hero">'+brkTeamWM(wmTeam)+'<div class="brk-cell-label">'+label+brkCellResultHtml(key,sc)+'</div>'+row(t1)+row(t2);
+  if(act.done)out+='<div class="brk-serieswin">winner <b>'+act.winner+' in '+act.games+'</b></div>';
   out+='</div>';return out;
 }
 function brkPickSeries(key,team){var pool=brkPool(),picks=brkLoadDraft();picks[key]=team;brkPrune(picks,pool);brkSaveDraft(picks);brkPaint();}
+
+/* ---- View All: the same full series cells laid out as a pannable bracket (NCAA-style) ---- */
+function brkBuildTree(picks,pool,sc,readonly){
+  function cell(key){return brkSeriesCellHtml(key,picks,pool,sc,readonly);}
+  function col(label,keys){
+    return '<div class="brk-va-col"><div class="brk-va-h">'+label+'</div><div class="brk-va-stack">'
+      +keys.map(cell).join('')+'</div></div>';
+  }
+  // rounds left→right, same 8→4→2→1 shape as the NCAA bracket; vertical + horizontal scroll
+  return '<div class="brk-va"><div class="brk-va-flow">'
+    +col('Round 1',['r1w0','r1w1','r1w2','r1w3','r1e0','r1e1','r1e2','r1e3'])
+    +col('Round 2',['r2w0','r2w1','r2e0','r2e1'])
+    +col('Conf Finals',['cfw','cfe'])
+    +col('Stanley Cup',['scf'])
+    +'</div></div>';
+}
 
 /* ---- submit ---- */
 function brkSubmit(btn){
