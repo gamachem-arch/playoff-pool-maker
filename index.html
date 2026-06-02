@@ -332,14 +332,32 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-pplayer { flex:0 0 auto; padding:6px 12px; border-radius:999px; font-size:13px; font-weight:700;
     cursor:pointer; border:1.5px solid transparent; font-family:Inter,sans-serif; white-space:nowrap; }
 
-  .brk-lb-row { display:flex; align-items:center; gap:10px; padding:11px 12px; border-radius:12px;
-    background:var(--surface); border:1px solid rgba(255,255,255,0.06); margin-bottom:8px; }
-  .brk-lb-row.me { border-color:rgba(59,130,246,0.5); }
-  .brk-lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:22px; font-weight:900; min-width:34px;
-    text-align:center; color:var(--muted); }
-  .brk-lb-name { font-weight:700; color:var(--text); font-size:15px; }
-  .brk-lb-sub { font-size:10px; color:var(--muted); margin-top:2px; letter-spacing:.2px; }
-  .brk-lb-pts { margin-left:auto; text-align:right; }
+  .brk-lb-legend { display:flex; gap:14px; justify-content:center; margin:0 0 12px; font-size:10px; color:var(--muted); letter-spacing:.5px; }
+  .brk-lb-legend span { display:flex; align-items:center; gap:4px; }
+  .brk-lb-legend i { width:9px; height:9px; border-radius:2px; display:inline-block; }
+  .brk-lb-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px;
+    background:var(--surface); border:1px solid rgba(255,255,255,0.06); border-left:3px solid var(--pcol,transparent);
+    margin-bottom:8px; cursor:pointer; }
+  .brk-lb-row.me { border-color:rgba(59,130,246,0.55); border-left-color:var(--pcol); background:rgba(59,130,246,0.07); }
+  .brk-lb-row.rank1 { background:linear-gradient(90deg,rgba(251,191,36,0.12),var(--surface) 55%); }
+  .brk-lb-row.rank2 { background:linear-gradient(90deg,rgba(203,213,225,0.10),var(--surface) 55%); }
+  .brk-lb-row.rank3 { background:linear-gradient(90deg,rgba(217,119,87,0.10),var(--surface) 55%); }
+  .brk-lb-rank { font-family:'Barlow Condensed',sans-serif; font-size:21px; font-weight:900; min-width:28px;
+    text-align:center; color:var(--muted); flex:none; }
+  .brk-lb-champ { position:relative; width:34px; height:34px; flex:none; }
+  .brk-lb-champ img { width:34px; height:34px; object-fit:contain; }
+  .brk-lb-champ.empty { display:flex; align-items:center; justify-content:center; color:#4b5563; font-weight:900;
+    font-size:17px; border:1px dashed rgba(255,255,255,0.12); border-radius:8px; }
+  .brk-lb-cmk { position:absolute; right:-4px; bottom:-4px; width:15px; height:15px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:900; border:1.5px solid var(--surface); }
+  .brk-lb-cmk.ok { background:#22c55e; color:#06210f; } .brk-lb-cmk.bad { background:#ef4444; color:#fff; }
+  .brk-lb-mid { flex:1; min-width:0; }
+  .brk-lb-name { font-weight:700; color:var(--text); font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .brk-lb-you { font-size:9px; color:#3b82f6; font-weight:800; margin-left:2px; }
+  .brk-lb-bar { display:flex; height:7px; border-radius:4px; overflow:hidden; background:rgba(255,255,255,0.05); margin-top:6px; }
+  .brk-lb-bar i { display:block; height:100%; }
+  .brk-lb-sub { font-size:10px; color:var(--muted); margin-top:3px; letter-spacing:.2px; }
+  .brk-lb-pts { text-align:right; flex:none; }
   .brk-lb-total { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--text); line-height:1; }
   .brk-lb-ptl { font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
   .brk-empty { text-align:center; color:var(--muted); padding:30px 16px; font-size:13px; line-height:1.6; }
@@ -435,7 +453,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   body.brk-mode #header-btns { display:none !important; }
   body.brk-mode #pool-switcher-wrap { display:none !important; }
   body.brk-mode .header { padding-top:10px; padding-bottom:4px; }
-  body.brk-mode #pool-title { font-size:23px; line-height:1.05; margin:0; }
+  body.brk-mode #pool-title { font-size:31px; line-height:1.02; margin:0; }
   body.brk-mode #sub { font-size:10px; letter-spacing:1px; text-transform:uppercase; opacity:0.6; margin-top:2px; }
 
   .brk-topnav { display:flex; align-items:center; gap:6px; margin:2px 0 10px; }
@@ -5225,17 +5243,29 @@ function brkBoardHtml(){
   }
   var scored=rows.map(function(r){return {r:r,s:brkScore(r.picks,pool)};});
   scored.sort(function(a,b){return b.s.total-a.s.total||b.s.correct-a.s.correct||a.r.submittedAt-b.r.submittedAt;});
-  var me=brkMeName(),medals=['🥇','🥈','🥉'],body;
-  if(!scored.length)body='<div class="brk-empty">No brackets submitted yet.<br>Fill out your bracket and hit submit to get on the board.</div>';
-  else body=scored.map(function(o,i){
-    var r=o.r,s=o.s,col=brkPlayerColorByName(r.name),champ=s.slots.scf.winner;
-    var champMark=(BRK.actual.scf&&BRK.actual.scf.done)?(champ===BRK.actual.scf.winner?' <span style="color:#22c55e">✓</span>':' <span style="color:#ef4444">busted</span>'):'';
-    var isMe=me&&r.name===me;
-    return '<div class="brk-lb-row'+(isMe?' me':'')+'" style="cursor:pointer" onclick="brkBoardOpen(\''+esc(r.name).replace(/'/g,"\\'")+'\')">'
-      +'<div class="brk-lb-rank">'+(medals[i]||(i+1))+'</div>'
-      +'<div style="flex:1;min-width:0"><div class="brk-lb-name"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+col+';margin-right:6px"></span>'+esc(r.name)+(isMe?' <span style="font-size:9px;color:#3b82f6">YOU</span>':'')+'</div>'
-      +'<div class="brk-lb-sub">'+(scope==='global'&&r.group?esc(r.group)+' · ':'')+'champ '+(champ||'—')+champMark+' · R1 '+s.perRound.r1+' · R2 '+s.perRound.r2+' · CF '+s.perRound.cf+' · SCF '+s.perRound.scf+'</div></div>'
-      +'<div class="brk-lb-pts"><div class="brk-lb-total">'+s.total+'</div><div class="brk-lb-ptl">pts</div></div></div>';
+  var me=brkMeName(),medals=['🥇','🥈','🥉'];
+  if(!scored.length)return brkBoardShell('<div class="brk-empty">No brackets submitted yet.<br>Fill out your bracket and hit submit to get on the board.</div>');
+  var maxTotal=scored.reduce(function(m,o){return Math.max(m,o.s.total);},1)||1;
+  var RC=['#0072B2','#E69F00','#009E73','#CC79A7'],RL=['R1','R2','CF','SCF'];   // colorblind-safe (Wong) per-round colors
+  var scfA=BRK.actual.scf,scfDone=scfA&&scfA.done;
+  var legend='<div class="brk-lb-legend">'+RL.map(function(l,i){return '<span><i style="background:'+RC[i]+'"></i>'+l+'</span>';}).join('')+'</div>';
+  var body=legend+scored.map(function(o,i){
+    var r=o.r,s=o.s,col=brkPlayerColorByName(r.name),champ=s.slots.scf.winner,isMe=me&&r.name===me;
+    var champOk=scfDone&&champ===scfA.winner,champBad=scfDone&&champ&&champ!==scfA.winner;
+    var champ_=champ
+      ? '<div class="brk-lb-champ"><img src="'+brkLogo(champ)+'" onerror="this.style.visibility=\'hidden\'">'+(scfDone?'<span class="brk-lb-cmk '+(champOk?'ok':'bad')+'">'+(champOk?'&#10003;':'&#10007;')+'</span>':'')+'</div>'
+      : '<div class="brk-lb-champ empty">?</div>';
+    var rounds=[s.perRound.r1,s.perRound.r2,s.perRound.cf,s.perRound.scf];
+    var segs=rounds.map(function(p,k){var w=p/maxTotal*100;return w>0?'<i style="width:'+w.toFixed(1)+'%;background:'+RC[k]+'" title="'+RL[k]+' '+p+' pts"></i>':'';}).join('');
+    return '<div class="brk-lb-row'+(isMe?' me':'')+(i<3?' rank'+(i+1):'')+'" style="--pcol:'+col+'" onclick="brkBoardOpen(\''+esc(r.name).replace(/'/g,"\\'")+'\')">'
+      +'<div class="brk-lb-rank">'+(medals[i]||(i+1))+'</div>'+champ_
+      +'<div class="brk-lb-mid">'
+        +'<div class="brk-lb-name">'+esc(r.name)+(isMe?' <span class="brk-lb-you">YOU</span>':'')+'</div>'
+        +'<div class="brk-lb-bar">'+segs+'</div>'
+        +(scope==='global'&&r.group?'<div class="brk-lb-sub">'+esc(r.group)+'</div>':'')
+      +'</div>'
+      +'<div class="brk-lb-pts"><div class="brk-lb-total">'+s.total+'</div><div class="brk-lb-ptl">pts</div></div>'
+    +'</div>';
   }).join('');
   return brkBoardShell(body);
 }
