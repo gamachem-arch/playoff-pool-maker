@@ -343,6 +343,11 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-lb-total { font-family:'Barlow Condensed',sans-serif; font-size:28px; font-weight:900; color:var(--text); line-height:1; }
   .brk-lb-ptl { font-size:9px; color:var(--muted); letter-spacing:1px; text-transform:uppercase; }
   .brk-empty { text-align:center; color:var(--muted); padding:30px 16px; font-size:13px; line-height:1.6; }
+  .brk-substatus { display:flex; align-items:center; justify-content:space-between; gap:8px;
+    background:rgba(34,197,94,0.08); border:1px solid rgba(34,197,94,0.25); border-radius:11px; padding:9px 12px; margin-bottom:10px; }
+  .brk-sub-l { font-size:13px; font-weight:700; color:#4ade80; }
+  .brk-editbtn { padding:6px 13px; border-radius:9px; border:1px solid rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.05); color:var(--text); font-family:Inter,sans-serif; font-size:12px; font-weight:600; cursor:pointer; }
 
   /* View All — NCAA-style horizontal bracket: compact match cards in space-around round columns.
      Horizontal scroll lives on the strip; vertical is the normal page scroll (seamless). */
@@ -4672,7 +4677,7 @@ var BRK_TC={ANA:'#F47A38',BOS:'#FFB81C',BUF:'#003087',CGY:'#D2001C',CAR:'#CC0000
 function brkTC(team){return BRK_TC[team]||'#6b7280';}
 function brkTeamWM(team,extra){return '<img class="brk-wm" src="'+brkLogo(team)+'" style="'+(extra||'')+'" onerror="this.style.display=\'none\'">';}
 
-var BRK={view:'picker', tab:0, viewAll:false, treeFull:false, parsed:null, games:null, odds:{}, actual:{},
+var BRK={view:'picker', tab:0, viewAll:false, treeFull:false, editing:false, parsed:null, games:null, odds:{}, actual:{},
   entries:[], allEntries:null, lbScope:'group', viewFilter:null, changeId:false, pollTimer:null, loaded:false};
 
 /* ---- small helpers ---- */
@@ -4840,7 +4845,7 @@ async function brkRender(){
   var pool=brkPool();if(!pool)return showPoolList();
   // reset transient view state when switching into a different pool
   var pid=pool.id||getActiveId();
-  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.changeId=false;BRK.tab=0;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
+  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.changeId=false;BRK.editing=false;BRK.tab=0;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
   document.getElementById('pool-title').textContent=pool.title||'Pool';
   document.getElementById('sub').textContent=(pool.type==='nrc'?'NRC Style · game-by-game bracket':'Bracket Challenge · pick the winners');
   brkShowContainer();drawPoolSwitcher();
@@ -4868,10 +4873,12 @@ function brkShowContainer(){
 }
 function brkPaint(){
   var wrap=document.getElementById('brk-wrap');if(!wrap)return;
-  // preserve the View All horizontal scroll across re-renders (live poll, pick taps)
+  // preserve horizontal scroll of the tab bar + View All strip across re-renders (tab taps, live poll, pick taps)
   var oldVa=wrap.querySelector('.brk-bscroll'),sl=oldVa?oldVa.scrollLeft:0;
+  var oldTabs=wrap.querySelector('.brk-tabs'),tsl=oldTabs?oldTabs.scrollLeft:0;
   wrap.innerHTML=brkSubnavHtml()+(BRK.view==='board'?brkBoardHtml():brkPickerHtml());
-  var newVa=wrap.querySelector('.brk-bscroll');if(newVa){newVa.scrollLeft=sl;}
+  var newVa=wrap.querySelector('.brk-bscroll');if(newVa)newVa.scrollLeft=sl;
+  var newTabs=wrap.querySelector('.brk-tabs');if(newTabs)newTabs.scrollLeft=tsl;
 }
 function brkGo(v){BRK.view=v;BRK.viewFilter=null;brkPaint();}
 
@@ -4882,13 +4889,13 @@ function brkSubnavHtml(){
       +'<button class="'+(BRK.view==='picker'?'on':'')+'" onclick="brkGo(\'picker\')">Bracket</button>'
       +'<button class="'+(BRK.view==='board'?'on':'')+'" onclick="brkGo(\'board\')">Leaderboard</button>'
     +'</div>'
-    +'<button class="brk-ibtn" id="share-link-btn" onclick="brkShowCode()">⬆ Invite</button>'
+    +'<button class="brk-ibtn" id="share-link-btn" onclick="brkShowCode()">⬆︎ Invite</button>'
     +'<button class="brk-ibtn brk-ibtn-icon" onclick="brkMenu(this)">⋯</button>'
     +'</div>';
 }
 function brkMenu(anchor){
   var ov=document.createElement('div');ov.className='brk-ov brk-menu-ov';ov.onclick=function(e){if(e.target===ov)ov.remove();};
-  var items=[['⚙','Edit pool','showSetup()'],['☰','My pools','showPoolList()'],['＋','Join by code','brkJoinByCode()'],['↻','Refresh','brkRender()'],['🔗','Copy share link','copyShareLink()']];
+  var items=[['⚙','Edit pool','showSetup()'],['☰','My pools','showPoolList()'],['＋','Join by code','brkJoinByCode()'],['↻︎','Refresh','brkRender()'],['🔗','Copy share link','copyShareLink()']];
   ov.innerHTML='<div class="brk-menu-card">'+items.map(function(it){
     return '<button class="brk-menu-item" onclick="this.closest(\'.brk-ov\').remove();'+it[2]+'"><span class="brk-menu-ic">'+it[0]+'</span>'+it[1]+'</button>';
   }).join('')+'</div>';
@@ -4924,9 +4931,11 @@ function brkJoinByCode(){
 /* ---- picker ---- */
 function brkPickerHtml(){
   var pool=brkPool(),me=brkMeName(),locked=brkLocked(),viewing=BRK.viewFilter;
+  var submitted=!viewing&&me&&(BRK.entries||[]).some(function(e){return e.name===me;});
+  var editing=!!BRK.editing;
   var picks,readonly;
   if(viewing){var ent=(BRK.entries||[]).find(function(e){return e.name===viewing;});picks=ent?ent.picks:{};readonly=true;}
-  else{picks=brkLoadDraft();readonly=locked;}
+  else{picks=brkLoadDraft();readonly=locked||(submitted&&!editing);}
   var sc=brkScore(picks,pool);
   var html='';
   if(viewing){html+=brkViewingBarHtml(viewing,sc);}
@@ -4934,6 +4943,10 @@ function brkPickerHtml(){
     html+=brkIdentityBarHtml(picks,sc);
     if(locked)html+=brkSeePicksHtml();
     if(!me){return html+'<div class="brk-empty" style="padding:16px">Tap your name above to start your bracket.</div>';}
+    // submitted & not locked & not editing → clean read-only view with a slim Edit affordance up top
+    if(submitted&&!locked&&!editing){
+      html+='<div class="brk-substatus"><span class="brk-sub-l">✓ Bracket submitted</span><button class="brk-editbtn" onclick="brkEdit(true)">✎ Edit picks</button></div>';
+    }
   }
   html+=brkTabsHtml(picks,pool);
   if(BRK.viewAll){
@@ -4950,10 +4963,13 @@ function brkPickerHtml(){
   }else if(locked){
     html+='<div class="brk-submitbar"><div class="brk-chip">🔒 Locked at Round 1 puck drop · you have '+sc.total+' pts</div>'
       +'<button class="btn btn-primary" style="width:100%" onclick="brkGo(\'board\')">View leaderboard →</button></div>';
+  }else if(submitted&&!editing){
+    /* clean submitted state — no bottom bar; the Edit button lives up top */
   }else{
-    var n=brkPickedCount(picks,pool),complete=n===15,submitted=me&&(BRK.entries||[]).some(function(e){return e.name===me;});
-    html+='<div class="brk-submitbar"><div class="brk-chip">'+n+'/15 series picked'+(submitted?' · ✓ submitted (you can still edit)':'')+'</div>'
-      +'<button class="btn btn-primary" style="width:100%'+(complete?'':';opacity:0.45')+'" '+(complete?'':'disabled ')+'onclick="brkSubmit(this)">'+(submitted?'Update my bracket':'Submit my bracket')+'</button></div>';
+    var n=brkPickedCount(picks,pool),complete=n===15;
+    html+='<div class="brk-submitbar"><div class="brk-chip">'+(submitted?'Editing — change picks, then update':n+'/15 series picked')+'</div>'
+      +'<button class="btn btn-primary" style="width:100%'+(complete?'':';opacity:0.45')+'" '+(complete?'':'disabled ')+'onclick="brkSubmit(this)">'+(submitted?'Update my bracket':'Submit my bracket')+'</button>'
+      +(submitted?'<button class="btn" style="width:100%;margin-top:6px" onclick="brkEdit(false)">Cancel</button>':'')+'</div>';
   }
   // discreet dev unlock
   html+='<div style="text-align:center;margin-top:18px;padding-bottom:20px"><button onclick="brkToggleDev()" style="background:none;border:none;color:rgba(255,255,255,'+(brkDevUnlocked()?'0.4':'0.12')+');font-size:10px;cursor:pointer;letter-spacing:1px">'+(brkDevUnlocked()?'🔓 dev unlock ON — tap to re-lock':'· · ·')+'</button></div>';
@@ -4998,6 +5014,14 @@ function brkSeePicksHtml(){
   h+='</div>';return h;
 }
 function brkSetIdentity(ab){var k=_myPlayerKey();if(k){try{localStorage.setItem(k,ab);}catch(e){}}BRK.viewFilter=null;BRK.changeId=false;brkPaint();}
+function brkEdit(on){
+  if(on===false){ // cancel — revert local draft to the submitted bracket
+    var me=brkMeName(),ent=(BRK.entries||[]).find(function(e){return e.name===me;});
+    if(ent)brkSaveDraft(JSON.parse(JSON.stringify(ent.picks||{})));
+    BRK.editing=false;
+  } else { BRK.editing=true; }
+  brkPaint();
+}
 function brkViewPlayer(name){BRK.viewFilter=(BRK.viewFilter===name?null:name);brkPaint();}
 function brkTabsHtml(picks,pool){
   var slots=brkPredict(picks,pool),html='<div class="brk-tabs">';
@@ -5036,7 +5060,7 @@ function brkSeriesCellHtml(key,picks,pool,sc,readonly){
     var w=winsIn(team),col=brkTC(team),isWin=slot.winner===team,isLose=slot.winner&&slot.winner!==team;
     var s='<div class="brk-trow'+(isWin?' tw-win':'')+(isLose?' tw-lose':'')+'" style="border-left:3px solid '+(isWin?col:'transparent')+'">'
       +'<img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'">'
-      +'<span class="brk-tname'+(isWin?' tw-adv':'')+'">'+team+(isWin?' <span style="font-size:11px;color:'+col+'">'+(BRK_SERIES[key].round===4?'🏆':'▶')+'</span>':'')+'</span>'
+      +'<span class="brk-tname'+(isWin?' tw-adv':'')+'">'+team+(isWin?' <span style="font-size:11px;color:'+col+'">'+(BRK_SERIES[key].round===4?'🏆':'▶︎')+'</span>':'')+'</span>'
       +'<div class="brk-games">';
     for(var i=0;i<cols;i++)s+=brkGameCellHtml(key,team,i,raw,readonly,slot.winner,act,matchup,isTop);
     var oppW=winsIn(isTop?t2:t1);
@@ -5049,7 +5073,7 @@ function brkSeriesCellHtml(key,picks,pool,sc,readonly){
     +'<div class="brk-cell-label">'+label+brkCellResultHtml(key,sc)+'</div>';
   out+=teamRow(t1,true)+teamRow(t2,false);
   var pickText=slot.winner?('your pick <b>'+slot.winner+' in '+raw.length+'</b>'+(act.done?('<span style="opacity:.5"> · actual '+act.winner+' in '+act.games+'</span>'):'')):'';
-  var resetBtn=(!readonly&&raw.length)?'<button class="brk-reset" onclick="brkResetSeries(\''+key+'\')">↺ reset</button>':'';
+  var resetBtn=(!readonly&&raw.length)?'<button class="brk-reset" onclick="brkResetSeries(\''+key+'\')">↺︎ reset</button>':'';
   if(pickText||resetBtn)out+='<div class="brk-foot"><span class="brk-serieswin">'+pickText+'</span>'+resetBtn+'</div>';
   out+='</div>';return out;
 }
@@ -5184,7 +5208,7 @@ function brkSubmit(btn){
   if(!brkPicksComplete(picks,pool)){alert('Pick a winner for all 15 series first.');return;}
   if(btn){btn.textContent='Submitting…';btn.disabled=true;}
   brkSubmitEntry(pool.id||getActiveId(),{name:me.name,picks:picks,submittedAt:Date.now()}).then(function(res){
-    if(res&&res.ok){brkFetchEntries(pool.id||getActiveId()).then(function(e){BRK.entries=e;BRK.view='board';brkPaint();});}
+    if(res&&res.ok){BRK.editing=false;brkFetchEntries(pool.id||getActiveId()).then(function(e){BRK.entries=e;BRK.view='board';brkPaint();});}
     else{alert('Submit failed: '+((res&&res.error)||'network')+'. Your picks are saved locally.');brkPaint();}
   });
 }
@@ -5219,7 +5243,7 @@ function brkBoardShell(body){
   return '<div style="display:flex;gap:6px;margin-bottom:12px">'
     +'<button class="brk-tab'+(BRK.lbScope==='group'?' on':'')+'" onclick="brkScope(\'group\')">This pool</button>'
     +'<button class="brk-tab'+(BRK.lbScope==='global'?' on':'')+'" onclick="brkScope(\'global\')">🌎 Global</button>'
-    +'<button class="brk-tab" onclick="brkRefreshBoard()">↻ Refresh</button></div>'+body;
+    +'<button class="brk-tab" onclick="brkRefreshBoard()">↻︎ Refresh</button></div>'+body;
 }
 function brkScope(s){BRK.lbScope=s;brkPaint();}
 function brkLoadGlobal(){brkFetchAll().then(function(d){BRK.allEntries=d;if(BRK.view==='board')brkPaint();});}
