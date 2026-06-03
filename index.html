@@ -1467,27 +1467,34 @@ function buildDualSparkline(histData,t1,t2,roundKey,liveVal1,liveVal2,startDate,
   function polyStr(pts){return pts.map(function(p){return p.x.toFixed(1)+','+p.y.toFixed(1);}).join(' ');}
   var col1='#60a5fa',col2='#fb923c';
   var last1=c1.length?c1[c1.length-1]:null,last2=c2.length?c2[c2.length-1]:null;
-  var dateLabels=useDates.map(function(d,i){
-    if(i!==0&&i!==useDates.length-1)return'';
-    var md=d.substring(5).replace('-','/');
-    var x=padX+(i/(useDates.length-1))*(W-padX*2);
-    var anchor=i===0?'start':'end';
-    return'<text x="'+x.toFixed(1)+'" y="'+(H+9)+'" font-size="6.5" fill="#6b7280" text-anchor="'+anchor+'" font-family="monospace">'+md+'</text>';
-  }).join('');
-  var dots1=c1.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c1.length-1?2.5:1.8)+'" fill="'+col1+'"/>';}).join('');
-  var dots2=c2.map(function(p,i){return'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="'+(i===c2.length-1?2.5:1.8)+'" fill="'+col2+'"/>';}).join('');
   var seriesLabel=roundKey==='cup'?'win cup':'win series';
+  // Dots are overlaid as round HTML elements (the SVG stretches via preserveAspectRatio="none",
+  // which would otherwise squash <circle> dots into ellipses). x maps 0..W → 0..100% width,
+  // y maps 0..H → 0..100% of the chart height, so HTML dots align exactly with the stretched line.
+  function dotHtml(pts,col){
+    return pts.map(function(p,i){
+      var leftPct=(p.x/W)*100,topPct=(p.y/H)*100,dia=(i===pts.length-1?6:4);
+      return'<div style="position:absolute;left:'+leftPct.toFixed(2)+'%;top:'+topPct.toFixed(2)+'%;width:'+dia+'px;height:'+dia+'px;border-radius:50%;background:'+col+';transform:translate(-50%,-50%);box-shadow:0 0 0 1.5px var(--surface)"></div>';
+    }).join('');
+  }
+  var firstMd=useDates[0].substring(5).replace('-','/'),lastMd=useDates[useDates.length-1].substring(5).replace('-','/');
   return'<div style="padding:6px 8px 4px;border-bottom:1px solid var(--border)">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">'
     +'<span style="font-size:9px;font-weight:700;color:'+col1+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+t1+(last1?' <span style="opacity:0.7">'+last1.val.toFixed(1)+'%</span>':'')+'</span>'
     +'<span style="font-size:7px;color:var(--muted);letter-spacing:0.8px;text-transform:uppercase;opacity:0.5">'+seriesLabel+'</span>'
     +'<span style="font-size:9px;font-weight:700;color:'+col2+';font-family:\'Barlow Condensed\',sans-serif;letter-spacing:0.5px">'+(last2?'<span style="opacity:0.7">'+last2.val.toFixed(1)+'%</span> ':'')+t2+'</span>'
     +'</div>'
-    +'<svg width="100%" viewBox="0 0 '+W+' '+(H+14)+'" preserveAspectRatio="none" style="display:block;height:44px">'
-    +(c1.length>=2?'<polyline points="'+polyStr(c1)+'" fill="none" stroke="'+col1+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>':'')
-    +(c2.length>=2?'<polyline points="'+polyStr(c2)+'" fill="none" stroke="'+col2+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>':'')
-    +dots1+dots2+dateLabels
-    +'</svg></div>';
+    +'<div style="position:relative;height:40px">'
+    +'<svg width="100%" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" style="display:block;height:40px">'
+    +(c1.length>=2?'<polyline points="'+polyStr(c1)+'" fill="none" stroke="'+col1+'" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>':'')
+    +(c2.length>=2?'<polyline points="'+polyStr(c2)+'" fill="none" stroke="'+col2+'" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round"/>':'')
+    +'</svg>'
+    +dotHtml(c1,col1)+dotHtml(c2,col2)
+    +'</div>'
+    +'<div style="display:flex;justify-content:space-between;padding:0 2px;margin-top:1px">'
+    +'<span style="font-size:7px;color:#6b7280;font-family:monospace">'+firstMd+'</span>'
+    +'<span style="font-size:7px;color:#6b7280;font-family:monospace">'+lastMd+'</span>'
+    +'</div></div>';
 }
 function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   if(!s||s.topTeam==="TBD")return '<div class="series"><div class="sh">'+label+'</div><div class="tbd-r">TBD</div><div class="tbd-r" style="border-top:1px solid var(--border)">TBD</div></div>';
@@ -1531,7 +1538,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
   // ── Stanley Cup Final: side-by-side hero layout ─────────────────────────
   if (roundNum === 4) {
     var _scfStarted = live || _played.length>0; // series underway once a game is live or played
-    var scfAutoOpen = w1>0||w2>0||_scfStarted; // auto-open once series has started
+    var scfAutoOpen = false; // collapsed by default — user taps to expand games/sparkline
     var bLogo1='<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
     var bLogo2=t2isTBD?'':'<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
     var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">'
