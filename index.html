@@ -1530,7 +1530,8 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
 
   // ── Stanley Cup Final: side-by-side hero layout ─────────────────────────
   if (roundNum === 4) {
-    var scfAutoOpen = w1>0||w2>0; // only auto-open once series has started
+    var _scfStarted = live || _played.length>0; // series underway once a game is live or played
+    var scfAutoOpen = w1>0||w2>0||_scfStarted; // auto-open once series has started
     var bLogo1='<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t1+'_'+logoSfx(t1)+'.svg" onerror="this.style.display=\'none\'">';
     var bLogo2=t2isTBD?'':'<img style="width:52px;height:52px;object-fit:contain;flex-shrink:0" src="https://assets.nhle.com/logos/nhl/svg/'+t2+'_'+logoSfx(t2)+'.svg" onerror="this.style.display=\'none\'">';
     var scfLeft='<div style="flex:1;display:flex;align-items:center;gap:10px;min-width:0">'
@@ -1568,7 +1569,7 @@ function seriesCard(s,label,odds,gd,dm,roundOdds,roundNum,histData,autoOpen){
           +'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:26px;font-weight:900;letter-spacing:0.5px;white-space:nowrap">'+(t2won?'<span style="font-size:11px;vertical-align:middle">🏆</span> ':'')+t2+'</div>'
           +(o2?'<div style="display:flex;align-items:center;justify-content:flex-end;gap:2px">'+deltaBadge(d2)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;color:#9ca3af">'+o2+'</span></div>':'')
         +'</div></div>';
-    var scfCenter=(w1>0||w2>0)
+    var scfCenter=(w1>0||w2>0||_scfStarted)
       ?'<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:22px;font-weight:900;flex-shrink:0;padding:0 6px">'
           +'<span style="color:'+(w1>w2?'#4ade80':'var(--muted)')+'">'+w1+'</span>'
           +'<span style="opacity:0.25;margin:0 3px">–</span>'
@@ -2233,18 +2234,38 @@ function lgoStatRowM(label,value){
     +'<span style="font-size:13px;font-weight:700;color:#f9fafb;font-family:\'Barlow Condensed\',sans-serif">'+value+'</span>'
     +'</div>';
 }
+// Merge goal win-probs into the timeline so the line steps at goals (a plateau between
+// goals) instead of a thin triangle — matches MoneyPuck's stepped win-probability line.
+function _scfWinSeries(timeline,goals){
+  var pts=(timeline||[]).map(function(p){return {t:p.t,wp:p.wp,_g:false};});
+  (goals||[]).forEach(function(g){if(g&&g.homeWinProb!=null)pts.push({t:g.t,wp:g.homeWinProb,_g:true});});
+  pts.sort(function(a,b){return (a.t-b.t)||((a._g?1:0)-(b._g?1:0));});
+  var out=[];
+  for(var i=0;i<pts.length;i++){
+    if(out.length&&out[out.length-1].t===pts[i].t){ if(pts[i]._g)out[out.length-1]=pts[i]; }
+    else out.push(pts[i]);
+  }
+  return out;
+}
+// Goal marker: tiny scoring-team logo on the line (falls back to a colored dot)
+function _scfGoalLogo(cx,cy,team,delta,sz,bg){
+  if(!team)return '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="3" fill="'+(delta>0?'#60a5fa':'#fb923c')+'" stroke="#0d1117" stroke-width="1.5"/>';
+  return '<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="'+bg+'" fill="#0d1117" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>'
+    +'<image href="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" x="'+(cx-sz/2).toFixed(1)+'" y="'+(cy-sz/2).toFixed(1)+'" width="'+sz+'" height="'+sz+'"/>';
+}
 function buildWinProbChartM(timeline,goals){
   if(!timeline||timeline.length<2)return'';
   var W=340,H=120,pL=30,pR=10,pT=8,pB=22,cW=W-pL-pR,cH=H-pT-pB;
   var maxT=Math.max.apply(null,timeline.map(function(p){return p.t;}));
   if(maxT<=1200)maxT=1200;else if(maxT<=2400)maxT=2400;else if(maxT<=3600)maxT=3600;else maxT=Math.ceil(maxT/300)*300;
   function tx(t){return pL+(t/maxT)*cW;}function ty(wp){return pT+(1-wp)*cH;}
-  var pts=timeline.map(function(p){return tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
+  var series=_scfWinSeries(timeline,goals);
+  var pts=series.map(function(p){return tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
   var linePath='M '+pts.join(' L ');
   var y50=ty(0.5);
-  var fillPath='M '+tx(timeline[0].t).toFixed(1)+','+y50.toFixed(1);
-  timeline.forEach(function(p){fillPath+=' L '+tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
-  fillPath+=' L '+tx(timeline[timeline.length-1].t).toFixed(1)+','+y50.toFixed(1)+' Z';
+  var fillPath='M '+tx(series[0].t).toFixed(1)+','+y50.toFixed(1);
+  series.forEach(function(p){fillPath+=' L '+tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
+  fillPath+=' L '+tx(series[series.length-1].t).toFixed(1)+','+y50.toFixed(1)+' Z';
   var periodLines=[1200,2400,3600].filter(function(t){return t<maxT;}).map(function(t){
     var x=tx(t).toFixed(1);
     return'<line x1="'+x+'" y1="'+pT+'" x2="'+x+'" y2="'+(pT+cH)+'" stroke="rgba(255,255,255,0.12)" stroke-width="1" stroke-dasharray="3,3"/>';
@@ -2260,9 +2281,9 @@ function buildWinProbChartM(timeline,goals){
     +'<text x="'+(pL-4)+'" y="'+(y50+4)+'" fill="#4b5563" font-size="8" font-family="Barlow Condensed,sans-serif" text-anchor="end">50%</text>'
     +'<text x="'+(pL-4)+'" y="'+(pT+cH+4)+'" fill="#4b5563" font-size="8" font-family="Barlow Condensed,sans-serif" text-anchor="end">0%</text>';
   var goalMarkers=(goals||[]).map(function(g){
-    var x=tx(g.t).toFixed(1),y=ty(g.homeWinProb).toFixed(1),isHome=g.delta>0,col=isHome?'#10b981':'#f87171';
-    return'<line x1="'+x+'" y1="'+pT+'" x2="'+x+'" y2="'+(pT+cH)+'" stroke="'+col+'" stroke-width="1" opacity="0.4"/>'
-      +'<circle cx="'+x+'" cy="'+y+'" r="3.5" fill="'+col+'" stroke="#0d1117" stroke-width="1.5"/>';
+    var cx=tx(g.t),cy=ty(g.homeWinProb),col=g.delta>0?'#10b981':'#f87171';
+    return'<line x1="'+cx.toFixed(1)+'" y1="'+pT+'" x2="'+cx.toFixed(1)+'" y2="'+(pT+cH)+'" stroke="'+col+'" stroke-width="1" opacity="0.35"/>'
+      +_scfGoalLogo(cx,cy,g.scorerTeam||'',g.delta,20,11);
   }).join('');
   var last=timeline[timeline.length-1];
   var endDot='<circle cx="'+tx(last.t).toFixed(1)+'" cy="'+ty(last.wp).toFixed(1)+'" r="3" fill="#3b82f6" stroke="#0d1117" stroke-width="1.5"/>';
@@ -2279,17 +2300,17 @@ function buildMiniWinChartM(timeline,goals){
   var maxT=Math.max.apply(null,timeline.map(function(p){return p.t;}));
   if(maxT<=1200)maxT=1200;else if(maxT<=2400)maxT=2400;else if(maxT<=3600)maxT=3600;else maxT=Math.ceil(maxT/300)*300;
   function tx(t){return(t/maxT)*W;}function ty(wp){return pT+(1-wp)*cH;}
-  var pts=timeline.map(function(p){return tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);}).join(' L ');
+  var series=_scfWinSeries(timeline,goals);
+  var pts=series.map(function(p){return tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);}).join(' L ');
   var y50=ty(0.5);
-  var fill='M '+tx(timeline[0].t).toFixed(1)+','+y50.toFixed(1);
-  timeline.forEach(function(p){fill+=' L '+tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
-  fill+=' L '+tx(timeline[timeline.length-1].t).toFixed(1)+','+y50.toFixed(1)+' Z';
+  var fill='M '+tx(series[0].t).toFixed(1)+','+y50.toFixed(1);
+  series.forEach(function(p){fill+=' L '+tx(p.t).toFixed(1)+','+ty(p.wp).toFixed(1);});
+  fill+=' L '+tx(series[series.length-1].t).toFixed(1)+','+y50.toFixed(1)+' Z';
   var divs=[1200,2400,3600].filter(function(t){return t<maxT;}).map(function(t){
     return'<line x1="'+tx(t).toFixed(1)+'" y1="0" x2="'+tx(t).toFixed(1)+'" y2="'+H+'" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="2,3"/>';
   }).join('');
   var gdots=(goals||[]).map(function(g){
-    var col=g.delta>0?'#60a5fa':'#fb923c';
-    return'<circle cx="'+tx(g.t).toFixed(1)+'" cy="'+ty(g.homeWinProb).toFixed(1)+'" r="3" fill="'+col+'" stroke="#0d1117" stroke-width="1.5"/>';
+    return _scfGoalLogo(tx(g.t),ty(g.homeWinProb),g.scorerTeam||'',g.delta,14,8);
   }).join('');
   var last=timeline[timeline.length-1];
   return'<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;display:block;height:52px">'
@@ -2303,22 +2324,25 @@ function buildMiniWinChartM(timeline,goals){
     +'</svg>';
 }
 var _SCF_TC={CAR:'#CC0000',VGK:'#B4975A',MTL:'#AF1E2D',BUF:'#003087',COL:'#6F263D',MIN:'#154734',DAL:'#006847',EDM:'#FF4C00',TBL:'#002868',BOS:'#FFB81C',LAK:'#111111',PHI:'#F74902',OTT:'#C52032',UTA:'#69B3E7',PIT:'#FCB514',ANA:'#F47A38'};
-function buildSCFLiveStats(data,away,home){
+function buildSCFLiveStats(data,away,home,leftT,rightT){
   if(!data)return'';
+  leftT=leftT||away;rightT=rightT||home;
   var c=data.current||{};
   var hwp=c.homeWinProb!=null?Math.round(c.homeWinProb*100):null,awp=hwp!=null?100-hwp:null;
   var chart=buildMiniWinChartM(data.timeline||[],data.goals||[]);
-  // Win % + chart (untouched — perfect)
+  // Win % + chart — ordered to match the series card (left = series topTeam)
+  var _pctOf=function(t){return t===home?hwp:awp;};
+  var _colOf=function(t){return t===home?'#60a5fa':'#fb923c';};
   var winSection='';
   if(chart&&hwp!=null){
     winSection='<div style="padding:10px 12px 0">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'
-        +'<div style="display:flex;align-items:center;gap:4px">'+makePill(away)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:#fb923c">'+awp+'%</span></div>'
+        +'<div style="display:flex;align-items:center;gap:4px">'+makePill(leftT)+'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:'+_colOf(leftT)+'">'+_pctOf(leftT)+'%</span></div>'
         +'<span style="font-size:9px;color:#6b7280;letter-spacing:1px;text-transform:uppercase">win game</span>'
-        +'<div style="display:flex;align-items:center;gap:4px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:#60a5fa">'+hwp+'%</span>'+makePill(home)+'</div>'
+        +'<div style="display:flex;align-items:center;gap:4px"><span style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;font-weight:700;color:'+_colOf(rightT)+'">'+_pctOf(rightT)+'%</span>'+makePill(rightT)+'</div>'
       +'</div>'+chart+'</div>';
   }
-  // Scoring summary
+  // Scoring summary — newest goal first (delta still computed in chronological order)
   var goals=data.goals||[];
   var cells=goals.map(function(g,gi){
     var prev=gi>0?goals[gi-1]:null;
@@ -2354,7 +2378,7 @@ function buildSCFLiveStats(data,away,home){
       +'</div>'
       +makePill(team)
       +'</div>';
-  }).join('');
+  }).reverse().join('');
   var scoringSection=goals.length
     ?'<div style="border-top:1px solid rgba(255,255,255,0.05);padding:10px 12px 12px">'
       +'<div style="font-size:9px;color:#6b7280;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;font-family:\'Barlow Condensed\',sans-serif">Goals</div>'
@@ -2363,11 +2387,28 @@ function buildSCFLiveStats(data,away,home){
   return(winSection||scoringSection)
     ?'<div style="border-top:1px solid rgba(255,255,255,0.08)">'+winSection+scoringSection+'</div>':'';
 }
-async function injectSCFStats(gameId,away,home,season){
+// Upcoming-game banner for SCF — same header-bar styling as the live panel, but a small
+// standalone strip directly under the series card: "🏒 GAME n TONIGHT · 8:00 PM ET   [PREVIEW]".
+// Teams are omitted (SCF is the only remaining series). Whole banner taps through to the preview.
+function buildScfUpcomingPanel(dg,gn){
+  if(!dg)return'';
+  var timeStr='';
+  try{timeStr=new Date(dg.startUTC).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York',hour12:true})+' ET';}catch(e){}
+  var click=dg.id?' onclick="showGamePreviewOverlayM(\''+dg.id+'\',\''+dg.away+'\',\''+dg.home+'\',\''+dg.season+'\')" style="cursor:pointer"':'';
+  var previewBtn=dg.id?'<span onclick="event.stopPropagation();showGamePreviewOverlayM(\''+dg.id+'\',\''+dg.away+'\',\''+dg.home+'\',\''+dg.season+'\')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:9px;color:#9ca3af;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;cursor:pointer;padding:2px 6px;border:1px solid #374151;border-radius:4px;-webkit-tap-highlight-color:transparent">PREVIEW</span>':'';
+  return '<div'+click+' style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;background:var(--surface);margin-top:8px">'
+    +'<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:5px;padding:10px 12px;background:linear-gradient(120deg,rgba(59,130,246,0.18),rgba(59,130,246,0.04) 55%,transparent)">'
+      +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:#cbd5e1">🏒 GAME '+gn+' TONIGHT</span>'
+      +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#93a3b8">· '+timeStr+'</span>'
+      +previewBtn
+    +'</div>'
+  +'</div>';
+}
+async function injectSCFStats(gameId,away,home,season,leftT,rightT){
   var el=document.getElementById('scf-live-stats');if(!el)return;
   try{
     var data=await fetch(ODDS_API+'?action=mpGame&id='+gameId+'&season='+season,{cache:'no-store'}).then(function(r){return r.json();});
-    el.innerHTML=buildSCFLiveStats(data,away,home);
+    el.innerHTML=buildSCFLiveStats(data,away,home,leftT,rightT);
     // Inject SOG into score area placeholders
     var shots=data.shots||[];
     var awaySOG=shots.filter(function(s){return s.team==='A'&&(s.event==='S'||s.event==='G');}).length;
@@ -4211,7 +4252,10 @@ async function doRender(){
             homeScore:g.homeTeam.score!=null?g.homeTeam.score:null,
             state:g.gameState,startUTC:g.startTimeUTC,
             period:(g.periodDescriptor&&g.periodDescriptor.number)||null,
-            periodType:(g.periodDescriptor&&g.periodDescriptor.periodType)||'REG'});
+            periodType:(g.periodDescriptor&&g.periodDescriptor.periodType)||'REG',
+            clock:g.clock||null,
+            tv:(g.tvBroadcasts||[]).map(function(b){return b.network;}).filter(Boolean),
+            venue:(g.venue&&g.venue.default)||''});
         });
       });
     }catch(e){}
@@ -4301,54 +4345,65 @@ async function doRender(){
         var _away=_dg.away,_home=_dg.home,_as=_dg.awayScore||0,_hs=_dg.homeScore||0,_st=_dg.state;
         var _live=_st==='LIVE'||_st==='CRIT',_fin=_st==='OFF'||_st==='FINAL';
         var _gn=_fin?_gPlayed:_gPlayed+1;
-        // Status bar
-        var _months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        var _statusHtml;
-        if(_live){
-          _statusHtml='<span class="live-dot" style="margin-right:4px"></span>'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#f87171">LIVE</span>'
-            +(_dg.period?'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#6b7280;margin-left:6px">P'+_dg.period+'</span>':'')
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#6b7280;margin-left:6px;opacity:0.6">· G'+_gn+'</span>';
-        }else if(_fin){
-          _statusHtml='<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6b7280">FINAL</span>'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#6b7280;margin-left:6px;opacity:0.6">· G'+_gn+'</span>';
-        }else{
-          var _td=new Date(new Date(_dg.startUTC).getTime()+_et);
-          var _tStr2=(_td.getHours()%12||12)+':'+String(_td.getMinutes()).padStart(2,'0')+(_td.getHours()>=12?' PM':' AM')+' ET';
-          _statusHtml='<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#9ca3af">🏒 G'+_gn+' TONIGHT</span>'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#6b7280;margin-left:6px">'+_tStr2+'</span>';
-        }
-        // Team blocks
-        var _mkT=function(team){
-          return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">'
-            +'<img style="width:60px;height:60px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">'
-            +'<div style="display:flex;align-items:center;gap:5px">'
-              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px">'+team+'</span>'
-              +makePill(team)
-            +'</div>'
-            +'<span id="scf-sog-'+team+'" style="font-size:10px;color:#4b5563;letter-spacing:.3px"></span>'
-            +'</div>';
-        };
-        // Center: score or VS
-        var _cx;
         if(!_live&&!_fin){
-          _cx='<div style="font-family:\'Barlow Condensed\',sans-serif;font-size:13px;letter-spacing:2.5px;color:var(--muted);opacity:0.4;flex-shrink:0">VS</div>';
+          // Upcoming: slim header-bar panel (see buildScfUpcomingPanel)
+          scfGameHtml=buildScfUpcomingPanel(_dg,_gn);
         }else{
-          var _aw=_fin&&_as>_hs,_hw=_fin&&_hs>_as;
-          _cx='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:60px;font-weight:900;line-height:1;color:'+(_aw?'#f9fafb':'var(--muted)')+'">'+_as+'</span>'
+          // Live / final: full rich panel with big logos, score, and injected live stats.
+          // Teams ordered to match the series card (topTeam left, bottomTeam right), not home/away.
+          var _serT=[r4render.topTeam,r4render.bottomTeam];
+          var _useSer=_serT.indexOf(_away)>=0&&_serT.indexOf(_home)>=0;
+          var _leftT=_useSer?r4render.topTeam:_away,_rightT=_useSer?r4render.bottomTeam:_home;
+          var _scoreOf=function(t){return t===_home?_hs:_as;};
+          var _ls=_scoreOf(_leftT),_rs=_scoreOf(_rightT);
+          var _statusHtml;
+          if(_live){
+            var _clk=_dg.clock||{};
+            var _pType=_dg.periodType||'REG';
+            var _pNum=_dg.period||1;
+            var _pLab=_pType==='OT'?'OT':_pType==='SO'?'SO':('P'+_pNum);
+            var _ord=_pNum===1?'1ST':_pNum===2?'2ND':_pNum===3?'3RD':(_pNum+'TH');
+            var _tr=_clk.timeRemaining||'';
+            var _clockTxt=_clk.inIntermission?(_ord+' INT'+(_tr?' · '+_tr:'')):(_pLab+(_tr?' · '+_tr:''));
+            _statusHtml='<span class="live-dot" style="margin-right:4px"></span>'
+              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:1px;color:#f87171">LIVE</span>'
+              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#cbd5e1;margin-left:6px">· '+_clockTxt+'</span>'
+              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#6b7280;margin-left:6px;opacity:0.7">· G'+_gn+'</span>';
+          }else{
+            _statusHtml='<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;font-weight:700;letter-spacing:1.5px;color:#6b7280">FINAL</span>'
+              +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:10px;color:#6b7280;margin-left:6px;opacity:0.7">· G'+_gn+'</span>';
+          }
+          // Team blocks
+          var _mkT=function(team){
+            return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px">'
+              +'<img style="width:60px;height:60px;object-fit:contain" src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" onerror="this.style.display=\'none\'">'
+              +'<div style="display:flex;align-items:center;gap:5px">'
+                +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.5px">'+team+'</span>'
+                +makePill(team)
+              +'</div>'
+              +'<span id="scf-sog-'+team+'" style="font-size:10px;color:#4b5563;letter-spacing:.3px"></span>'
+              +'</div>';
+          };
+          // Center: score (left = series topTeam, right = bottomTeam)
+          var _lw=_fin&&_ls>_rs,_rw=_fin&&_rs>_ls;
+          var _cx='<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'
+            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:60px;font-weight:900;line-height:1;color:'+(_lw?'#f9fafb':'var(--muted)')+'">'+_ls+'</span>'
             +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:30px;font-weight:900;opacity:0.2;flex-shrink:0">·</span>'
-            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:60px;font-weight:900;line-height:1;color:'+(_hw?'#f9fafb':'var(--muted)')+'">'+_hs+'</span>'
+            +'<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:60px;font-weight:900;line-height:1;color:'+(_rw?'#f9fafb':'var(--muted)')+'">'+_rs+'</span>'
             +'</div>';
-        }
-        var _click=(_live||_fin)&&_dg.id?' onclick="showLiveGameOverlayMaker(\''+_dg.id+'\',\''+_away+'\',\''+_home+'\',\''+_dg.season+'\')" style="cursor:pointer"':'';
-        scfGameHtml='<div'+_click+' style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;background:var(--surface);margin-top:8px'+(_live?';border-color:rgba(248,113,113,0.35);box-shadow:0 0 0 1px rgba(248,113,113,0.08)':'')+'">'
-          +'<div style="display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06)">'+_statusHtml+'</div>'
-          +'<div style="display:flex;align-items:center;padding:20px 12px;gap:8px">'+_mkT(_away)+_cx+_mkT(_home)+'</div>'
-          +((_live||_fin)&&_dg.id?'<div id="scf-live-stats"></div>':'')
-          +'</div>';
-        if((_live||_fin)&&_dg.id){
-          (function(id,aw,hm,ss){setTimeout(function(){injectSCFStats(id,aw,hm,ss);},0);}(_dg.id,_away,_home,_dg.season));
+          var _click=_dg.id?' onclick="showLiveGameOverlayMaker(\''+_dg.id+'\',\''+_away+'\',\''+_home+'\',\''+_dg.season+'\')" style="cursor:pointer"':'';
+          var _previewPill=_dg.id
+            ?'<span onclick="event.stopPropagation();showGamePreviewOverlayM(\''+_dg.id+'\',\''+_away+'\',\''+_home+'\',\''+_dg.season+'\')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:9px;color:#9ca3af;font-weight:700;font-family:\'Barlow Condensed\',sans-serif;letter-spacing:.5px;cursor:pointer;padding:2px 6px;border:1px solid #374151;border-radius:4px;-webkit-tap-highlight-color:transparent">PREVIEW</span>'
+            :'';
+          var _hdrBg=_live?'linear-gradient(120deg,rgba(248,113,113,0.20),rgba(248,113,113,0.04) 55%,transparent)':'rgba(255,255,255,0.03)';
+          scfGameHtml='<div'+_click+' style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;background:var(--surface);margin-top:8px'+(_live?';border-color:rgba(248,113,113,0.35);box-shadow:0 0 0 1px rgba(248,113,113,0.08)':'')+'">'
+            +'<div style="position:relative;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;background:'+_hdrBg+';border-bottom:1px solid rgba(255,255,255,0.06)">'+_statusHtml+_previewPill+'</div>'
+            +'<div style="display:flex;align-items:center;padding:20px 12px;gap:8px">'+_mkT(_leftT)+_cx+_mkT(_rightT)+'</div>'
+            +(_dg.id?'<div id="scf-live-stats"></div>':'')
+            +'</div>';
+          if(_dg.id){
+            (function(id,aw,hm,ss,lt,rt){setTimeout(function(){injectSCFStats(id,aw,hm,ss,lt,rt);},0);}(_dg.id,_away,_home,_dg.season,_leftT,_rightT));
+          }
         }
       }
     }
