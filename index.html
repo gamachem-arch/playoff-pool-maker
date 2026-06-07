@@ -327,6 +327,12 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-gcell.na { background:transparent; border-color:transparent; cursor:default; }
   .brk-gcell.ok { box-shadow:inset 0 0 0 2px #22c55e; }
   .brk-gcell.bad { box-shadow:inset 0 0 0 2px #ef4444; }
+  /* per-game points shown BELOW each cell (replaces the old in-cell ✓/✕) */
+  .brk-gcol { display:flex; flex-direction:column; align-items:center; gap:3px; }
+  .brk-gpts { height:11px; line-height:11px; min-width:14px; text-align:center; font-family:'Barlow Condensed',sans-serif;
+    font-size:11px; font-weight:800; letter-spacing:.3px; color:transparent; }
+  .brk-gpts.ok { color:#22c55e; }
+  .brk-gpts.miss { color:#6b7280; }
   .brk-wins { min-width:24px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:30px;
     font-weight:900; margin-left:8px; color:var(--muted); line-height:1; }
   .brk-wins.lead { color:#f9fafb; text-shadow:0 0 14px rgba(255,255,255,0.25); }
@@ -417,6 +423,11 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-pcell.ok { box-shadow:0 0 0 1.5px #22c55e; }
   .brk-pcell.bad { opacity:.55; box-shadow:0 0 0 1.5px #ef4444; }
   .brk-pcell.ph { opacity:.28; }
+  /* one shared points line under both team rows — aligns each game's points under its column */
+  .brk-prow { display:flex; align-items:center; gap:6px; padding:1px 9px 5px; }
+  .brk-ppt { width:14px; text-align:center; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:800; line-height:1; color:transparent; }
+  .brk-ppt.ok { color:#22c55e; }
+  .brk-ppt.miss { color:#6b7280; }
   .brk-msc { font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:18px; min-width:16px;
     text-align:right; color:var(--muted); flex:none; margin-left:6px; }
   .brk-msc.w { color:#f9fafb; }
@@ -4768,12 +4779,12 @@ var BRK_SERIES={
 var BRK_TABS=[
   {label:'R1 West', series:['r1w0','r1w1','r1w2','r1w3']},
   {label:'R1 East', series:['r1e0','r1e1','r1e2','r1e3']},
-  {label:'R2 West', series:['r2w0','r2w1']},
-  {label:'R2 East', series:['r2e0','r2e1']},
-  {label:'West Final', series:['cfw']},
-  {label:'East Final', series:['cfe']},
+  {label:'Round 2', series:['r2w0','r2w1','r2e0','r2e1']},
+  {label:'Conf Finals', series:['cfw','cfe']},
   {label:'Cup Final', series:['scf']}
 ];
+// active round (getActiveRound: 1–4) → the tab to land on when the pool first opens
+function brkActiveRoundTabIndex(){var r=getActiveRound(BRK.parsed);return r>=4?4:r===3?3:r===2?2:0;}
 var BRK_ROUNDKEY={1:'r1',2:'r2',3:'cf',4:'scf'};
 var BRK_WEIGHT={1:1,2:2,3:4,4:8};   // simple Bracket Challenge round weighting
 // real NHL team primary colors (all 32 — works next season too)
@@ -4949,7 +4960,7 @@ async function brkRender(){
   var pool=brkPool();if(!pool)return showPoolList();
   // reset transient view state when switching into a different pool
   var pid=pool.id||getActiveId();
-  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.changeId=false;BRK.editing=false;BRK.tab=0;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
+  if(_brkLastPool!==pid){_brkLastPool=pid;BRK.view='picker';BRK.viewFilter=null;BRK.changeId=false;BRK.editing=false;BRK.tab=0;BRK._initTab=true;BRK.viewAll=false;BRK.lbScope='group';BRK.allEntries=null;BRK.loaded=false;}
   document.getElementById('pool-title').textContent=pool.title||'Pool';
   document.getElementById('sub').textContent=(pool.type==='nrc'?'NRC Style · game-by-game bracket':'Bracket Challenge · pick the winners');
   brkShowContainer();drawPoolSwitcher();
@@ -4967,6 +4978,7 @@ async function brkRender(){
     BRK.games=res[1]||[];BRK.entries=res[3]||[];
     var odds={};Object.keys(res[2]||{}).forEach(function(k){var v=res[2][k],t=k.toUpperCase().trim();if(typeof v==='string')odds[t]=v;else if(v&&v.cup)odds[t]=v.cup;});
     BRK.odds=odds;BRK.actual=brkActual(BRK.parsed,BRK.games);BRK.loaded=true;
+    if(BRK._initTab){BRK.tab=brkActiveRoundTabIndex();BRK._initTab=false;BRK._scrollTabIntoView=true;}   // land on the current round (SCF/CF/R2/R1) on first open
     brkPaint();brkSetupPoll();
   }catch(e){wrap.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>';}
 }
@@ -4982,7 +4994,14 @@ function brkPaint(){
   var oldTabs=wrap.querySelector('.brk-tabs'),tsl=oldTabs?oldTabs.scrollLeft:0;
   wrap.innerHTML=brkSubnavHtml()+(BRK.view==='board'?brkBoardHtml():brkPickerHtml());
   var newVa=wrap.querySelector('.brk-bscroll');if(newVa)newVa.scrollLeft=sl;
-  var newTabs=wrap.querySelector('.brk-tabs');if(newTabs){newTabs.scrollLeft=tsl;brkTabFade(newTabs);}
+  var newTabs=wrap.querySelector('.brk-tabs');
+  if(newTabs){
+    newTabs.scrollLeft=tsl;
+    // after a programmatic tab change (initial load on the active round, or a "next round" jump),
+    // scroll the strip so the now-active tab is fully visible instead of clipped at the edge
+    if(BRK._scrollTabIntoView){var onBtn=newTabs.querySelector('.brk-tab.on');if(onBtn){var br=onBtn.getBoundingClientRect(),tr=newTabs.getBoundingClientRect();newTabs.scrollLeft+=(br.left-tr.left)-12;}BRK._scrollTabIntoView=false;}
+    brkTabFade(newTabs);
+  }
 }
 function brkGo(v){BRK.view=v;BRK.viewFilter=null;brkPaint();}
 
@@ -5167,13 +5186,14 @@ function brkSeriesCellHtml(key,picks,pool,sc,readonly){
   function winsIn(team){return raw.filter(function(x){return x===team;}).length;}
   var matchup=act.known&&[t1,t2].slice().sort().join()===act.teams.slice().sort().join();
   var cols=brkSeriesCols(raw,slot.winner);
+  var gp=brkScoringCfg().game;   // points per correct game pick (configurable)
   function teamRow(team,isTop){
     var w=winsIn(team),col=brkTC(team),isWin=slot.winner===team,isLose=slot.winner&&slot.winner!==team;
     var s='<div class="brk-trow'+(isWin?' tw-win':'')+(isLose?' tw-lose':'')+'" style="border-left:3px solid '+(isWin?col:'transparent')+'">'
       +'<img class="brk-tlogo" src="'+brkLogo(team)+'" onerror="this.style.display=\'none\'">'
       +'<span class="brk-tname'+(isWin?' tw-adv':'')+'">'+team+(isWin?' <span style="font-size:11px;color:'+col+'">'+(BRK_SERIES[key].round===4?'🏆':'▶︎')+'</span>':'')+'</span>'
       +'<div class="brk-games">';
-    for(var i=0;i<cols;i++)s+=brkGameCellHtml(key,team,i,raw,readonly,slot.winner,act,matchup,isTop);
+    for(var i=0;i<cols;i++)s+=brkGameCellHtml(key,team,i,raw,readonly,slot.winner,act,matchup,isTop,gp);
     var oppW=winsIn(isTop?t2:t1);
     s+='</div><span class="brk-wins'+(w>oppW?' lead':'')+'">'+w+'</span></div>';
     return s;
@@ -5190,17 +5210,17 @@ function brkSeriesCellHtml(key,picks,pool,sc,readonly){
 }
 // how many game columns to render: full 7 while picking; once a series is locked in, just your games
 function brkSeriesCols(raw,decidedWinner){ return decidedWinner?Math.min(7,Math.max(raw.length,1)):7; }
-// in-cell ✓/✕: a correct game pick gets a green ✓ badge, a wrong one a red ✕ (+ dimmed cell)
-function brkGameCellHtml(key,team,i,raw,readonly,decidedWinner,act,matchup,isTop){
+// each game cell sits in a column with its POINTS shown below: +N (green) for a correct game pick, 0 (muted) for a miss
+function brkGameCellHtml(key,team,i,raw,readonly,decidedWinner,act,matchup,isTop,gp){
   var pc=brkTC(team),pick=raw[i],picked=pick===team,otherPicked=pick!=null&&pick!==team;
   var actualW=(matchup&&act&&act.known&&i<act.gameWinners.length)?act.gameWinners[i]:null;
-  var cls='brk-gcell',style='',onclick='',inner='';
+  var cls='brk-gcell',style='',onclick='',inner='',pts='';
   if(picked){
     cls+=' win';
     if(actualW!=null){
       style='background:'+pc+';border-color:'+pc;
-      if(actualW===team)inner='<span class="brk-gmark ok">✓</span>';
-      else{cls+=' bad';inner='<span class="brk-gmark bad">✕</span>';}
+      if(actualW===team){cls+=' ok';pts='<span class="brk-gpts ok">+'+gp+'</span>';}
+      else{cls+=' bad';pts='<span class="brk-gpts miss">0</span>';}
     }else if(matchup&&act&&act.done){
       // a game you predicted that the series never reached — ghost it, don't shout
       cls+=' phantom';style='background:'+hexToRgba(pc,0.16)+';border-color:'+hexToRgba(pc,0.32);
@@ -5211,7 +5231,8 @@ function brkGameCellHtml(key,team,i,raw,readonly,decidedWinner,act,matchup,isTop
   else if(!decidedWinner&&i===raw.length){cls+=' active';inner='<span class="brk-gn">'+(i+1)+'</span>';if(!readonly)onclick=' onclick="brkPickGame(\''+key+'\',\''+team+'\','+i+')"';else cls+=' future';}
   else if(!decidedWinner&&i>raw.length){cls+=' future';inner='<span class="brk-gn">'+(i+1)+'</span>';}
   else{cls+=' na';}
-  return '<div class="'+cls+'"'+(style?' style="'+style+'"':'')+onclick+'>'+inner+'</div>';
+  if(!pts)pts='<span class="brk-gpts"></span>';   // empty placeholder keeps every column the same height
+  return '<div class="brk-gcol"><div class="'+cls+'"'+(style?' style="'+style+'"':'')+onclick+'>'+inner+'</div>'+pts+'</div>';
 }
 function brkPickGame(key,team,i){
   var pool=brkPool(),picks=brkLoadDraft(),raw=Array.isArray(picks[key])?picks[key].slice():[];
@@ -5242,26 +5263,39 @@ function brkPickSeries(key,team){var pool=brkPool(),picks=brkLoadDraft();picks[k
 
 /* ---- View All: NCAA-style horizontal bracket of compact match cards ---- */
 function brkSeriesTabIndex(key){for(var i=0;i<BRK_TABS.length;i++)if(BRK_TABS[i].series.indexOf(key)>=0)return i;return 0;}
-function brkJumpTo(i){BRK.viewAll=false;BRK.tab=i;brkPaint();try{document.getElementById('brk-wrap').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}}
+function brkJumpTo(i){BRK.viewAll=false;BRK.tab=i;BRK._scrollTabIntoView=true;brkPaint();try{document.getElementById('brk-wrap').scrollIntoView({behavior:'smooth',block:'start'});}catch(e){}}
 function brkTreeMatch(key,slots){
   var slot=slots[key],t1=slot.teams[0],t2=slot.teams[1],pickW=slot.winner,act=BRK.actual[key];
   var done=act&&act.done,actW=done?act.winner:null;
   var matchup=act.known&&[t1,t2].slice().sort().join()===act.teams.slice().sort().join();
-  var raw=slot.gamesArr||[],cols=raw.length;
+  var raw=slot.gamesArr||[],cols=raw.length,gp=brkScoringCfg().game;
   function winsIn(team){return raw.filter(function(x){return x===team;}).length;}
-  // per-team game cells: filled on the games THIS team is picked to win (position = meaning), ✓/✕ = result (shape)
+  // per-team game cells: filled on the games THIS team is picked to win (position = meaning); ring = result (points sit in the shared line below)
   function gcells(team){
     if(!cols)return '<div class="brk-pgames"></div>';
     var col=brkTC(team),s='';
     for(var i=0;i<cols;i++){
       if(raw[i]!==team){s+='<span class="brk-pcell"></span>';continue;}
-      var cc='brk-pcell on',mk='';
+      var cc='brk-pcell on';
       var aw=(matchup&&act.known&&i<act.gameWinners.length)?act.gameWinners[i]:null;
-      if(aw!=null){ if(aw===team){cc+=' ok';mk='&#10003;';} else {cc+=' bad';mk='&#10007;';} }
+      if(aw!=null){ cc+=(aw===team)?' ok':' bad'; }
       else if(matchup&&done){cc+=' ph';}
-      s+='<span class="'+cc+'" style="--pc:'+col+'">'+mk+'</span>';
+      s+='<span class="'+cc+'" style="--pc:'+col+'"></span>';
     }
     return '<div class="brk-pgames">'+s+'</div>';
+  }
+  // shared points line: one entry per game column, aligned under the two stacked cells (+N green / 0 muted)
+  function ptsrow(){
+    if(!cols||!matchup)return '';
+    var s='',any=false;
+    for(var i=0;i<cols;i++){
+      var aw=(act.known&&i<act.gameWinners.length)?act.gameWinners[i]:null;
+      if(aw==null){s+='<span class="brk-ppt"></span>';continue;}
+      any=true;
+      s+=(raw[i]===aw)?'<span class="brk-ppt ok">+'+gp+'</span>':'<span class="brk-ppt miss">0</span>';
+    }
+    if(!any)return '';
+    return '<div class="brk-prow"><div class="brk-pgames">'+s+'</div><span class="brk-msc" style="visibility:hidden">0</span></div>';
   }
   function row(team){
     if(!team||team==='TBD')return '<div class="brk-mrow tbd"><span class="brk-mlogo"></span><span class="brk-mnm">TBD</span><div class="brk-pgames"></div><span class="brk-msc"></span></div>';
@@ -5283,7 +5317,7 @@ function brkTreeMatch(key,slots){
   }
   var cardCls=key==='scf'?' final':'';
   if(done&&pickW)cardCls+=(pickW===actW?' ok':' bad');
-  return '<div class="brk-match'+cardCls+'" onclick="brkJumpTo('+brkSeriesTabIndex(key)+')">'+row(t1)+row(t2)+strip+'</div>';
+  return '<div class="brk-match'+cardCls+'" onclick="brkJumpTo('+brkSeriesTabIndex(key)+')">'+row(t1)+row(t2)+ptsrow()+strip+'</div>';
 }
 function brkSetTreeFull(v){BRK.treeFull=v;brkPaint();}
 function brkBuildTree(picks,pool,sc,readonly){
