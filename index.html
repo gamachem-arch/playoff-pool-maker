@@ -287,6 +287,25 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   .brk-tab.va.on { background:#10b981; border-color:#10b981; border-style:solid; color:#fff; }
   .brk-tab .brk-tab-n { display:inline-block; min-width:16px; margin-left:5px; padding:0 4px; border-radius:8px;
     font-size:10px; background:rgba(255,255,255,0.18); }
+  /* round tabs: stick to top while scrolling cards + edge-fade affordance for the hidden tabs */
+  .brk-tabs-wrap { position:sticky; top:0; z-index:15; background:var(--bg); margin-bottom:10px; padding-top:6px; }
+  .brk-tabs-wrap .brk-tabs { margin-bottom:0; }
+  .brk-tabs-wrap::before, .brk-tabs-wrap::after { content:''; position:absolute; top:6px; bottom:6px; width:30px;
+    pointer-events:none; z-index:3; opacity:0; transition:opacity .2s; }
+  .brk-tabs-wrap::before { left:0; background:linear-gradient(90deg,var(--bg) 35%,transparent); }
+  .brk-tabs-wrap::after  { right:0; background:linear-gradient(270deg,var(--bg) 35%,transparent); }
+  .brk-tabs-wrap.has-left::before { opacity:1; }
+  .brk-tabs-wrap.has-right::after { opacity:1; }
+  /* "pick next round" CTA — surfaces once every series in the current tab is decided */
+  .brk-nextround { width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin:2px 0 4px; padding:13px 16px; border-radius:12px; cursor:pointer;
+    border:1px solid rgba(59,130,246,0.4); background:linear-gradient(90deg,rgba(16,185,129,0.10),rgba(59,130,246,0.14));
+    color:var(--text); font-family:'Barlow Condensed',sans-serif; transition:all .15s; }
+  .brk-nextround:hover { border-color:rgba(59,130,246,0.7); background:linear-gradient(90deg,rgba(16,185,129,0.16),rgba(59,130,246,0.22)); }
+  .brk-nextround .brk-nr-l { font-size:12px; font-weight:700; letter-spacing:.4px; color:#10b981; text-transform:uppercase; }
+  .brk-nextround .brk-nr-r { font-size:16px; font-weight:800; letter-spacing:.4px; display:flex; align-items:center; gap:8px; }
+  .brk-nextround .brk-nr-arw { font-size:18px; transition:transform .15s; }
+  .brk-nextround:hover .brk-nr-arw { transform:translateX(4px); }
 
   .brk-cell { background:var(--surface); border:1px solid rgba(255,255,255,0.08); border-radius:14px;
     padding:12px; margin-bottom:12px; }
@@ -456,7 +475,7 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
   body.brk-mode #pool-title { font-size:31px; line-height:1.02; margin:0; }
   body.brk-mode #sub { font-size:10px; letter-spacing:1px; text-transform:uppercase; opacity:0.6; margin-top:2px; }
   /* desktop: center the normal views in a comfortable column; View All breaks out to full width */
-  body.brk-mode #page-wrap { overflow-x:hidden; }
+  body.brk-mode #page-wrap { overflow-x:clip; }   /* clip (not hidden) so sticky round tabs still pin */
   body.brk-mode .header, body.brk-mode #brk-wrap { max-width:600px; margin-left:auto; margin-right:auto; }
   body.brk-mode .brk-bscroll { position:relative; left:50%; width:100vw; margin-left:-50vw; padding-left:16px; padding-right:16px; box-sizing:border-box; }
   body.brk-mode .brk-bracket { margin:0 auto; }
@@ -4963,7 +4982,7 @@ function brkPaint(){
   var oldTabs=wrap.querySelector('.brk-tabs'),tsl=oldTabs?oldTabs.scrollLeft:0;
   wrap.innerHTML=brkSubnavHtml()+(BRK.view==='board'?brkBoardHtml():brkPickerHtml());
   var newVa=wrap.querySelector('.brk-bscroll');if(newVa)newVa.scrollLeft=sl;
-  var newTabs=wrap.querySelector('.brk-tabs');if(newTabs)newTabs.scrollLeft=tsl;
+  var newTabs=wrap.querySelector('.brk-tabs');if(newTabs){newTabs.scrollLeft=tsl;brkTabFade(newTabs);}
 }
 function brkGo(v){BRK.view=v;BRK.viewFilter=null;brkPaint();}
 
@@ -5040,6 +5059,12 @@ function brkPickerHtml(){
     var tab=BRK_TABS[BRK.tab];
     html+='<div class="brk-clabel">'+tab.label+'</div>';
     tab.series.forEach(function(key){html+=brkSeriesCellHtml(key,picks,pool,sc,readonly);});
+    // once every series in this tab is decided, offer a one-tap jump to the next unfinished round
+    if(!readonly&&!viewing){
+      var _sl=sc.slots,_curDone=tab.series.every(function(k){return _sl[k].winner;}),_nxt=-1;
+      if(_curDone){for(var _ni=BRK.tab+1;_ni<BRK_TABS.length;_ni++){if(!BRK_TABS[_ni].series.every(function(k){return _sl[k].winner;})){_nxt=_ni;break;}}}
+      if(_nxt>=0)html+='<button class="brk-nextround" onclick="brkJumpTo('+_nxt+')"><span class="brk-nr-l">✓ '+esc(tab.label)+' done</span><span class="brk-nr-r">Pick '+esc(BRK_TABS[_nxt].label)+'<span class="brk-nr-arw">→</span></span></button>';
+    }
   }
   // submit / status bar
   if(viewing){
@@ -5109,13 +5134,14 @@ function brkEdit(on){
 }
 function brkViewPlayer(name){BRK.viewFilter=(BRK.viewFilter===name?null:name);brkPaint();}
 function brkTabsHtml(picks,pool){
-  var slots=brkPredict(picks,pool),html='<div class="brk-tabs">';
+  var slots=brkPredict(picks,pool),html='<div class="brk-tabs-wrap"><div class="brk-tabs" onscroll="brkTabFade(this)">';
   BRK_TABS.forEach(function(tab,i){var done=tab.series.filter(function(k){return slots[k].winner;}).length;
     html+='<button class="brk-tab'+(!BRK.viewAll&&BRK.tab===i?' on':'')+'" onclick="brkTab('+i+')">'+tab.label+'<span class="brk-tab-n">'+done+'/'+tab.series.length+'</span></button>';});
-  html+='<button class="brk-tab va'+(BRK.viewAll?' on':'')+'" onclick="brkToggleAll()">View All</button></div>';
+  html+='<button class="brk-tab va'+(BRK.viewAll?' on':'')+'" onclick="brkToggleAll()">View All</button></div></div>';
   return html;
 }
 function brkTab(i){BRK.viewAll=false;BRK.tab=i;brkPaint();}
+function brkTabFade(el){if(!el)return;var w=el.parentElement;if(!w||!/(^|\s)brk-tabs-wrap(\s|$)/.test(w.className))return;var sl=el.scrollLeft,max=el.scrollWidth-el.clientWidth;w.classList.toggle('has-left',sl>4);w.classList.toggle('has-right',sl<max-4);}
 function brkToggleAll(){BRK.viewAll=!BRK.viewAll;brkPaint();}
 function brkSeriesLabel(key){
   var spec=BRK_SERIES[key];
