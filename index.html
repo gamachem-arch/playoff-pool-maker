@@ -97,6 +97,9 @@ h1{font-family:'Barlow Condensed',sans-serif;font-size:clamp(28px,6vw,52px);font
 @keyframes confetti-fall{0%{transform:translateY(-12vh) rotate(0deg);opacity:1}100%{transform:translateY(112vh) rotate(720deg);opacity:1}}
 @keyframes win-pop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
 @keyframes win-trophy{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes cup-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes cup-glow{0%,100%{filter:drop-shadow(0 0 14px rgba(251,191,36,0.55))}50%{filter:drop-shadow(0 0 30px rgba(251,191,36,0.9))}}
+@keyframes cup-shine{0%{background-position:-160% 0}100%{background-position:260% 0}}
 .confetti-pc{position:absolute;top:-12vh;will-change:transform;border-radius:1px;}
 .live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#f87171;margin-right:4px;animation:pulse-dot 1.2s ease-in-out infinite;vertical-align:middle;flex-shrink:0;}
 .team-odds-row.my-team{border-left:3px solid;background:rgba(255,255,255,0.03);}
@@ -4215,6 +4218,60 @@ function showWinnerCelebration(name,poolTitle){
   requestAnimationFrame(function(){overlay.style.opacity='1';});
 }
 
+// ─── STANLEY CUP CHAMPION CELEBRATION ────────────────────────────────────────
+// Second, distinct celebration that fires ONCE the Cup itself is decided —
+// centered on the champion team (big logo) + the pool player who owns them.
+// Independent of maybeShowWinnerCelebration (the "you clinched the pool" one).
+var TEAM_NAMES={ANA:'Anaheim Ducks',ARI:'Arizona Coyotes',BOS:'Boston Bruins',BUF:'Buffalo Sabres',CGY:'Calgary Flames',CAR:'Carolina Hurricanes',CHI:'Chicago Blackhawks',COL:'Colorado Avalanche',CBJ:'Columbus Blue Jackets',DAL:'Dallas Stars',DET:'Detroit Red Wings',EDM:'Edmonton Oilers',FLA:'Florida Panthers',LAK:'Los Angeles Kings',MIN:'Minnesota Wild',MTL:'Montreal Canadiens',NSH:'Nashville Predators',NJD:'New Jersey Devils',NYI:'New York Islanders',NYR:'New York Rangers',OTT:'Ottawa Senators',PHI:'Philadelphia Flyers',PIT:'Pittsburgh Penguins',SJS:'San Jose Sharks',SEA:'Seattle Kraken',STL:'St. Louis Blues',TBL:'Tampa Bay Lightning',TOR:'Toronto Maple Leafs',UTA:'Utah Hockey Club',VAN:'Vancouver Canucks',VGK:'Vegas Golden Knights',WSH:'Washington Capitals',WPG:'Winnipeg Jets'};
+function maybeShowCupCelebration(r4,pool){
+  try{
+    if(!pool||!r4)return false;
+    if(window._pwaOverlayActive||_tourActive)return false;
+    // champion = whichever finalist reached 4 wins
+    var champ=r4.topWins===4?r4.topTeam:r4.bottomWins===4?r4.bottomTeam:null;
+    if(!champ||champ==='TBD')return false;
+    var poolId=pool.id||pool.title||'pool';
+    var key='cupCelebrated_'+poolId+'_'+champ;
+    if(localStorage.getItem(key))return false;
+    localStorage.setItem(key,'1');
+    var owner=(pool.players||[]).find(function(p){return(p.teams||[]).indexOf(champ)>=0;});
+    showCupCelebration(champ,owner?owner.name:null,pool.title||'Playoff Pool');
+    return true;
+  }catch(e){return false;}
+}
+function showCupCelebration(team,playerName,poolTitle){
+  var color=_SCF_TC[team]||'#fbbf24';
+  var teamName=TEAM_NAMES[team]||team;
+  var overlay=document.createElement('div');
+  overlay.id='cup-celebration';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(circle at 50% 38%,'+hexToRgba(color,0.22)+',rgba(5,8,14,0.95) 72%);opacity:0;transition:opacity .45s ease;overflow:hidden';
+  var colors=['#fbbf24','#f9fafb',color,'#ffd76b','#cbd5e1'];
+  var pieces='';
+  for(var i=0;i<170;i++){
+    var c=colors[Math.floor(Math.random()*colors.length)];
+    var left=Math.random()*100;
+    var pw=5+Math.random()*8, ph=8+Math.random()*12;
+    var dur=2.8+Math.random()*2.6, delay=Math.random()*3;
+    var round=Math.random()<0.3?'border-radius:50%':'';
+    pieces+='<div class="confetti-pc" style="left:'+left+'vw;width:'+pw+'px;height:'+ph+'px;background:'+c+';'+round+';animation:confetti-fall '+dur.toFixed(2)+'s linear '+delay.toFixed(2)+'s infinite"></div>';
+  }
+  var congrats=playerName
+    ? '<div style="font-size:15px;color:#e2e8f0;margin-top:14px;line-height:1.45">Congrats to <b style="color:#fbbf24">'+esc(playerName)+'</b> — your champs are crowned! 🎉</div>'
+    : '<div style="font-size:15px;color:#e2e8f0;margin-top:14px;line-height:1.45">A champion is crowned. 🎉</div>';
+  overlay.innerHTML=pieces+
+    '<div style="position:relative;z-index:1;max-width:360px;width:100%;text-align:center;background:linear-gradient(160deg,rgba(28,34,46,0.97),rgba(13,18,28,0.97));border:1.5px solid #fbbf24;border-radius:22px;padding:26px 24px 22px;box-shadow:0 0 50px rgba(251,191,36,0.4);animation:win-pop .55s cubic-bezier(0.2,0.8,0.3,1.2) both">'+
+      '<img src="https://assets.nhle.com/logos/playoffs/png/scp-20252026-cup.png" alt="Stanley Cup" style="height:70px;object-fit:contain;animation:cup-float 3s ease-in-out infinite">'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:13px;letter-spacing:3px;text-transform:uppercase;background:linear-gradient(100deg,#b8860b 0%,#fbbf24 25%,#fff6d6 50%,#fbbf24 75%,#b8860b 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:cup-shine 3.2s linear infinite;margin-top:14px">2026 Stanley Cup Champions</div>'+
+      '<img src="https://assets.nhle.com/logos/nhl/svg/'+team+'_'+logoSfx(team)+'.svg" alt="'+esc(teamName)+'" style="width:150px;height:150px;object-fit:contain;margin:12px auto 4px;display:block;animation:cup-glow 2.6s ease-in-out infinite" onerror="this.style.display=\'none\'">'+
+      '<div style="font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:32px;line-height:1.05;color:#f9fafb">'+esc(teamName)+'</div>'+
+      congrats+
+      '<div style="font-size:14px;color:#94a3b8;margin-top:12px;line-height:1.45">That\'s a wrap on the <b style="color:#cbd5e1">'+esc(poolTitle)+'</b> season.<br><span style="font-style:italic">See you all next year! 🏒</span></div>'+
+      '<button onclick="(function(){var o=document.getElementById(\'cup-celebration\');if(o){o.style.opacity=\'0\';setTimeout(function(){o.remove();},450);}})()" style="margin-top:22px;width:100%;padding:12px;border:none;border-radius:12px;background:#fbbf24;color:#1a1206;font-family:\'Barlow Condensed\',sans-serif;font-weight:900;font-size:16px;letter-spacing:1px;text-transform:uppercase;cursor:pointer">🏆 Raise the Cup</button>'+
+    '</div>';
+  document.body.appendChild(overlay);
+  requestAnimationFrame(function(){overlay.style.opacity='1';});
+}
+
 
 function formatGameTime(utcStr) {
   var d = new Date(utcStr);
@@ -4491,7 +4548,9 @@ async function doRender(){
     document.getElementById("sub").textContent="Live NHL scores + MoneyPuck odds · Updated "+new Date().toLocaleTimeString();
     refreshBracketIfOpen();
     initTour();
-    maybeShowWinnerCelebration(pieTotals2,getActivePool());
+    // Cup-decided celebration takes priority; if it fires, skip the pool-clinch one this render.
+    var _cupShown=maybeShowCupCelebration(r4render,getActivePool());
+    if(!_cupShown)maybeShowWinnerCelebration(pieTotals2,getActivePool());
   }catch(e){
     document.getElementById("main").innerHTML='<div class="loading">Error: '+e.message+'</div>';
     document.getElementById("sub").textContent="Failed to load";
